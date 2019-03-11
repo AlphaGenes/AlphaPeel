@@ -1,0 +1,25 @@
+PLINK v1.90p 64-bit (13 Jan 2017)
+Options in effect:
+  --bfile test3/outputs/output.called.0.99
+  --out test3/outputs/output.called.0.99
+  --real-ref-alleles
+  --recode A
+
+Hostname: node1h02.ecdf.ed.ac.uk
+Working directory: /exports/cmvm/eddie/eb/groups/tier2_hickey_group/awhalen/tinyimpute/testData/TinyPeel
+Start time: Tue Nov 27 13:57:43 2018
+
+Random number seed: 1543327063
+128533 MB RAM detected; reserving 64266 MB for main workspace.
+3 variants loaded from .bim file.
+5 people (0 males, 0 females, 5 ambiguous) loaded from .fam.
+Ambiguous sex IDs written to test3/outputs/output.called.0.99.nosex .
+Using 1 thread (no multithreaded calculations invoked).
+Before main variant filters, 5 founders and 0 nonfounders present.
+Calculating allele frequencies... done.
+Total genotyping rate is 0.8.
+3 variants and 5 people pass filters and QC.
+Note: No phenotypes present.
+--recode A to test3/outputs/output.called.0.99.raw ... done.
+
+End time: Tue Nov 27 13:57:43 2018

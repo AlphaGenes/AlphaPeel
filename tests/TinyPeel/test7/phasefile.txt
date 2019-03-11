@@ -1,0 +1,8 @@
+phase_aa 0 0 0 0 0
+phase_aa 0 0 0 0 0
+phase_aA 0 0 0 0 0
+phase_aA 1 1 1 1 1
+phase_Aa 1 1 1 1 1
+phase_Aa 0 0 0 0 0
+phase_AA 1 1 1 1 1
+phase_AA 1 1 1 1 1
