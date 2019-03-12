@@ -1,4 +1,4 @@
-
+mkdir outputs
 # AlphaPeel is a command line package for performing multilocus iterative peeling using genotype or sequence data.
 # Install TinyPeel via pip using:
 # pip install <wheel name>
