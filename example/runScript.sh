@@ -17,9 +17,9 @@ TinyPeel -genotypes data/genotypes.txt \
 
 # Example 2: Performing single-locus "hybrid" peeling with sequence data and pre-computed segregation estimates (generated from Example 1).
 
-TinyPeel -seqfile baseData/sequence.2 \
+TinyPeel -seqfile data/sequence.txt \
          -pedigree data/pedigree.txt \
-         -mapfile baseData/map.txt\
+         -mapfile data/genotypes-map.txt\
          -out outputs/hybrid \
          -runType single \
          -segmapfile data/segregation-map.txt \

@@ -1,4 +1,0 @@
-genotypes_0 0 0 0 0 0
-genotypes_2 2 2 2 2 2
-genotypes_F 1 1 1 1 1
-genotypes_M 2 2 2 2 2

@@ -1,0 +1,16 @@
+PLINK v1.90b6.5 64-bit (13 Sep 2018)
+Options in effect:
+  --bfile test3c/outputs/output.called.0.9
+  --out test3c/outputs/output.called.0.9
+  --real-ref-alleles
+  --recode A
+
+Hostname: mvm-ri-m155130.roslin.ed.ac.uk
+Working directory: /Users/awhalen/Documents/tinyimpute-split/tinypeel/tests/functional_tests
+Start time: Tue Mar 12 10:56:51 2019
+
+Random number seed: 1552388211
+16384 MB RAM detected; reserving 8192 MB for main workspace.
+Error: Failed to open test3c/outputs/output.called.0.9.bed.
+
+End time: Tue Mar 12 10:56:51 2019
