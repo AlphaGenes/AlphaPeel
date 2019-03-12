@@ -13,11 +13,8 @@ assessPeeling = function(filePrefix){
 
     print(" ")
     print(paste("Assessing peeling file:", filePrefix))
-    print(paste("Checking if outputs are equal:", all(newFile == oldFile)))
-
     newAcc = getMarkerCorrelations(newFile[,-1], trueGenotypes[,-1])
-    oldAcc = getMarkerCorrelations(oldFile[,-1], trueGenotypes[,-1])
-    print(paste("Comparing accuracies: ", round(oldAcc, digits=3), "->", round(newAcc, digits=3)))
+    print(paste("Comparing accuracies: ", round(newAcc, digits=3)))
 
 }
 
