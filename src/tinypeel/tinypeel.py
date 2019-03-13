@@ -7,90 +7,32 @@ from .tinyhouse import InputOutput
 
 from .Peeling import Peeling
 from .Peeling import PeelingIO
+from .Peeling import PeelingInfo
+from .Peeling import PeelingUpdates
 
 import concurrent.futures
 from itertools import repeat
 
+def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode = False):
+    #Right now maf _only_ uses the penetrance so can be estimated once.
+    if args.estmaf: PeelingUpdates.updateMaf(pedigree, peelingInfo)
 
-
-def updateFamily(family, peelingInfo):
-    sire = family.sire.idn
-    dam = family.dam.idn
-    fam = family.idn
-
-    peelingInfo.posterior[sire,:,:] = peelingInfo.posterior[sire,:,:] / peelingInfo.posteriorSire[fam,:,:] * peelingInfo.posteriorSire_new[fam,:,:]
-    peelingInfo.posterior[dam,:,:] = peelingInfo.posterior[dam,:,:] / peelingInfo.posteriorDam[fam,:,:] * peelingInfo.posteriorDam_new[fam,:,:]
-
-    peelingInfo.posterior[sire,:,:] = peelingInfo.posterior[sire,:,:]/np.sum(peelingInfo.posterior[sire,:,:], 0)
-    peelingInfo.posterior[dam,:,:] = peelingInfo.posterior[dam,:,:] / np.sum(peelingInfo.posterior[dam,:,:], 0)
-
-    peelingInfo.posteriorSire[fam,:,:]  = peelingInfo.posteriorSire_new[fam,:,:] 
-    peelingInfo.posteriorDam[fam,:,:]  = peelingInfo.posteriorDam_new[fam,:,:] 
-
-def updateFamilyNull(family, peelingInfo):
-    sire = family.sire.idn
-    dam = family.dam.idn
-    fam = family.idn
-
-    peelingInfo.posterior[sire,:,:] = 1
-    peelingInfo.posterior[dam,:,:] = 1
-
-    peelingInfo.posterior[sire,:,:] = 1
-    peelingInfo.posterior[dam,:,:] = 1
-
-    peelingInfo.posteriorSire[fam,:,:]  = 1
-    peelingInfo.posteriorDam[fam,:,:]  = 1
-
-def updatePosterior(pedigree, peelingInfo, sires, dams) :
-
-    if pedigree.mapSireToFamilies is None:
-        pedigree.setupFamilyMap()
-
-    for sire in sires:
-        updateSire(sire, pedigree.mapSireToFamilies[sire], peelingInfo)
-
-    for dam in dams:
-        updateDam(dam, pedigree.mapDamToFamilies[dam], peelingInfo)
-
-
-def updateSire(sire, famList, peelingInfo) :
-    peelingInfo.posterior[sire,:,:] = 0
-    for famId in famList:
-        log_update = np.log(peelingInfo.posteriorSire_new[famId,:,:])
-        peelingInfo.posterior[sire,:,:] += log_update
-        peelingInfo.posteriorSire[famId,:,:] = -log_update
-
-    for famId in famList:
-        peelingInfo.posteriorSire[famId,:,:] += peelingInfo.posterior[sire,:,:]
-
-    #Rescale values.
-    peelingInfo.posterior[sire,:,:] = Peeling.expNorm1(peelingInfo.posterior[sire,:,:])
-    peelingInfo.posterior[sire,:,:] /= np.sum(peelingInfo.posterior[sire,:,:], 0)
-
-    for famId in famList:
-        peelingInfo.posteriorSire[famId,:,:] = Peeling.expNorm1(peelingInfo.posteriorSire[famId,:,:])
-        peelingInfo.posteriorSire[famId,:,:]  /= np.sum(peelingInfo.posteriorSire[famId,:,:], 0)
+    for i in range(args.ncycles):
+        print("Cycle ", i)
+        peelingCycle(pedigree, peelingInfo, args = args, singleLocusMode = singleLocusMode)
+        peelingInfo.iteration += 1
         
-def updateDam(dam, famList, peelingInfo) :
-    peelingInfo.posterior[dam,:,:] = 0
-
-    for famId in famList:
-        log_update = np.log(peelingInfo.posteriorDam_new[famId,:,:])
-        peelingInfo.posterior[dam,:,:] += log_update
-
-        peelingInfo.posteriorDam[famId,:,:] = -log_update
-
-    for famId in famList:
-        peelingInfo.posteriorDam[famId,:,:] += peelingInfo.posterior[dam,:,:]
-
-    peelingInfo.posterior[dam,:,:] = Peeling.expNorm1(peelingInfo.posterior[dam,:,:])
-    peelingInfo.posterior[dam,:,:] /= np.sum(peelingInfo.posterior[dam,:,:], 0)
-    for famId in famList:
-        peelingInfo.posteriorDam[famId,:,:] = Peeling.expNorm1(peelingInfo.posteriorDam[famId,:,:])
-        peelingInfo.posteriorDam[famId,:,:]  /= np.sum(peelingInfo.posteriorDam[famId,:,:], 0)
+        # esttransitions is been disabled.
+        # if args.esttransitions: 
+        #     print("Estimating the transmission rate is currently a disabled option")
+            # PeelingUpdates.updateSeg(peelingInfo) #Option currently disabled.
+            
+        if args.esterrors: 
+            PeelingUpdates.updatePenetrance(pedigree, peelingInfo)
 
 def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
     nWorkers = args.maxthreads
+    
     for families in pedigree.genFamilies:
         print("Peeling Down")
         jit_families = [family.toJit() for family in families]
@@ -110,15 +52,9 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
             with concurrent.futures.ThreadPoolExecutor(max_workers=nWorkers) as executor:
                  results = executor.map(Peeling.peel, jit_families, repeat(Peeling.PEEL_UP), repeat(peelingInfo), repeat(singleLocusMode))
         else:
-            # for family in jit_families:
-            for family in families:
-                Peeling.peel(family.toJit(), Peeling.PEEL_UP, peelingInfo, singleLocusMode)
+            for family in jit_families:
+                Peeling.peel(family, Peeling.PEEL_UP, peelingInfo, singleLocusMode)
 
-        # for fam in families:
-        #     if not args.noposterior:
-        #         updateFamily(fam, peelingInfo)
-        #     else:
-        #         updateFamilyNull(fam, peelingInfo)
         sires = set()
         dams = set()
         for family in families:
@@ -126,18 +62,76 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
             dams.add(family.dam.idn)
         updatePosterior(pedigree, peelingInfo, sires, dams)
 
+# updatePosterior updates the posterior term for a specific set of sires and dams.
+# The updateSire and updateDam functions perform the updates for a specific sire 
+# and specific dam by including all of the information from all of their families.
+# This update is currently not multithreaded. It is also currently not ideal -- 
+# right now the posterior term is updated for all of the sires/dams no matter 
+# whether or not they have been changed since the last update.
+
+def updatePosterior(pedigree, peelingInfo, sires, dams) :
+
+    if pedigree.mapSireToFamilies is None or pedigree.mapDamToFamilies is None:
+        pedigree.setupFamilyMap()
+
+    for sire in sires:
+        updateSire(sire, pedigree.mapSireToFamilies[sire], peelingInfo)
+
+    for dam in dams:
+        updateDam(dam, pedigree.mapDamToFamilies[dam], peelingInfo)
+
+
+def updateSire(sire, famList, peelingInfo) :
+    peelingInfo.posterior[sire,:,:] = 0
+    for famId in famList:
+        log_update = np.log(peelingInfo.posteriorSire_new[famId,:,:])
+        peelingInfo.posterior[sire,:,:] += log_update
+        peelingInfo.posteriorSire_minusFam[famId,:,:] = -log_update
+
+    for famId in famList:
+        peelingInfo.posteriorSire_minusFam[famId,:,:] += peelingInfo.posterior[sire,:,:]
+
+    #Rescale values.
+    peelingInfo.posterior[sire,:,:] = Peeling.expNorm1D(peelingInfo.posterior[sire,:,:])
+    peelingInfo.posterior[sire,:,:] /= np.sum(peelingInfo.posterior[sire,:,:], 0)
+
+    for famId in famList:
+        peelingInfo.posteriorSire_minusFam[famId,:,:] = Peeling.expNorm1D(peelingInfo.posteriorSire_minusFam[famId,:,:])
+        peelingInfo.posteriorSire_minusFam[famId,:,:]  /= np.sum(peelingInfo.posteriorSire_minusFam[famId,:,:], 0)
+        
+def updateDam(dam, famList, peelingInfo) :
+    peelingInfo.posterior[dam,:,:] = 0
+
+    for famId in famList:
+        log_update = np.log(peelingInfo.posteriorDam_new[famId,:,:])
+        peelingInfo.posterior[dam,:,:] += log_update
+        peelingInfo.posteriorDam_minusFam[famId,:,:] = -log_update
+
+    for famId in famList:
+        peelingInfo.posteriorDam_minusFam[famId,:,:] += peelingInfo.posterior[dam,:,:]
+
+    peelingInfo.posterior[dam,:,:] = Peeling.expNorm1D(peelingInfo.posterior[dam,:,:])
+    peelingInfo.posterior[dam,:,:] /= np.sum(peelingInfo.posterior[dam,:,:], 0)
+    for famId in famList:
+        peelingInfo.posteriorDam_minusFam[famId,:,:] = Peeling.expNorm1D(peelingInfo.posteriorDam_minusFam[famId,:,:])
+        peelingInfo.posteriorDam_minusFam[famId,:,:]  /= np.sum(peelingInfo.posteriorDam_minusFam[famId,:,:], 0)
 
 def getLociAndDistance(snpMap, segMap):
     nSnp = len(snpMap)
     distance = np.full(nSnp, 0, dtype = np.float32)
     loci = np.full((nSnp, 2), 0, dtype = np.int64)
 
-    #Assume snp map and segMap are sorted.
+    # Assume snp map and segMap are sorted.
     segIndex = 0
     for i in range(nSnp) :
         pos = snpMap[i]
+        # Move along the segMap until we reach a point where we are either at the end of the map, or where the next seg marker occurs after the position in the genotype file.
+        # This assumes sorting pretty heavily. Alternative would be to find the neighboring positions in the seg file for each marker in the genotype file.
         while segIndex < (len(segMap)-1) and segMap[segIndex + 1] < pos : 
             segIndex += 1
+        
+        # Now that positions are known, choose the neighboring markers and the distance to those markers.
+        # First two if statements handle the begining and ends of the chromosome.
         if segIndex == 0 and segMap[segIndex] > pos :
             loci[i, :] = (segIndex, segIndex)
             distance[i] = 0
@@ -153,8 +147,8 @@ def getLociAndDistance(snpMap, segMap):
 
 def generateSingleLocusSegregation(peelingInfo, pedigree, args):
     segInfo = None
-    print(args.segfile)
     if args.segfile is not None:
+        # This just gets the locations in the map files.
         snpMap = np.array(InputOutput.readMapFile(args.mapfile, args.startsnp, args.stopsnp)[2])
         segMap = np.array(InputOutput.readMapFile(args.segmapfile)[2])
 
@@ -164,7 +158,6 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
         
         seg = InputOutput.readInSeg(pedigree, args.segfile, start = start, stop = stop)
         loci -= start # Re-align to seg file.
-        segInfo = (seg, loci, distance)
         for i in range(len(distance)):
             segLoc0 = loci[i,0]
             segLoc1 = loci[i,1]
@@ -173,31 +166,18 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
     else:
         peelingInfo.segregation[:,:,:] = .25
 
-def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode = False):
-    #Right now maf _only_ uses the penetrance so can be estimated once.
-    # if args.estmaf: Peeling.updateMaf(pedigree, peelingInfo)
-
-    for i in range(args.ncycles):
-        print("Cycle ", i)
-        peelingCycle(pedigree, peelingInfo, args = args, singleLocusMode = singleLocusMode)
-        peelingInfo.iteration += 1
-        # if args.esttransitions: Peeling.updateSeg(peelingInfo) #Option currently disabled.
-        if args.esterrors: Peeling.updatePenetrance(pedigree, peelingInfo)
-
 
 ### ACTUAL PROGRAM BELOW
 def main() :
     args = InputOutput.parseArgs("AlphaPeel")
     pedigree = Pedigree.Pedigree() 
     InputOutput.readInPedigreeFromInputs(pedigree, args)
-    pedigree.setMaf()
 
     singleLocusMode = args.runtype == "single"
     if args.runtype == "multi" and args.segfile :
         print("Running in multi-locus mode, external segfile ignored")
 
-    # if args.runtype == "multi" :
-    peelingInfo = Peeling.createPeelingInfo(pedigree, args, phaseFounder = (not args.nophasefounders))
+    peelingInfo = PeelingInfo.createPeelingInfo(pedigree, args, phaseFounder = (not args.nophasefounders))
 
     if singleLocusMode:
         print("Generating seg estimates")
@@ -207,16 +187,8 @@ def main() :
     PeelingIO.writeGenotypes(pedigree, genoProbFunc = peelingInfo.getGenoProbs)
     if not args.no_params: PeelingIO.writeOutParamaters(peelingInfo)
     if not singleLocusMode and not args.no_seg: InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.segregation, args.out + ".seg")
-    # InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.penetrance, args.out + ".penetrance")
-    # InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.anterior, args.out + ".anterior")
-    # InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.posterior, args.out + ".posterior")
 
-    # InputOutput.writeFamIndexedMatrix(pedigree, peelingInfo.posteriorSire, args.out + ".posteriorSire")
-    # InputOutput.writeFamIndexedMatrix(pedigree, peelingInfo.posteriorDam, args.out + ".posteriorDam")
-
-    # InputOutput.writeFamIndexedMatrix(pedigree, peelingInfo.posteriorSire_new, args.out + ".posteriorSire_new")
-    # InputOutput.writeFamIndexedMatrix(pedigree, peelingInfo.posteriorDam_new, args.out + ".posteriorDam_new")
-
+    PeelingIO.fullOutput(pedigree, peelingInfo, args)
 
 if __name__ == "__main__":
     main()

@@ -1,14 +1,4 @@
-# Cython compile instructions
-
-from setuptools import setup
-
-from setuptools import Extension, find_packages
-import os
-import glob
-from sys import platform
-import sys
-import sysconfig
-
+from setuptools import setup, Extension, find_packages
 
 setup(
     name="TinyPeel",
