@@ -188,7 +188,6 @@ def main() :
     if not args.no_params: PeelingIO.writeOutParamaters(peelingInfo)
     if not singleLocusMode and not args.no_seg: InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.segregation, args.out + ".seg")
 
-    PeelingIO.fullOutput(pedigree, peelingInfo, args)
 
 if __name__ == "__main__":
     main()
