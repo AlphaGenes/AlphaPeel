@@ -355,7 +355,7 @@ def expNorm1D(mat):
         for a in range(4):
             total += tmp[a,i]
         for a in range(4):
-            mat[a, i] /= total
+            tmp[a, i] /= total
     return tmp
 
 
