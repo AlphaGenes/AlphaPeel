@@ -291,4 +291,8 @@ Rscript checkResults.r 3c
 Rscript checkResults.r 4
 Rscript checkResults.r 5
 
+Rscript checkResults.r 7
+Rscript checkResults.r 7b
+Rscript checkResults.r 7c
+
 Rscript checkResults.r 8

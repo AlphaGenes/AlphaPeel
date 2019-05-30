@@ -119,7 +119,8 @@ def addPenetranceFromExternalFile(pedigree, peelingInfo, fileName, args):
             else:
                 ind = pedigree.individuals[idx]
                 peelingInfo.penetrance[ind.idn,e,:] *= penetranceLine
-                peelingInfo.penetrance[ind.idn,e,:] /= np.sum(peelingInfo.penetrance[ind.idn,e,:], 0) # Normalization added, just in case.
+                # Normalizing in terms of SNPs seems like a really bad idea.
+                # peelingInfo.penetrance[ind.idn,e,:] /= np.sum(peelingInfo.penetrance[ind.idn,e,:], 0) # Normalization added, just in case.
                 e = (e+1)%4
 
 
