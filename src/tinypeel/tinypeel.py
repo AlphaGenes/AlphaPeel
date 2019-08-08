@@ -33,9 +33,9 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode = False):
 def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
     nWorkers = args.maxthreads
     
-    for families in pedigree.genFamilies:
-        print("Peeling Down")
-        jit_families = [family.toJit() for family in families]
+    for index, generation in enumerate(pedigree.generations):
+        print("Peeling Down, Generation", index)
+        jit_families = [family.toJit() for family in generation.families]
 
         if args.maxthreads > 1:
             with concurrent.futures.ThreadPoolExecutor(max_workers=nWorkers) as executor:
@@ -44,9 +44,9 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
             for family in jit_families:
                 Peeling.peel(family, Peeling.PEEL_DOWN, peelingInfo, singleLocusMode)
 
-    for families in reversed(pedigree.genFamilies):
-        print("Peeling Up")
-        jit_families = [family.toJit() for family in families]
+    for index, generation in enumerate(reversed(pedigree.generations)):
+        print("Peeling Up, Generation", len(pedigree.generations) - index - 1)
+        jit_families = [family.toJit() for family in generation.families]
 
         if args.maxthreads > 1:
             with concurrent.futures.ThreadPoolExecutor(max_workers=nWorkers) as executor:
@@ -57,9 +57,9 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
 
         sires = set()
         dams = set()
-        for family in families:
-            sires.add(family.sire.idn)
-            dams.add(family.dam.idn)
+        for family in generation.families:
+            sires.add(family.sire)
+            dams.add(family.dam)
         updatePosterior(pedigree, peelingInfo, sires, dams)
 
 # updatePosterior updates the posterior term for a specific set of sires and dams.
@@ -71,17 +71,20 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
 
 def updatePosterior(pedigree, peelingInfo, sires, dams) :
 
-    if pedigree.mapSireToFamilies is None or pedigree.mapDamToFamilies is None:
-        pedigree.setupFamilyMap()
+    # if pedigree.mapSireToFamilies is None or pedigree.mapDamToFamilies is None:
+    #     pedigree.setupFamilyMap()
 
     for sire in sires:
-        updateSire(sire, pedigree.mapSireToFamilies[sire], peelingInfo)
+        updateSire(sire, peelingInfo)
 
     for dam in dams:
-        updateDam(dam, pedigree.mapDamToFamilies[dam], peelingInfo)
+        updateDam(dam, peelingInfo)
 
 
-def updateSire(sire, famList, peelingInfo) :
+def updateSire(sire, peelingInfo) :
+
+    famList = [fam.idn for fam in sire.families]
+    sire = sire.idn
     peelingInfo.posterior[sire,:,:] = 0
     for famId in famList:
         log_update = np.log(peelingInfo.posteriorSire_new[famId,:,:])
@@ -99,9 +102,11 @@ def updateSire(sire, famList, peelingInfo) :
         peelingInfo.posteriorSire_minusFam[famId,:,:] = Peeling.expNorm1D(peelingInfo.posteriorSire_minusFam[famId,:,:])
         peelingInfo.posteriorSire_minusFam[famId,:,:]  /= np.sum(peelingInfo.posteriorSire_minusFam[famId,:,:], 0)
         
-def updateDam(dam, famList, peelingInfo) :
-    peelingInfo.posterior[dam,:,:] = 0
+def updateDam(dam, peelingInfo) :
 
+    famList = [fam.idn for fam in dam.families]
+    dam = dam.idn
+    peelingInfo.posterior[dam,:,:] = 0
     for famId in famList:
         log_update = np.log(peelingInfo.posteriorDam_new[famId,:,:])
         peelingInfo.posterior[dam,:,:] += log_update

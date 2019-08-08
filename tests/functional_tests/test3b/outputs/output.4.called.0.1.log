@@ -1,16 +1,16 @@
-PLINK v1.90p 64-bit (13 Jan 2017)
+PLINK v1.90b6.5 64-bit (13 Sep 2018)
 Options in effect:
   --bfile test3b/outputs/output.4.called.0.1
   --out test3b/outputs/output.4.called.0.1
   --real-ref-alleles
   --recode A
 
-Hostname: node1h02.ecdf.ed.ac.uk
-Working directory: /exports/cmvm/eddie/eb/groups/tier2_hickey_group/awhalen/pythonsuite/tinypeel/tests/functional_tests
-Start time: Thu May 30 13:45:37 2019
+Hostname: mvm-ri-m155130.roslin.ed.ac.uk
+Working directory: /Users/awhalen/Documents/tinypeel/tests/functional_tests
+Start time: Thu Aug  8 14:36:59 2019
 
-Random number seed: 1559220337
-128533 MB RAM detected; reserving 64266 MB for main workspace.
+Random number seed: 1565271419
+16384 MB RAM detected; reserving 8192 MB for main workspace.
 5 variants loaded from .bim file.
 4 people (0 males, 0 females, 4 ambiguous) loaded from .fam.
 Ambiguous sex IDs written to test3b/outputs/output.4.called.0.1.nosex .
@@ -21,4 +21,4 @@ Calculating allele frequencies... done.
 Note: No phenotypes present.
 --recode A to test3b/outputs/output.4.called.0.1.raw ... done.
 
-End time: Thu May 30 13:45:37 2019
+End time: Thu Aug  8 14:36:59 2019

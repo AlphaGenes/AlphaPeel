@@ -8,7 +8,8 @@ TinyPeel
 
 # Example 1: Performing multi-locus peeling with genotype data:
 
-TinyPeel -genotypes data/genotypes.txt \
+# TinyPeel -genotypes data/genotypes.txt \
+python ../src/tinyPeel-script.py -genotypes data/genotypes.txt \
          -pedigree data/pedigree.txt \
          -out outputs/multilocus \
          -nCycles 5 \
@@ -17,7 +18,7 @@ TinyPeel -genotypes data/genotypes.txt \
 
 # Example 2: Performing single-locus "hybrid" peeling with sequence data and pre-computed segregation estimates (generated from Example 1).
 
-TinyPeel -seqfile data/sequence.txt \
+python ../src/tinyPeel-script.py -seqfile data/sequence.txt \
          -pedigree data/pedigree.txt \
          -mapfile data/genotypes-map.txt\
          -out outputs/hybrid \
