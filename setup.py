@@ -1,7 +1,7 @@
 from setuptools import setup, Extension, find_packages
 
 setup(
-    name="TinyPeel",
+    name="AlphaPeel",
     version="0.0.1",
     author="Andrew Whalen",
     author_email="awhalen@roslin.ed.ac.uk",
@@ -16,7 +16,7 @@ setup(
     ],
     entry_points = {
     'console_scripts': [
-        'TinyPeel=tinypeel.tinypeel:main',
+        'AlphaPeel=tinypeel.tinypeel:main',
         ],
     },
     install_requires=[
