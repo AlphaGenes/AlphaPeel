@@ -6,20 +6,11 @@ Options in effect:
   --recode A
 
 Hostname: mvm-ri-m155130.roslin.ed.ac.uk
-Working directory: /Users/awhalen/Documents/tinypeel/tests/functional_tests
-Start time: Thu Aug  8 14:37:07 2019
+Working directory: /Users/awhalen/Documents/alphapeel-python/tests/functional_tests
+Start time: Mon Mar  2 13:31:49 2020
 
-Random number seed: 1565271427
+Random number seed: 1583155909
 16384 MB RAM detected; reserving 8192 MB for main workspace.
-5 variants loaded from .bim file.
-3 people (0 males, 0 females, 3 ambiguous) loaded from .fam.
-Ambiguous sex IDs written to test3c/outputs/output.called.0.9.nosex .
-Using 1 thread (no multithreaded calculations invoked).
-Before main variant filters, 3 founders and 0 nonfounders present.
-Calculating allele frequencies... done.
-Total genotyping rate is 0.733333.
-5 variants and 3 people pass filters and QC.
-Note: No phenotypes present.
---recode A to test3c/outputs/output.called.0.9.raw ... done.
+Error: Failed to open test3c/outputs/output.called.0.9.bed.
 
-End time: Thu Aug  8 14:37:07 2019
+End time: Mon Mar  2 13:31:49 2020

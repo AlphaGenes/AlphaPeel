@@ -1,6 +1,6 @@
 #module load roslin/plink/1.90p
 
-tinypeel=TinyPeel
+tinypeel=AlphaPeel
 
 
 # Test 1: Can we read in unrelated individuals from multiple file formats and output the values to a normal dosage file.
