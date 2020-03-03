@@ -173,8 +173,68 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
 
 
 ### ACTUAL PROGRAM BELOW
+
+
+def getArgs() :
+    parser = argparse.ArgumentParser(description='')
+    core_parser = parser.add_argument_group("Core arguments")
+    core_parser.add_argument('-out', required=True, type=str, help='The output file prefix.')
+   
+    core_peeling_parser = parser.add_argument_group("Mandatory peeling arguments")
+    core_peeling_parser.add_argument('-runtype', default=None, required=False, type=str, help='Program run type. Either "single" or "multi".')
+
+    # Input options
+    input_parser = parser.add_argument_group("Input Options")
+    InputOutput.add_arguments_from_dictionary(input_parser, InputOutput.get_input_options(), options = ["bfile", "genotypes", "seqfile", "pedigree", "startsnp", "stopsnp"]) 
+
+    # Output options
+    output_parser = parser.add_argument_group("Output Options")
+
+    output_parser.add_argument('-no_dosages', action='store_true', required=False, help='Flag to suppress the dosage files.')
+    output_parser.add_argument('-no_seg', action='store_true', required=False, help='Flag to suppress the segregation files (e.g. when running for chip imputation and not hybrid peeling).')
+    output_parser.add_argument('-no_params', action='store_true', required=False, help='Flag to suppress writing the parameter files.')
+
+    output_parser.add_argument('-haps', action='store_true', required=False, help='Flag to enable writing out the genotype probabilities.')
+    output_parser.add_argument('-calling_threshold', default=None, required=False, type=float, nargs="*", help='Genotype calling threshold(s). Multiple space separated values allowed. Use. .3 for best guess genotype.')
+    output_parser.add_argument('-binary_call_files', action='store_true', required=False, help='Flag to write out the called genotype files as a binary plink output [Not yet implemented].')
+    output_parser.add_argument('-call_phase', action='store_true', required=False, help='Flag to call the phase as well as the genotypes.')
+
+    # Multithreading
+    multithread_parser = parser.add_argument_group("Multithreading Options")
+    InputOutput.add_arguments_from_dictionary(multithread_parser, InputOutput.get_multithread_options(), options = ["iothreads", "maxthreads"]) 
+
+
+    peeling_parser = parser.add_argument_group("Optional peeling arguments")
+    peeling_parser.add_argument('-ncycles',default=5, required=False, type=int, help='Number of peeling cycles. Default: 5.')
+    peeling_parser.add_argument('-length', default=1.0, required=False, type=float, help='Estimated length of the chromosome in Morgans. [Default 1.00]')
+    peeling_parser.add_argument('-penetrance',   default=None, required=False, type=str, nargs="*", help=argparse.SUPPRESS) #help='An optional external penetrance file. This will overwrite the default penetrance values.')
+
+
+    peeling_control_parser = parser.add_argument_group("Peeling control arguments")
+    peeling_control_parser.add_argument('-esterrors', action='store_true', required=False, help='Flag to re-estimate the genotyping error rates after each peeling cycle.')
+    peeling_control_parser.add_argument('-estmaf', action='store_true', required=False, help='Flag to re-estimate the minor allele frequency after each peeling cycle.')
+    peeling_control_parser.add_argument('-nophasefounders', action='store_true', required=False, help='A flag phase a heterozygous allele in one of the founders (if such an allele can be found).')
+    peeling_control_parser.add_argument('-sexchrom', action='store_true', required=False, help='A flag to that this is a sex chromosome. Sex needs to be given in the pedigree file. This is currently an experimental option.')
+
+
+    singleLocus_parser = parser.add_argument_group("Hybrid peeling arguments")
+    singleLocus_parser.add_argument('-mapfile',default=None, required=False, type=str, help='a map file for genotype data.')
+    singleLocus_parser.add_argument('-segmapfile',default=None, required=False, type=str, help='a map file for the segregation estimates for hybrid peeling.')
+    singleLocus_parser.add_argument('-segfile',default=None, required=False, type=str, help='A segregation file for hybrid peeling.')
+    # singleLocus_parser.add_argument('-blocksize',default=100, required=False, type=int, help='The number of markers to impute at once. This changes the memory requirements of the program.')
+
+
+
+    InputOutput.add_arguments_from_dictionary(famParser, InputOutput.get_probability_options(), options = ["error", "seqerror"]) 
+
+    return InputOutput.parseArgs("AlphaPeel", parser)
+
+
+
+
+
 def main() :
-    args = InputOutput.parseArgs("AlphaPeel")
+    args = getArgs()
     pedigree = Pedigree.Pedigree() 
     InputOutput.readInPedigreeFromInputs(pedigree, args)
 

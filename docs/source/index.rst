@@ -241,19 +241,6 @@ Example: ::
   1 snp_c 65429279
   1 snp_d 107421759
 
-Map file 
------------------
-
-The map file gives the chromosome number and the marker name and the base pair position for each marker in two columns. AlphaPeel needs to be run with all of the markers on the same chromosome. 
-
-Example: ::
-
-  1 snp_a 12483939
-  1 snp_b 192152913
-  1 snp_c 65429279
-  1 snp_d 107421759
-
-
 
 Output file formats
 ~~~~~~~~~~~~~~~~~~~

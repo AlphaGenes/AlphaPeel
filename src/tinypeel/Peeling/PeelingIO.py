@@ -68,6 +68,8 @@ def writeGenotypes(pedigree, genoProbFunc) :
             if args.binary_call_files : writeBinaryCalledGenotypes(pedigree, genoProbFunc, args.out + ".called." + str(thresh), thresh)
             if not args.binary_call_files : writeCalledGenotypes(pedigree, genoProbFunc, args.out + ".called." + str(thresh), thresh)
 
+            if args.call_phase:
+                writeCalledPhase(pedigree, genoProbFunc, args.out + ".called_phase." + str(thresh), thresh)
 
 def writeGenoProbs(pedigree, genoProbFunc, outputFile):
     with open(outputFile, 'w+') as f:
@@ -100,6 +102,23 @@ def writeCalledGenotypes(pedigree, genoProbFunc, outputFile, thresh):
                 doubleIfNotMissing(calledGenotypes)
 
             f.write(ind.idx + ' ' + ' '.join(map(str, calledGenotypes)) + '\n')
+
+def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
+    with open(outputFile, 'w+') as f:
+        for idx, ind in pedigree.writeOrder():
+            matrix = genoProbFunc(ind.idn)
+
+            # Paternal            
+            paternal_probs = np.array([matrix[0,:] + matrix[1,:], matrix[2,:] + matrix[3,:]], dtype=np.float32)
+            paternal_haplotype = np.argmax(paternal_haplotype, axis = 0)
+            setMissing(paternal_haplotype, paternal_probs, thresh)
+            f.write(ind.idx + ' ' + ' '.join(map(str, paternal_haplotype)) + '\n')
+
+            #Maternal
+            maternal_probs = np.array([matrix[0,:] + matrix[2,:], matrix[1,:] + matrix[3,:]], dtype=np.float32)
+            maternal_haplotype = np.argmax(maternal_probs, axis = 0)
+            setMissing(maternal_haplotype, maternal_probs, thresh)
+            f.write(ind.idx + ' ' + ' '.join(map(str, maternal_haplotype)) + '\n')
 
 def writeBinaryCalledGenotypes(pedigree, genoProbFunc, outputFile, thresh):
     for idx, ind in pedigree.writeOrder():
