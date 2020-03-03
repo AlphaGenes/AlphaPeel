@@ -12,6 +12,7 @@ from .Peeling import PeelingUpdates
 
 import concurrent.futures
 from itertools import repeat
+import argparse
 
 def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode = False):
     #Right now maf _only_ uses the penetrance so can be estimated once.
@@ -185,7 +186,7 @@ def getArgs() :
 
     # Input options
     input_parser = parser.add_argument_group("Input Options")
-    InputOutput.add_arguments_from_dictionary(input_parser, InputOutput.get_input_options(), options = ["bfile", "genotypes", "seqfile", "pedigree", "startsnp", "stopsnp"]) 
+    InputOutput.add_arguments_from_dictionary(input_parser, InputOutput.get_input_options(), options = ["bfile", "genotypes", "phasefile", "seqfile", "pedigree", "startsnp", "stopsnp"]) 
 
     # Output options
     output_parser = parser.add_argument_group("Output Options")
@@ -198,6 +199,10 @@ def getArgs() :
     output_parser.add_argument('-calling_threshold', default=None, required=False, type=float, nargs="*", help='Genotype calling threshold(s). Multiple space separated values allowed. Use. .3 for best guess genotype.')
     output_parser.add_argument('-binary_call_files', action='store_true', required=False, help='Flag to write out the called genotype files as a binary plink output [Not yet implemented].')
     output_parser.add_argument('-call_phase', action='store_true', required=False, help='Flag to call the phase as well as the genotypes.')
+    
+    InputOutput.add_arguments_from_dictionary(output_parser, InputOutput.get_output_options(), options = ["writekey", "onlykeyed"]) 
+
+
 
     # Multithreading
     multithread_parser = parser.add_argument_group("Multithreading Options")
@@ -208,6 +213,7 @@ def getArgs() :
     peeling_parser.add_argument('-ncycles',default=5, required=False, type=int, help='Number of peeling cycles. Default: 5.')
     peeling_parser.add_argument('-length', default=1.0, required=False, type=float, help='Estimated length of the chromosome in Morgans. [Default 1.00]')
     peeling_parser.add_argument('-penetrance',   default=None, required=False, type=str, nargs="*", help=argparse.SUPPRESS) #help='An optional external penetrance file. This will overwrite the default penetrance values.')
+    InputOutput.add_arguments_from_dictionary(peeling_parser, InputOutput.get_probability_options(), options = ["error", "seqerror"]) 
 
 
     peeling_control_parser = parser.add_argument_group("Peeling control arguments")
@@ -225,7 +231,6 @@ def getArgs() :
 
 
 
-    InputOutput.add_arguments_from_dictionary(famParser, InputOutput.get_probability_options(), options = ["error", "seqerror"]) 
 
     return InputOutput.parseArgs("AlphaPeel", parser)
 

@@ -7,10 +7,10 @@ Options in effect:
 
 Hostname: mvm-ri-m155130.roslin.ed.ac.uk
 Working directory: /Users/awhalen/Documents/alphapeel-python/tests/functional_tests
-Start time: Tue Mar  3 12:15:48 2020
+Start time: Tue Mar  3 12:40:18 2020
 
-Random number seed: 1583237748
+Random number seed: 1583239218
 16384 MB RAM detected; reserving 8192 MB for main workspace.
 Error: Failed to open test3b/outputs/output.4.called.0.1.bed.
 
-End time: Tue Mar  3 12:15:48 2020
+End time: Tue Mar  3 12:40:18 2020

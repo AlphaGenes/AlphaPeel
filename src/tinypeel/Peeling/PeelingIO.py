@@ -110,7 +110,7 @@ def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
 
             # Paternal            
             paternal_probs = np.array([matrix[0,:] + matrix[1,:], matrix[2,:] + matrix[3,:]], dtype=np.float32)
-            paternal_haplotype = np.argmax(paternal_haplotype, axis = 0)
+            paternal_haplotype = np.argmax(paternal_probs, axis = 0)
             setMissing(paternal_haplotype, paternal_probs, thresh)
             f.write(ind.idx + ' ' + ' '.join(map(str, paternal_haplotype)) + '\n')
 

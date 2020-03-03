@@ -15,6 +15,17 @@ AlphaPeel -genotypes data/genotypes.txt \
          -runType multi \
          -maxthreads 6
 
+# Example 1b: Performing multi-locus peeling with genotype data and calling the values with a threshold of 0.98
+
+AlphaPeel -genotypes data/genotypes.txt \
+         -pedigree data/pedigree.txt \
+         -out outputs/multilocus \
+         -nCycles 5 \
+         -runType multi \
+         -maxthreads 6 \
+         -calling_threshold 0.98 \
+         -call_phase
+
 # Example 2: Performing single-locus "hybrid" peeling with sequence data and pre-computed segregation estimates (generated from Example 1).
 
 AlphaPeel -seqfile data/sequence.txt \
@@ -26,3 +37,13 @@ AlphaPeel -seqfile data/sequence.txt \
          -segfile outputs/multilocus.seg \
          -nCycles 5 \
          -maxthreads 6
+
+
+AlphaPeel -genotypes genotypes.txt \
+         -pedigree pedigree.txt \
+         -out multilocus \
+         -nCycles 5 \
+         -runType multi \
+         -maxthreads 6 \
+         -calling_threshold 0.98 \
+         -call_phase
