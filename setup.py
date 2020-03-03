@@ -2,7 +2,7 @@ from setuptools import setup, Extension, find_packages
 
 setup(
     name="AlphaPeel",
-    version="0.0.1",
+    version="1.1.0",
     author="Andrew Whalen",
     author_email="awhalen@roslin.ed.ac.uk",
     description="Multilocus and hybrid peeling",
