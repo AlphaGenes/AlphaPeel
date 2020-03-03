@@ -19,7 +19,7 @@ AlphaPeel -genotypes data/genotypes.txt \
 
 AlphaPeel -genotypes data/genotypes.txt \
          -pedigree data/pedigree.txt \
-         -out outputs/multilocus \
+         -out outputs/multilocus_with_phase \
          -nCycles 5 \
          -runType multi \
          -maxthreads 6 \
@@ -38,12 +38,3 @@ AlphaPeel -seqfile data/sequence.txt \
          -nCycles 5 \
          -maxthreads 6
 
-
-AlphaPeel -genotypes genotypes.txt \
-         -pedigree pedigree.txt \
-         -out multilocus \
-         -nCycles 5 \
-         -runType multi \
-         -maxthreads 6 \
-         -calling_threshold 0.98 \
-         -call_phase

@@ -203,7 +203,6 @@ def getArgs() :
     InputOutput.add_arguments_from_dictionary(output_parser, InputOutput.get_output_options(), options = ["writekey", "onlykeyed"]) 
 
 
-
     # Multithreading
     multithread_parser = parser.add_argument_group("Multithreading Options")
     InputOutput.add_arguments_from_dictionary(multithread_parser, InputOutput.get_multithread_options(), options = ["iothreads", "maxthreads"]) 
