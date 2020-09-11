@@ -20,7 +20,7 @@ setup(
         ],
     },
     install_requires=[
-        'numpy',
-        'numba',
+        'numpy>=1.19',
+        'numba>=0.49.0'
     ]
 )
