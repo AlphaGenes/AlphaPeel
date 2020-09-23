@@ -10,6 +10,7 @@ setup(
     long_description_content_type="text/markdown",
     packages=['tinypeel', 'tinypeel.tinyhouse','tinypeel.Peeling'],
     package_dir={'': 'src'},
+    license="MIT license",
 
     classifiers=[
         "Programming Language :: Python :: 3",

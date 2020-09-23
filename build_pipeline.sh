@@ -31,6 +31,10 @@ rm -rf $target
 mkdir $target
 cp dist/* $target
 cp docs/build/latex/AlphaPeel.pdf $target
+
+cp MIT_License.txt $target
+
+
 cp -r example $target
 zip -r $target.zip $target
 

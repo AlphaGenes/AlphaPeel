@@ -30,7 +30,7 @@ Availability
 Conditions of use
 -----------------
 
-|ap| is part of a suite of software that our group has developed. It is fully and freely available for academic use, provided that users cite it in publications. However, due to our contractual obligations with some of the funders of the research program that has developed this suite of software, all interested commercial organizations are requested to contact John Hickey (`John.Hickey@roslin.ed.ac.uk <John.Hickey@roslin.ed.ac.uk>`_) to discuss the terms of use.
+|ap| is part of a suite of software that our group has developed. It is fully and freely available for all use under the MIT License.
 
 Suggested Citation:
 
