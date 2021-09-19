@@ -1,5 +1,7 @@
 import concurrent.futures
-from numba import jit, jitclass, float32, int8, int64, optional, boolean
+from numba import jit, float32, int8, int64, optional, boolean
+from numba.experimental import jitclass
+
 import numpy as np
 from collections import OrderedDict
 
@@ -82,7 +84,7 @@ def peel(family, operation, peelingInfo, singleLocusMode) :
         
         # The child's estimate is the combination of the posterior term and penetrance term for that child.
         # We are estimating the parent's genotypes so the anterior term is ignored to avoid double counting.
-        childValues = posterior[child,:,:] * penetrance[child,:,:]
+        childValues = np.ascontiguousarray(posterior[child,:,:]) * penetrance[child,:,:]
         childValues = childValues/np.sum(childValues, axis = 0)
         childValues = e1e*childValues + e4
 

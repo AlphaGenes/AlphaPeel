@@ -1,5 +1,6 @@
 import concurrent.futures
-from numba import jit, jitclass, float32, int8, int64, optional, boolean
+from numba import jit, float32, int8, int64, optional, boolean
+from numba.experimental import jitclass
 import numpy as np
 from collections import OrderedDict
 

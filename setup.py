@@ -22,6 +22,6 @@ setup(
     },
     install_requires=[
         'numpy>=1.19',
-        'numba>=0.49.0'
+        'numba>=0.50.0'
     ]
 )

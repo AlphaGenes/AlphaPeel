@@ -1,5 +1,6 @@
 import numpy as np
-from numba import jit, jitclass, float32, int32, int64, optional
+from numba import jit, float32, int32, int64, optional
+from numba.experimental import jitclass
 
 from .tinyhouse import Pedigree
 from .tinyhouse import ProbMath
