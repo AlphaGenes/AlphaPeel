@@ -35,8 +35,10 @@ Run the following to build the Python wheel and user guide. You will need an ins
     git submodule init
     git submodule update
     
-    bash build_pipeline.sh
-    pip install dist/AlphaPeel*.whl
+    mamba create -n AlphaPeel
+    mamba activate AlphaPeel
+    ./build_pipeline.sh
+    pip install --force-reinstall dist/AlphaPeel*.whl
     
     cd example; ./runScript.sh
 
