@@ -15,7 +15,7 @@ PEEL_UP = 0
 PEEL_DOWN = 1
 
 # This is the main peeling function.
-@jit(nopython=True, nogil=True, locals={'e': float32, 'e4':float32, 'e16':float32, 'e1e':float32, 'childValues':float32[:,:]})
+@jit(nopython=True, nogil=True, locals={'e': float32, 'e4':float32, 'e16':float32, 'e1e':float32})
 def peel(family, operation, peelingInfo, singleLocusMode) :
 
     isSexChrom = peelingInfo.isSexChrom
@@ -83,7 +83,7 @@ def peel(family, operation, peelingInfo, singleLocusMode) :
         
         # The child's estimate is the combination of the posterior term and penetrance term for that child.
         # We are estimating the parent's genotypes so the anterior term is ignored to avoid double counting.
-        childValues = np.ascontiguousarray(posterior[child,:,:]) * penetrance[child,:,:]
+        childValues = posterior[child,:,:] * penetrance[child,:,:]
         childValues = childValues/np.sum(childValues, axis = 0)
         childValues = e1e*childValues + e4
 

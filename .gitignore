@@ -9,3 +9,4 @@ __pycache__/
 AlphaPeel
 build/
 docs/build/
+example/outputs

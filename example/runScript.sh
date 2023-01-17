@@ -1,15 +1,11 @@
 #!/bin/bash
 
-mkdir outputs
-# AlphaPeel is a command line package for performing multilocus iterative peeling using genotype or sequence data.
-# Install AlphaPeel via pip using:
-# pip install <wheel name>
+mkdir -p outputs
 
-#To check command line arguments run AlphaPeel without any arguments.
+# To check command line arguments run AlphaPeel without any arguments.
 AlphaPeel
 
 # Example 1: Performing multi-locus peeling with genotype data:
-
 AlphaPeel -genotypes data/genotypes.txt \
          -pedigree data/pedigree.txt \
          -out outputs/multilocus \
@@ -18,7 +14,6 @@ AlphaPeel -genotypes data/genotypes.txt \
          -maxthreads 6
 
 # Example 1b: Performing multi-locus peeling with genotype data and calling the values with a threshold of 0.98
-
 AlphaPeel -genotypes data/genotypes.txt \
          -pedigree data/pedigree.txt \
          -out outputs/multilocus_with_phase \
@@ -29,7 +24,6 @@ AlphaPeel -genotypes data/genotypes.txt \
          -call_phase
 
 # Example 2: Performing single-locus "hybrid" peeling with sequence data and pre-computed segregation estimates (generated from Example 1).
-
 AlphaPeel -seqfile data/sequence.txt \
          -pedigree data/pedigree.txt \
          -mapfile data/genotypes-map.txt\
@@ -39,4 +33,3 @@ AlphaPeel -seqfile data/sequence.txt \
          -segfile outputs/multilocus.seg \
          -nCycles 5 \
          -maxthreads 6
-
