@@ -1,9 +1,6 @@
 import concurrent.futures
 from numba import jit, float32, int8, int64, optional, boolean
-try:
-    from numba.experimental import jitclass
-except ModuleNotFoundError:
-    from numba import jitclass
+from numba.experimental import jitclass
 import numpy as np
 from collections import OrderedDict
 
