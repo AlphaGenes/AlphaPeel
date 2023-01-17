@@ -8,6 +8,9 @@ from ..tinyhouse import ProbMath
 from ..tinyhouse import HaplotypeOperations
 
 import math
+import concurrent.futures
+from itertools import repeat
+
 
 # Defining variables for peel up and peel down. Ideally these would be characters, but numba does not support characters.
 PEEL_UP = 0
@@ -15,7 +18,7 @@ PEEL_DOWN = 1
 
 # This is the main peeling function.
 @jit(nopython=True, nogil=True, locals={'e': float32, 'e4':float32, 'e16':float32, 'e1e':float32, 'childValues':float32[:,:]})
-def peel(family, operation, peelingInfo, singleLocusMode) :
+def peel(family, operation, peelingInfo, singleLocusMode, noPost) :
 
     isSexChrom = peelingInfo.isSexChrom
 
@@ -144,12 +147,13 @@ def peel(family, operation, peelingInfo, singleLocusMode) :
     for i in range(nOffspring) :
         parentsMinusChild[i,:,:,:] = np.log(jointParents[:,:,:])
     allToParents[:,:,:] = 0
-    for i in range(nOffspring):
-        log_childToParents = np.log(childToParents[i,:,:,:])
-        allToParents += log_childToParents
-        parentsMinusChild[i,:,:,:] -= log_childToParents # This is done to take away the setimate for an individual child from their parent's posterior term.
-    for i in range(nOffspring):
-        parentsMinusChild[i,:,:,:] += allToParents
+    if not noPost:
+        for i in range(nOffspring):
+            log_childToParents = np.log(childToParents[i,:,:,:])
+            allToParents += log_childToParents
+            parentsMinusChild[i,:,:,:] -= log_childToParents # This is done to take away the setimate for an individual child from their parent's posterior term.
+        for i in range(nOffspring):
+            parentsMinusChild[i,:,:,:] += allToParents
 
     # Move from a log-scale to a non-log scale and re-normalize.
     allToParents = expNorm2D(allToParents)
@@ -179,7 +183,7 @@ def peel(family, operation, peelingInfo, singleLocusMode) :
         damPosterior = damPosterior*e1e + e4
         peelingInfo.posteriorDam_new[fam,:,:] = damPosterior
 
-    if (not singleLocusMode) and (operation == PEEL_DOWN):
+    if (not singleLocusMode) and (operation == PEEL_UP):
         # Estimate the segregation probabilities for each child.
 
         for i in range(nOffspring):
@@ -199,9 +203,9 @@ def peel(family, operation, peelingInfo, singleLocusMode) :
             #Option 1: Estimate without normalizing.
             # estimateSegregation(segregationTensor, parentsMinusChild[i,:,:,:], childValues, pointSeg[child,:,:])
             #Option 2: Estimate with normalizing. I think this is what we want.
-            estimateSegregationWithNorm(segregationTensor, segregationTensor_norm, parentsMinusChild[i,:,:,:], childValues, pointSeg[child,:,:])
+            estimateSegregation(segregationTensor, parentsMinusChild[i,:,:,:], childValues, pointSeg[child,:,:])
 
-            segregation[child,:,:] = (1-e)*collapsePointSeg(pointSeg[child,:,:], peelingInfo.transmissionRate) + e/4
+            segregation[child,:,:] = (1-e)*collapsePointSeg(pointSeg[child,:,:], peelingInfo.forwardSeg[child,:,:], peelingInfo.backwardSeg[child,:,:], peelingInfo.transmissionRate) + e/4
 
 #####
 ##### The following are a large number of "helper" jit functions that replace the einstien sums in the original scripts.
@@ -272,6 +276,13 @@ def estimateSegregation(segregationTensor, parentValues, childValues, output):
                 for d in range(4) :
                     for i in range(nLoci):
                         output[d, i] += segregationTensor[a,b,c,d]*parentValues[a,b,i]*childValues[c,i]
+    for i in range(nLoci):
+        count = 0
+        for d in range(4):
+            count += output[d,i]
+        for d in range(4):
+            output[d,i] /= count
+
     return output
 
 @jit(nopython=True, nogil=True)
@@ -287,6 +298,7 @@ def estimateSegregationWithNorm(segregationTensor, segregationTensor_norm, paren
                         #Check if norm is 0. Otherwise use norm to normalize.
                         if segregationTensor_norm[a, b, c] != 0:
                             output[d, i] += segregationTensor[a,b,c,d]*parentValues[a,b,i]*childValues[c,i]/segregationTensor_norm[a, b, c]
+                            # output[d, i] += segregationTensor[a,b,c,d]*parentValues[a,b,i]*childValues[c,i]
     return output
 
 @jit(nopython=True, nogil=True)
@@ -359,12 +371,203 @@ def expNorm1D(mat):
     return tmp
 
 
+spec = OrderedDict()
+spec['score'] = float32[:,:]
+spec['score_mat'] = float32[:,:]
+spec['score_pat'] = float32[:,:]
+spec['mat'] = float32[:,:,:]
+
+@jitclass(spec)
+class jit_recombScore(object):
+    def __init__(self, transmissionRate):
+        self.score = np.array([[0, 1, 1, 2],
+                      [1, 0, 2, 1],
+                      [1, 2, 0, 1],
+                      [2, 1, 1, 0]], dtype = np.float32)
+    
+    
+        self.score_pat = np.array([[0, 0, 1, 1],
+                          [0, 0, 1, 1],
+                          [1, 1, 0, 0],
+                          [1, 1, 0, 0]], dtype = np.float32)
+
+        self.score_mat = np.array([[0, 1, 0, 1],
+                          [1, 0, 1, 0],
+                          [0, 1, 0, 1],
+                          [1, 0, 1, 0]], dtype = np.float32)
+        self.mat = np.full((len(transmissionRate), 4, 4), 0, dtype = np.float32)
+        for i in range(len(transmissionRate)):
+            e = transmissionRate[i]
+            self.mat[i,:,:] = np.array([[(1-e)**2,  (1-e)*e,    (1-e)*e,    e**2],
+                                [(1-e)*e,   (1-e)**2,   e**2,       (1-e)*e],
+                                [(1-e)*e,   e**2,       (1-e)**2,   (1-e)*e],
+                                [e**2,      (1-e)*e,    (1-e)*e,    (1-e)**2]])
+
+
+
+def setRecombinations(pedigree, peelingInfo):
+    values = 0
+    count = 0
+
+    recombScore = jit_recombScore(peelingInfo.transmissionRate)
+    if InputOutput.args.maxthreads > 1:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=InputOutput.args.maxthreads) as executor:
+            idns = [ind.idn for ind in pedigree]
+            results = executor.map(estimateRecombinations, idns, repeat(peelingInfo), repeat(recombScore))
+        
+        for result in results:
+            values += result
+            count += 1
+        values /= count
+    else:
+        for ind in pedigree:
+            idn = ind.idn
+            values += estimateRecombinations(idn, peelingInfo, recombScore)
+            count += 1
+        values /= count
+
+    return values
+
+@jit(nopython=True, nogil=True)
+def estimateRecombinations(idn, peelingInfo, recombScore):
+    pointSeg = peelingInfo.pointSeg[idn,:,:]
+    forwardSeg = peelingInfo.forwardSeg[idn,:,:]
+    backwardSeg = peelingInfo.backwardSeg[idn,:,:]
+    recomb = peelingInfo.recomb[idn,:]
+    recomb_mat = peelingInfo.recomb_mat[idn,:]
+    recomb_pat = peelingInfo.recomb_pat[idn,:]
+    transmissionRate = peelingInfo.transmissionRate
+    nLoci = pointSeg.shape[1]
+    for i in range(nLoci -1):
+        # recomb[i], recomb_mat[i], recomb_pat[i] = estimateLocusRecombination(pointSeg, forwardSeg, backwardSeg, recombScore, i)
+        recomb[i], recomb_mat[i], recomb_pat[i] = estimateLocusRecombination_old(pointSeg, forwardSeg, backwardSeg, transmissionRate[i], i)
+
+    return np.sum(recomb)/2
+
+@jit(nopython=True, nogil=True)
+def estimateLocusRecombination_old(pointSeg, forwardSeg, backwardSeg, transmissionRate, locus):
+    # Estimates the transmission rate between locus and locus + 1.
+    val_current = pointSeg[:,locus]*forwardSeg[:,locus]
+    val_current = val_current/np.sum(val_current)
+
+    val_next = pointSeg[:,locus+1]*backwardSeg[:,locus+1]
+    val_next = val_next/np.sum(val_next)
+    
+    # norm1D(val_current)
+    # norm1D(val_next)
+    
+    # Now create joint probabilities.
+    e = transmissionRate
+    mat = np.array([[(1-e)**2,  (1-e)*e,    (1-e)*e,    e**2],
+                    [(1-e)*e,   (1-e)**2,   e**2,       (1-e)*e],
+                    [(1-e)*e,   e**2,       (1-e)**2,   (1-e)*e],
+                    [e**2,      (1-e)*e,    (1-e)*e,    (1-e)**2]])
+    score = np.array([[0, 1, 1, 2],
+                      [1, 0, 2, 1],
+                      [1, 2, 0, 1],
+                      [2, 1, 1, 0]])
+    
+    
+    score_pat = np.array([[0, 0, 1, 1],
+                          [0, 0, 1, 1],
+                          [1, 1, 0, 0],
+                          [1, 1, 0, 0]])
+
+    score_mat = np.array([[0, 1, 0, 1],
+                          [1, 0, 1, 0],
+                          [0, 1, 0, 1],
+                          [1, 0, 1, 0]])
+
+    for i in range(4):
+        for j in range(4):
+            mat[i,j] *= val_current[i]*val_next[j]
+
+    mat = mat/np.sum(mat)
+    error = np.sum(mat*score)
+    error_mat = np.sum(mat*score_mat)
+    error_pat = np.sum(mat*score_pat)
+    # count = 0
+    # for i in range(4):
+    #     for j in range(4):
+    #         count += mat[i,j]
+    # for i in range(4):
+    #     for j in rnage(4):
+    #         mat[i,j]/=count
+    # norm2D(mat)
+    # error = 0
+    # for i in range(4):
+    #     for j in range(4):
+    #         error += mat[i,j]*score[i,j]
+    return(error, error_mat, error_pat)
+
+
+@jit(nopython=True, nogil=True)
+def estimateLocusRecombination(pointSeg, forwardSeg, backwardSeg, recombScore, locus):
+    # Estimates the transmission rate between locus and locus + 1.
+    val_current = np.full(4, 0, dtype = np.float32)
+    val_next = np.full(4, 0, dtype = np.float32)
+
+    for i in range(4):
+        val_current[i] = pointSeg[i,locus]*forwardSeg[i,locus]
+
+    for i in range(4):
+        val_next[i] = pointSeg[i,locus+1]*backwardSeg[i,locus+1]
+
+    norm1D(val_current)
+    norm1D(val_next)
+    
+    # Now create joint probabilities.
+
+    mat = np.full((4, 4), 0, dtype = np.float32)
+    for i in range(4):
+        for j in range(4):
+            mat[i,j] = recombScore.mat[locus,i,j]
+
+
+    # Now create joint probabilities.
+    for i in range(4):
+        for j in range(4):
+            mat[i,j] *= val_current[i]*val_next[j]
+
+    norm2D(mat)
+    error = 0
+    error_mat = 0
+    error_pat = 0
+    for i in range(4):
+        for j in range(4):
+            error += mat[i,j]*recombScore.score[i,j]
+            error_mat += mat[i,j]*recombScore.score_pat[i,j]
+            error_pat += mat[i,j]*recombScore.score_mat[i,j]
+
+    return(error, error_mat, error_pat)
+
+@jit(nopython=True, nogil=True)
+def norm1D(values) :
+    count = 0
+    for i in range(4):
+        count += values[i]
+    for i in range(4):
+        values[i] /= count
+
+@jit(nopython=True, nogil=True)
+def norm2D(values) :
+    count = 0
+    for i in range(4):
+        for j in range(4):
+            count += values[i, j]
+    for i in range(4):
+        for j in range(4):
+            values[i,j] /= count
+
 @jit(nopython=True, nogil=True, locals={'e': float32, 'e2':float32, 'e1e':float32, 'e2i':float32})
-def collapsePointSeg(pointSeg, transmission):
+def collapsePointSeg(pointSeg, forwardSeg, backwardSeg, transmission):
 
     # This is the forward backward algorithm.
     # Segregation estimate state ordering: pp, pm, mp, mm
     nLoci = pointSeg.shape[1] 
+
+    forwardSeg[:,:] = 1
+    backwardSeg[:,:] = 1
 
     seg = np.full(pointSeg.shape, .25, dtype = np.float32)
     for i in range(nLoci):
@@ -402,6 +605,7 @@ def collapsePointSeg(pointSeg, transmission):
 
         for j in range(4):
             seg[j,i] *= new[j]
+            forwardSeg[j,i] = new[j]
         # seg[:,i] *= new
         prev = new
 
@@ -428,6 +632,7 @@ def collapsePointSeg(pointSeg, transmission):
 
         for j in range(4):
             seg[j,i] *= new[j]
+            backwardSeg[j,i] = new[j]
         prev = new
     
     for i in range(nLoci):

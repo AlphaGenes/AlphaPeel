@@ -15,12 +15,13 @@ import math
 ### peeling probability calculations.                                 ### 
 #########################################################################
 
-def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder = False) :
+def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder = False, noPenetrance = False) :
 
     # NOTE: createSeg is added as an option to decrease memory usage during the single locus peeling steps.
     nLoci = pedigree.nLoci
 
     peelingInfo = jit_peelingInformation(nInd=pedigree.maxIdn, nFam=pedigree.maxFam, nLoci=nLoci, createSeg=createSeg)
+    
     peelingInfo.isSexChrom = args.sexchrom
     # Information about the peeling positions are handled elsewhere.
     peelingInfo.positions = None 
@@ -36,29 +37,31 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder = False) :
     peelingInfo.seqError[:] = args.seqerror
     setupTransmission(args.length, peelingInfo) #Sets up the transmission rates using a custom position list and a total chromosome length.
 
+
     for ind in pedigree:
         peelingInfo.sex[ind.idn] = ind.sex
+
 
         if ind.genotypes is not None and ind.haplotypes is not None:
             HaplotypeOperations.ind_fillInGenotypesFromPhase(ind)
 
         sexChromFlag = peelingInfo.isSexChrom and ind.sex == 0 #This is the sex chromosome and the individual is male.
+        if not noPenetrance:
+            peelingInfo.penetrance[ind.idn,:,:] = ProbMath.getGenotypeProbabilities(peelingInfo.nLoci, ind.genotypes, ind.reads, peelingInfo.genoError, peelingInfo.seqError, sexChromFlag)
+            
+            # Set the genotyping/read status for each individual. This will be used for, e.g., estimating the minor allele frequency.
+            if ind.genotypes is not None:
+                setGenotypeStatusGenotypes(ind.idn, ind.genotypes, peelingInfo)
 
-        peelingInfo.penetrance[ind.idn,:,:] = ProbMath.getGenotypeProbabilities(peelingInfo.nLoci, ind.genotypes, ind.reads, peelingInfo.genoError, peelingInfo.seqError, sexChromFlag)
-        
-        # Set the genotyping/read status for each individual. This will be used for, e.g., estimating the minor allele frequency.
-        if ind.genotypes is not None:
-            setGenotypeStatusGenotypes(ind.idn, ind.genotypes, peelingInfo)
+            if ind.reads is not None:
+                setGenotypeStatusReads(ind.idn, ind.reads[0], ind.reads[1], peelingInfo)
 
-        if ind.reads is not None:
-            setGenotypeStatusReads(ind.idn, ind.reads[0], ind.reads[1], peelingInfo)
+            if ind.isGenotypedFounder() and phaseFounder and ind.genotypes is not None:
 
-        if ind.isGenotypedFounder() and phaseFounder and ind.genotypes is not None:
-            loci = getHetMidpoint(ind.genotypes)
-            if loci is not None:
-                e = args.error
-                peelingInfo.penetrance[ind.idn,:,loci] = np.array([e/3, e/3, 1-e, e/3], dtype = np.float32)
-    
+                loci = getHetMidpoint(ind.genotypes)
+                if loci is not None:
+                    e = args.error
+                    peelingInfo.penetrance[ind.idn,:,loci] = np.array([e/3, e/3, 1-e, e/3], dtype = np.float32)
 
     if args.penetrance is not None:
         if args.sexchrom:
@@ -154,6 +157,12 @@ spec['posterior'] = float32[:,:,:]
 spec['penetrance'] = float32[:,:,:]
 spec['segregation'] = optional(float32[:,:,:])
 spec['pointSeg'] = optional(float32[:,:,:]) # I think we don't use this any more. Potentially could be dropped.
+spec['forwardSeg'] = optional(float32[:,:,:]) 
+spec['backwardSeg'] = optional(float32[:,:,:]) 
+
+spec['recomb'] = optional(float32[:,:]) #nInd x nLoci
+spec['recomb_mat'] = optional(float32[:,:]) #nInd x nLoci
+spec['recomb_pat'] = optional(float32[:,:]) #nInd x nLoci
 
 # Family terms. Each will be nFam x 4 x nLoci
 spec['posteriorSire_minusFam'] = float32[:,:,:]
@@ -207,6 +216,11 @@ class jit_peelingInformation(object):
 
         if createSeg: # Only removes the point seg term since this is not used for single locus peeling.
             self.pointSeg = np.full((self.nInd, 4, self.nLoci), baseValue, dtype = np.float32)
+            self.forwardSeg = np.full((self.nInd, 4, self.nLoci), baseValue, dtype = np.float32)
+            self.backwardSeg = np.full((self.nInd, 4, self.nLoci), baseValue, dtype = np.float32)
+            self.recomb = np.full((self.nInd, self.nLoci-1), 0, dtype = np.float32)
+            self.recomb_mat = np.full((self.nInd, self.nLoci-1), 0, dtype = np.float32)
+            self.recomb_pat = np.full((self.nInd, self.nLoci-1), 0, dtype = np.float32)
         else:
             self.pointSeg = None
 
@@ -220,7 +234,6 @@ class jit_peelingInformation(object):
         self.seqError = np.full((self.nLoci), 0, dtype = np.float32)
         self.maf = np.full((self.nLoci), .5, dtype = np.float32)
         self.transmissionRate = np.full((self.nLoci-1), 0, dtype = np.float32)
-
 
     def getGenoProbs(self, idn):
         genoProbs = self.anterior[idn,:,:]*self.posterior[idn,:,:]*self.penetrance[idn,:,:]

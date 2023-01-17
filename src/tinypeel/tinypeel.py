@@ -19,9 +19,10 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode = False):
 
     for i in range(args.ncycles):
         print("Cycle ", i)
-        peelingCycle(pedigree, peelingInfo, args = args, singleLocusMode = singleLocusMode)
+        peelingCycle(pedigree, peelingInfo, args = args, singleLocusMode = True)
         peelingInfo.iteration += 1
         
+        # PeelingInfo.setupTransmission(mapLength, peelingInfo)
         # esttransitions is been disabled.
         # if args.esttransitions: 
         #     print("Estimating the transmission rate is currently a disabled option")
@@ -29,6 +30,9 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode = False):
             
         if args.esterrors: 
             PeelingUpdates.updatePenetrance(pedigree, peelingInfo)
+            
+    peelingCycle(pedigree, peelingInfo, args = args, singleLocusMode = False)
+    mapLength = Peeling.setRecombinations(pedigree, peelingInfo)
 
 def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
     nWorkers = args.maxthreads
@@ -39,10 +43,10 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
 
         if args.maxthreads > 1:
             with concurrent.futures.ThreadPoolExecutor(max_workers=nWorkers) as executor:
-                 results = executor.map(Peeling.peel, jit_families, repeat(Peeling.PEEL_DOWN), repeat(peelingInfo), repeat(singleLocusMode))
+                 results = executor.map(Peeling.peel, jit_families, repeat(Peeling.PEEL_DOWN), repeat(peelingInfo), repeat(singleLocusMode), repeat(args.no_post))
         else:
             for family in jit_families:
-                Peeling.peel(family, Peeling.PEEL_DOWN, peelingInfo, singleLocusMode)
+                Peeling.peel(family, Peeling.PEEL_DOWN, peelingInfo, singleLocusMode, args.no_post)
 
     for families in reversed(pedigree.genFamilies):
         print("Peeling Up")
@@ -50,10 +54,10 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
 
         if args.maxthreads > 1:
             with concurrent.futures.ThreadPoolExecutor(max_workers=nWorkers) as executor:
-                 results = executor.map(Peeling.peel, jit_families, repeat(Peeling.PEEL_UP), repeat(peelingInfo), repeat(singleLocusMode))
+                 results = executor.map(Peeling.peel, jit_families, repeat(Peeling.PEEL_UP), repeat(peelingInfo), repeat(singleLocusMode), repeat(args.no_post))
         else:
             for family in jit_families:
-                Peeling.peel(family, Peeling.PEEL_UP, peelingInfo, singleLocusMode)
+                Peeling.peel(family, Peeling.PEEL_UP, peelingInfo, singleLocusMode, args.no_post)
 
         sires = set()
         dams = set()
@@ -171,12 +175,14 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
 def main() :
     args = InputOutput.parseArgs("AlphaPeel")
     pedigree = Pedigree.Pedigree() 
+    print("reading in data")
     InputOutput.readInPedigreeFromInputs(pedigree, args)
 
     singleLocusMode = args.runtype == "single"
     if args.runtype == "multi" and args.segfile :
         print("Running in multi-locus mode, external segfile ignored")
 
+    print("Creating peeling info")
     peelingInfo = PeelingInfo.createPeelingInfo(pedigree, args, phaseFounder = (not args.nophasefounders))
 
     if singleLocusMode:
@@ -184,11 +190,21 @@ def main() :
         generateSingleLocusSegregation(peelingInfo, pedigree, args)
     runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode = singleLocusMode)
 
+    InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.recomb, args.out + ".recomb", digits = 6)
+    InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.recomb_mat, args.out + ".recomb_mat", digits = 6)
+    InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.recomb_pat, args.out + ".recomb_pat", digits = 6)
+
     PeelingIO.writeGenotypes(pedigree, genoProbFunc = peelingInfo.getGenoProbs)
+
     if not args.no_params: PeelingIO.writeOutParamaters(peelingInfo)
     if not singleLocusMode and not args.no_seg: InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.segregation, args.out + ".seg")
+    # InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.forwardSeg, args.out + ".forwardSeg")
+    # InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.backwardSeg, args.out + ".backwardSeg")
+    InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.pointSeg, args.out + ".pointSeg")
 
-    PeelingIO.fullOutput(pedigree, peelingInfo, args)
+
+
+    # PeelingIO.fullOutput(pedigree, peelingInfo, args)
 
 if __name__ == "__main__":
     main()
