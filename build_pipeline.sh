@@ -1,3 +1,4 @@
+#!/bin/bash
 command=$1
 if [ $# -eq 0 ] ; then 
     command=none

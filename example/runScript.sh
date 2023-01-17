@@ -1,3 +1,5 @@
+#!/bin/bash
+
 mkdir outputs
 # AlphaPeel is a command line package for performing multilocus iterative peeling using genotype or sequence data.
 # Install AlphaPeel via pip using:
