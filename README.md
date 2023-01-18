@@ -37,7 +37,7 @@ Run the following to build the Python wheel and user guide. You will need an ins
     
     mamba create -n AlphaPeel
     mamba activate AlphaPeel
-    mamba install python
+    mamba install python=3.9
     ./build_pipeline.sh
     pip install --force-reinstall dist/AlphaPeel*.whl
     
