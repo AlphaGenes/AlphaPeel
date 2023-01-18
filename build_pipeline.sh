@@ -20,12 +20,11 @@ python setup.py bdist_wheel
 
 if [ $command == "install" ] ; then
     pip uninstall AlphaPeel -y
-    pip install dist/AlphaPeel-0.0.1-py3-none-any.whl
+    pip install dist/AlphaPeel*.whl
 fi
 
 #Compile manual
  ( cd docs; make latexpdf )
-
 
 target=AlphaPeel
 rm -rf $target
@@ -34,7 +33,6 @@ cp dist/* $target
 cp docs/build/latex/AlphaPeel.pdf $target
 
 cp MIT_License.txt $target
-
 
 cp -r example $target
 zip -r $target.zip $target
