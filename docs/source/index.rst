@@ -252,8 +252,8 @@ The phase file gives the phased haplotypes (either 0 or 1) for each individual i
 
 Example: ::
 
-  id1 0 1 9 0 # Maternal haplotype
   id1 0 1 9 0 # Paternal haplotype
+  id1 0 1 9 0 # Maternal haplotype
   id2 1 1 1 0
   id2 0 0 0 1
   id3 1 0 1 0
