@@ -22,7 +22,7 @@ Whalen, A, Ros-Freixedes, R, Wilson, DL, Gorjanc, G, Hickey, JM. (2018). Hybrid 
 
 ## Installation
 
-    wget https://github.com/AlphaGenes/AlphaPeel/blob/master/AlphaPeel.zip
+    wget https://github.com/AlphaGenes/AlphaPeel/raw/main/AlphaPeel.zip
     unzip AlphaPeel.zip
     pip install AlphaPeel/AlphaPeel*.whl
 
