@@ -30,13 +30,14 @@ Whalen, A, Ros-Freixedes, R, Wilson, DL, Gorjanc, G, Hickey, JM. (2018). Hybrid 
 
 Run the following to build the Python wheel and user guide. You will need an installation of [Sphinx](https://www.sphinx-doc.org) and [LaTex](https://www.latex-project.org/get) to build the user guide.
 
-    git clone --recurse-submodules https://github.com/AlphaGenes/AlphaPeel.git
+    git clone https://github.com/AlphaGenes/AlphaPeel.git
     cd AlphaPeel
+    git submodule init
+    git submodule update
     
     mamba create -n AlphaPeel
     mamba activate AlphaPeel
     mamba install python=3.9
-    pip install sphinx
     ./build_pipeline.sh
     pip install --force-reinstall dist/AlphaPeel*.whl
     
