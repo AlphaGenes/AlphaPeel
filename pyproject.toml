@@ -31,10 +31,6 @@ AlphaPeel = "tinypeel.tinypeel:main"
 "Homepage" = "https://github.com/AlphaGenes/AlphaPeel"
 "Bug Tracker" = "https://github.com/AlphaGenes/AlphaPeel/issues"
 
-[tool.setuptools.packages]
-# correspond to from setuptools import find_packages, but it is not used
-find = {}
-
 [tool.setuptools]
 package-dir = {"" = "src"}
 packages = ["tinypeel", "tinypeel.tinyhouse", "tinypeel.Peeling"]
