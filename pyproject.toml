@@ -33,4 +33,4 @@ AlphaPeel = "tinypeel.tinypeel:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["tinypeel", "tinypeel.tinyhouse", "tinypeel.Peeling"]
+packages = ["tinypeel", "tinypeel.Peeling"]
