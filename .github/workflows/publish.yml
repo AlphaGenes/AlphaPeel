@@ -24,7 +24,7 @@ jobs:
                 --user
 
             - name: Build SDist and wheel
-              run: pipx run build
+              run: pipx -m build
 
             - uses: actions/upload-artifact@v3
               with:
