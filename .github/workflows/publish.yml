@@ -20,11 +20,11 @@ jobs:
               run: >-
                 python3 -m
                 pip install
-                build 
-                --user
+                --upgrade 
+                build
 
             - name: Build SDist and wheel
-              run: pipx -m build
+              run: python3 -m build
 
             - uses: actions/upload-artifact@v3
               with:
