@@ -8,6 +8,7 @@ jobs:
         permissions:
           contents: read
           id-token: write
+        environment: release
 
         steps:
             - uses: actions/checkout@v3
