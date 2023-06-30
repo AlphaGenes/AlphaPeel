@@ -25,7 +25,7 @@ Please report any issues to `John.Hickey@roslin.ed.ac.uk <John.Hickey@roslin.ed.
 Availability
 ------------
 
-|ap| is available from the `AlphaGenes <http://www.alphagenes.roslin.ed.ac.uk/software-packages/alphapeel/>`_ website. The download files contains a python wheel file along with this documentation and an example. 
+|ap| is available from the `Github AlphaPeel <https://github.com/AlphaGenes/AlphaPeel>`_ website. The download files contains a python wheel file along with this documentation and an example. 
 
 Conditions of use
 -----------------
@@ -66,14 +66,14 @@ Input Arguments
 
     Input Options:
       -bfile [BFILE [BFILE ...]]
-                          A file in plink (binary) format. Only stable on
+                          File(s) in plink (binary) format. Only stable on
                           Linux).
       -genotypes [GENOTYPES [GENOTYPES ...]]
-                          A file in AlphaGenes format.
+                          File(s) in AlphaGenes format.
       -seqfile [SEQFILE [SEQFILE ...]]
-                          A sequence data file.
+                          Sequence data file(s).
       -pedigree [PEDIGREE [PEDIGREE ...]]
-                          A pedigree file in AlphaGenes format.
+                          Pedigree file(s) in AlphaGenes format.
       -startsnp STARTSNP    The first marker to consider. The first marker in the
                           file is marker "1".
       -stopsnp STOPSNP      The last marker to consider.
@@ -83,6 +83,8 @@ AlphaPeel requires a pedigree file and one or more genotype files to run the ana
 AlphaPeel supports binary plink files, ``-bfile``, genotype files in the AlphaGenesFormat, ``-genotypes``, and sequence data read counts in the AlphaGenes format, ``-seqfile``. A pedigree file must be supplied using the ``-pedigree`` option. 
 
 Use the ``-startsnp`` and ``-stopsnp`` comands to run the analysis only on a subset of markers.
+
+The input options in the form of ``[xxx [xxx ...]]`` can take in more than one input file that are seperated by space.
 
 Binary plink files require the package ``alphaplinkpython``. This can be installed via ``pip`` but is only stable for Linux.
 
