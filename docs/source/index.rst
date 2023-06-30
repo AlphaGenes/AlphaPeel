@@ -17,15 +17,14 @@ AlphaPeel
 Introduction
 ~~~~~~~~~~~~
 
-
-|ap| is program to call, impute, and phase genotypes using a pedigree in potentially very large livestock populations. A complete description of the methods is given in Whalen et al (2018; http://dx.doi.org/10.1186/s12711-018-0438-2).
-
-Please report any issues to `John.Hickey@roslin.ed.ac.uk <John.Hickey@roslin.ed.ac.uk>`_ or `awhalen@roslin.ed.ac.uk <awhalen@roslin.ed.ac.uk>`_.
+|ap| is program to call, impute, and phase genotypes using a pedigree in potentially very large livestock populations. A complete description of the methods is given in Whalen et al. (2018; http://dx.doi.org/10.1186/s12711-018-0438-2).
 
 Availability
 ------------
 
-|ap| is available from the `Github AlphaPeel <https://github.com/AlphaGenes/AlphaPeel>`_ website. The download files contains a python wheel file along with this documentation and an example. 
+|ap| is available as open-source from the `Github AlphaPeel <https://github.com/AlphaGenes/AlphaPeel>`_ website and can be easily installed using ``pip install AlphaPeel``.
+
+Please report any issues on `https://github.com/AlphaGenes/AlphaPeel/issues`_.
 
 Conditions of use
 -----------------
