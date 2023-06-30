@@ -24,7 +24,7 @@ Availability
 
 |ap| is available as open-source from the `Github AlphaPeel <https://github.com/AlphaGenes/AlphaPeel>`_ website and can be easily installed using ``pip install AlphaPeel``.
 
-Please report any issues on `https://github.com/AlphaGenes/AlphaPeel/issues`_.
+Please report any issues at `<https://github.com/AlphaGenes/AlphaPeel/issues>`_.
 
 Conditions of use
 -----------------
