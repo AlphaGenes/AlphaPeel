@@ -24,6 +24,10 @@ jobs:
                 --upgrade 
                 build
 
+            - name: Initialize submodules
+              run: |
+                git submodule update --init
+
             - name: Build SDist and wheel
               run: python3 -m build
 
