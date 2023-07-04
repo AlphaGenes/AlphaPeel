@@ -9,8 +9,8 @@ AlphaPeel
 ====================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   
+   contribute
 
 .. highlight:: none
 
