@@ -33,6 +33,7 @@ Update the version of the package
 We also need to update the ``version`` in ``pyproject.toml``. For example, if the current version of the package is ``1.1.3`` and the updated version should be ``1.1.4``, modify the following:
 
 .. code-block:: toml
+
     ...
     [project]
     name = "AlphaPeel"
@@ -42,6 +43,7 @@ We also need to update the ``version`` in ``pyproject.toml``. For example, if th
 to 
 
 .. code-block:: toml
+
     ...
     [project]
     name = "AlphaPeel"
@@ -62,11 +64,13 @@ Finally, we need to publish the updated package. In AlphaPeel, this is done by t
 First, tag the commit with the corresponding version number. 
 
 .. code-block:: console
+
     git tag 1.1.4
 
 Then push the tagged commit.
 
 .. code-block:: console
+    
     git push --tags
 
 This will trigger the workflow and publish a newer version of the project.
