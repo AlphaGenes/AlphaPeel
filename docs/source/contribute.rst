@@ -52,8 +52,8 @@ to
 
 Remember to commit the changes.
 
-Publish via workflow (for administrators)
------------------------------------------
+Publish via workflow
+--------------------
 
 .. note::
 
@@ -61,16 +61,16 @@ Publish via workflow (for administrators)
 
 Finally, we need to publish the updated package. In AlphaPeel, this is done by trigering the workflow by a tagged commit.
 
-First, tag the commit with the corresponding version number. 
+First, tag the commit with the corresponding version number: 
 
 .. code-block:: console
 
     git tag 1.1.4
 
-Then push the tagged commit.
+Then push the tagged commit:
 
 .. code-block:: console
-    
+
     git push --tags
 
 This will trigger the workflow and publish a newer version of the project.
