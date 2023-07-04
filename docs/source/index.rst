@@ -9,8 +9,8 @@ AlphaPeel
 ====================
 
 .. toctree::
-   
-   contribute
+  
+  contribute
 
 .. highlight:: none
 
