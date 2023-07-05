@@ -27,10 +27,18 @@ Depending on the type of change you should use either main, devel, or other bran
 
     cd AlphaPeel
     git branch # check branches
-    # git checkout main # 
-    git checkout devel # most changes should go here and later merged to main by maintainers
+
+    # Large code changes should be done via dedicated branches
+    # (these will be merged into the devel branch by maintainers)
     git branch fix_GitHubIssueNumber # fixing issue with GitHub number GitHubIssueNumber 
     git checkout fix_GitHubIssueNumber
+
+    # Small code changes can be done directly on the devel branch
+    # (these will eventually be merged into the main branch by maintainers)
+    git checkout devel
+
+    # Stable/publish code
+    git checkout main
 
 Make changes in your clone 
 --------------------------
