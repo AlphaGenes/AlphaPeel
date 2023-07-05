@@ -6,7 +6,7 @@ Whalen, A, Ros-Freixedes, R, Wilson, DL, Gorjanc, G, Hickey, JM. (2018). Hybrid 
 
 ## User guide
 
-See `docs/source/index.rst` or PDF in the ZIP file in this repository.
+See (https://alphapeel.readthedocs.io/en/latest)
 
 ## Conditions of use
 
