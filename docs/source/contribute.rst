@@ -10,7 +10,7 @@ Fork the repository
 
 First you should fork the `repository <https://github.com/AlphaGenes/AlphaPeel>`_.
 
-For more information, see the `GitHub Docs <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui&platform=mac#forking-a-repository>`_.
+For more information, see the `GitHub Docs <https://docs.github.com/en/get-started/quickstart/fork-a-repo#forking-a-repository>`_.
 
 Clone your forked repository
 ----------------------------
