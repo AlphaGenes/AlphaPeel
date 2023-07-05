@@ -9,7 +9,8 @@ Forking the repository
 ----------------------
 
 Fork the `repository <https://github.com/AlphaGenes/AlphaPeel>`_.
-* For more information, see the `GitHub Docs <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui&platform=mac#forking-a-repository>_`.
+
+* For more information, see the `GitHub Docs <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui&platform=mac#forking-a-repository>`_.
 
 Cloning your forked repository
 ------------------------------
@@ -82,7 +83,7 @@ Remember to commit the changes.
 Creating a pull request
 -----------------------
 
-`Create a pull request <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request#creating-the-pull-request>` to propose your changes to the repository. Your PR will be reviewed by some of the maintainers.
+`Create a pull request <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request#creating-the-pull-request>`_ to propose your changes to the repository. Your PR will be reviewed by some of the maintainers.
 
 Publish via actions
 -------------------
