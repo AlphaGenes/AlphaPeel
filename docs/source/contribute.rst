@@ -3,62 +3,97 @@ Contributing Guide
 
 Welcome to AlphaPeel contributing guide.
 
-In this guide you will get an overview of the contribution workflow.
+In this guide you will get an overview of the contribution workflow via the AlphaPeel GitHub repository.
 
-Forking the repository
-----------------------
+Fork the repository
+-------------------
 
-Fork the `repository <https://github.com/AlphaGenes/AlphaPeel>`_.
+First you should fork the `repository <https://github.com/AlphaGenes/AlphaPeel>`_.
 
-* For more information, see the `GitHub Docs <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui&platform=mac#forking-a-repository>`_.
+For more information, see the `GitHub Docs <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui&platform=mac#forking-a-repository>`_.
 
-Cloning your forked repository
-------------------------------
+Clone your forked repository
+----------------------------
 
-Clone your forked repository into a local directory, initialized the submodule at the same time by copying the following command to the terminal:
+Clone your forked repository into a local directory and initialise submodules at the same time by running the following command in your terminal:
 
 .. code-block:: console
 
     git clone --recurse-submodules https://github.com/AlphaGenes/AlphaPeel.git
 
+Depending on the type of change you should use either main, devel, or other branch:
 
-Making changes to your fork
----------------------------
+.. code-block:: console
 
-Commit the changes you made.
+    cd AlphaPeel
+    git branch # check branches
 
-Check submodule update
-----------------------
+    # Large code changes should be done via dedicated branches
+    # (these will be merged into the devel branch by maintainers)
+    git branch fix_GitHubIssueNumber # fixing issue with GitHub number GitHubIssueNumber 
+    git checkout fix_GitHubIssueNumber
 
-Before open a pull request, check if the submodule is up to date. This can be done by firstly checking the current state of the submodule:
+    # Small code changes can be done directly on the devel branch
+    # (these will eventually be merged into the main branch by maintainers)
+    git checkout devel
+
+    # Stable/publish code
+    git checkout main
+
+Make changes in your clone 
+--------------------------
+
+Make changes and commit them to your local clone repository. Adding #GitHubIssueNumber in the message links with the issue page.
+
+.. code-block:: console
+
+    git commit -m "Informative short message #GitHubIssueNumber"
+
+Update submodules?
+------------------
+
+Sometimes you have to update the submodules in line with your code changes in the AlphaPeel or in the submodules.
+
+First check the current state of the submodule:
 
 .. code-block:: console
 
     git submodule status
 
-Next, verify the lateset commit in the submodule's remote repository:
+Next, check the lateset commit in the submodule's remote repository:
 
 .. code-block:: console
     
     cd src/tinypeel/tinyhouse
     git log --oneline --max-count=1 origin/main
+    cd ../../..
 
-If the commit hashes match, then the submodule reference is up to date. Otherwise, please update the referece using the following command:
+If the commit hashes match, then the submodule reference is up to date. If you want to use the old submodule version, then missmatch is ok. Otherwise, update the referece using:
 
 .. code-block:: console
 
     git submodule update --remote
+    git commit -m "Updated submodule reference to X.Y.Z #GitHubIssueNumber" # provide version or hash
 
-Remember to commit the changes.
+Create a pull request
+-----------------------
 
-Update the version of the package
----------------------------------
+`Create a pull request (PR) <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request#creating-the-pull-request>_` to propose your changes to the repository. Your PR will be reviewed by maintainers.
+
+Update the version of the package to publish the package
+--------------------------------------------------------
 
 .. note:: 
 
-    This section is only for the repository maintainers when a new version of the package is required to release, otherwise you can skip it.
+    This section is only for the repository maintainers to publish a new version of the package.
 
-To release a new version of the package, we also need to update the ``version`` in ``pyproject.toml``. For example, if the current version of the package is ``1.1.3`` and the updated version should be ``1.1.4``, modify the following:
+To release a new version of the package, we must update the ``version`` in ``pyproject.toml``. For example, if the current version of the package is ``1.1.3`` and the updated version should be ``1.1.4``, run:
+
+.. code-block:: console
+
+    vi pyproject.toml
+
+modify the following:
 
 .. code-block:: toml
 
@@ -78,32 +113,28 @@ to
     version = "1.1.4"
     ...
 
-Remember to commit the changes.
+commit the change:
 
-Creating a pull request
------------------------
+.. code-block:: console
 
-`Create a pull request <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request#creating-the-pull-request>`_ to propose your changes to the repository. Your PR will be reviewed by some of the maintainers.
+    git commit -m "Bumped version to 1.1.4"
 
-Publish via actions
--------------------
-
-.. note::
-
-    This section is only for the repository administrators. Others should stop here.
-
-Finally, we need to publish the updated package. In AlphaPeel, this is done by trigering the workflow by a tagged commit.
-
-First, tag the commit with the corresponding version number: 
+tag the version:
 
 .. code-block:: console
 
     git tag 1.1.4
+    # git tag 1.1.4 --force # if you are reusing the tag
 
-Then push the tagged commit:
+and push:
 
 .. code-block:: console
 
+    git push # do we need this one or just the next one?
     git push --tags
+    # git push --tags --force # if you are reusing the tag
 
-This will trigger the workflow and publish a new version of the project.
+The above will trigger workflow actions to publish the package on PyPI and documentation on Read the Docs:
+
+  * <https://pypi.org/project/AlphaPeel>_
+  * <https://alphapeel.readthedocs.io/en/stable/index.html>_

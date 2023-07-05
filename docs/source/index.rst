@@ -6,7 +6,7 @@
 .. NOTE:  added the line to the latex options:   'extraclassoptions': 'openany,oneside'
 
 AlphaPeel
-====================
+=========
 
 .. toctree::
    
@@ -45,7 +45,7 @@ While every effort has been made to ensure that |ap| does what it claims to do, 
 Program Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-AlphaPeel takes in a number of command line arguments to control the program's behavior. To view a list of arguments, run AlphaPeel without any command line arguments, i.e. ``AlphaPeel`` or ``AlphaPeel -h``. 
+|ap| takes in a number of command line arguments to control the program's behavior. To view a list of arguments, run |ap| without any command line arguments, i.e. ``AlphaPeel`` or ``AlphaPeel -h``. 
 
 
 Core Arguments 
@@ -56,7 +56,7 @@ Core Arguments
   Core arguments
     -out prefix              The output file prefix.
 
-The ``-out`` argument gives the output file prefix for where the outputs of AlphaPeel should be stored. By default, AlphaPeel outputs a file with imputed genotypes, ``prefix.genotypes``, phased haplotypes ``prefix.phase``, and genotype dosages ``prefix.dosages``. For more information on which files are created, see "Output Arguments", below.
+The ``-out`` argument gives the output file prefix for where the outputs of |ap| should be stored. By default, |ap| outputs a file with imputed genotypes, ``prefix.genotypes``, phased haplotypes ``prefix.phase``, and genotype dosages ``prefix.dosages``. For more information on which files are created, see "Output Arguments", below.
 
 Input Arguments 
 ----------------
@@ -77,9 +77,9 @@ Input Arguments
                           file is marker "1".
       -stopsnp STOPSNP      The last marker to consider.
 
-AlphaPeel requires a pedigree file and one or more genotype files to run the analysis.
+|ap| requires a pedigree file and one or more genotype files to run the analysis.
 
-AlphaPeel supports binary plink files, ``-bfile``, genotype files in the AlphaGenesFormat, ``-genotypes``, and sequence data read counts in the AlphaGenes format, ``-seqfile``. A pedigree file must be supplied using the ``-pedigree`` option. 
+|ap| supports binary plink files, ``-bfile``, genotype files in the AlphaGenesFormat, ``-genotypes``, and sequence data read counts in the AlphaGenes format, ``-seqfile``. A pedigree file must be supplied using the ``-pedigree`` option. 
 
 Use the ``-startsnp`` and ``-stopsnp`` comands to run the analysis only on a subset of markers.
 
@@ -118,13 +118,13 @@ Output Arguments
       -binary_call_files    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
-By default AlphaPeel produces a dosages file, a segregation files and two parameter files (genotyping error and recombination rate). Creation of each of these files can be suppressed with the ``-no_dosages``, ``-no_seg``, and ``-no_params`` options. AlphaPeel can also write out the genotype probability file (.haps) with the `-haps` argument.
+By default |ap| produces a dosages file, a segregation files and two parameter files (genotyping error and recombination rate). Creation of each of these files can be suppressed with the ``-no_dosages``, ``-no_seg``, and ``-no_params`` options. |ap| can also write out the genotype probability file (.haps) with the `-haps` argument.
 
 The ``-calling_threshold`` arguments controls which genotypes (and phased haplotypes) are called as part of the algorithm. A calling threshold of 0.9 indicates that genotypes are only called if greater than 90% of the final probability mass is on that genotype. Using a higher-value will increase the accuracy of called genotypes, but will result in fewer genotypes being called. Since there are three genotypes states,  "best-guess" genotypes are produced with a calling threshold less than ``0.33``. ``-calling_threshThe ``-binary_call_files`` option can be used to change the output to a plink binary format. 
 
 The order in which individuals are output can be changed by using the ``writekey`` option. This option changes the order in which individuals are written out to the order in which they were observed in the corresponding file. The ```-onlykeyed`` option suppresses the output of dummy individuals (not recommended for hybrid peeling). 
 
-The parameter ``-iothreads`` controls the number of threads/processes used by AlphaPeel. AlphaPeel uses additional threads to parse and format input and output files. Setting this option to a value greater than 1 is only recommended for very large files (i.e. >10,000 individuals).
+The parameter ``-iothreads`` controls the number of threads/processes used by |ap|. |ap| uses additional threads to parse and format input and output files. Setting this option to a value greater than 1 is only recommended for very large files (i.e. >10,000 individuals).
 
 
 Peeling arguments: 
@@ -161,7 +161,7 @@ Peeling arguments:
 For hybrid peeling, where a large amount (millions of segregating sites) of sequence data needs to be imputed, first run the program in multi-locus mode to generate a segregation file, and then run the program in single-locus mode with a known segregation file.
 
 
-The ``-error``, ``-seqerror`` and ``-length`` arguments control some of the parameters used in the model. AlphaPeel is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
+The ``-error``, ``-seqerror`` and ``-length`` arguments control some of the parameters used in the model. |ap| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
 
 The ``-esterrors`` option estimated the genotyping error rate based on observed information, this option is generally not necessary and can increase runtime. ``-estmaf`` estimates the minor allele frequency after each peeling cycle. This option can be useful if there are a large number of non-genotyped founders. 
 
@@ -227,13 +227,13 @@ Example: ::
 Binary plink file
 -----------------
 
-AlphaPeel supports the use of binary plink files using the package ``AlphaPlinkPython``. AlphaPeel will use the pedigree supplied by the ``.fam`` file if a pedigree file is not supplied. Otherwise the pedigree file will be used and the ``.fam`` file will be ignored. 
+|ap| supports the use of binary plink files using the package ``AlphaPlinkPython``. |ap| will use the pedigree supplied by the ``.fam`` file if a pedigree file is not supplied. Otherwise the pedigree file will be used and the ``.fam`` file will be ignored. 
 
 
 Map file 
 -----------------
 
-The map file gives the chromosome number and the marker name and the base pair position for each marker in two columns. AlphaPeel needs to be run with all of the markers on the same chromosome. 
+The map file gives the chromosome number and the marker name and the base pair position for each marker in two columns. |ap| needs to be run with all of the markers on the same chromosome. 
 
 Example: ::
 
@@ -300,7 +300,7 @@ Example: ::
 
 
 Segregation file
-------------------
+----------------
 
 The segregation file gives the joint probability of each pattern of inheritance. There are four lines for each individual representing the probability of inheriting: 
 
@@ -329,8 +329,9 @@ Example: ::
   id4    0.8794    0.8821    0.8927    0.9122
 
 Parameter files
-------------------
-AlphaPeel outputs three parameter files, ``.maf``, ``.seqError``, ``.genoError``. These give the minor allele frequency, sequencing error rates, and genotyping error rates used. All three files contain a single column with an entry for each marker. 
+---------------
+
+|ap| outputs three parameter files, ``.maf``, ``.seqError``, ``.genoError``. These give the minor allele frequency, sequencing error rates, and genotyping error rates used. All three files contain a single column with an entry for each marker. 
 
 Example ``.maf`` file for four loci: 
 ::
