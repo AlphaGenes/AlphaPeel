@@ -20,22 +20,42 @@ AlphaPeel is fully and freely available for all use under the MIT License.
 
 ## Installation
 
-AlphaPeel is available on [PyPi](https://pypi.org/project/AlphaPeel): 
+AlphaPeel is available on [PyPI](https://pypi.org/project/AlphaPeel): 
 
     pip install AlphaPeel
 
-## Build instructions
+## User guide
 
-Run the following to build the Python wheel and user guide. You will need an installation of [Sphinx](https://www.sphinx-doc.org) and [LaTex](https://www.latex-project.org/get) to build the user guide.
+User guide is available on [Read the Docs](https://alphapeel.readthedocs.io/en/latest/).
 
-    git clone --recurse-submodules https://github.com/AlphaGenes/AlphaPeel.git
-    cd AlphaPeel
-    
-    mamba create -n AlphaPeel
-    mamba activate AlphaPeel
-    mamba install python=3.9
-    pip install sphinx
-    ./build_pipeline.sh
-    pip install --force-reinstall dist/AlphaPeel*.whl
-    
-    cd example; ./runScript.sh
+## Distribution
+
+Wheel distribution and source distribution are both available on [PyPI](https://pypi.org/project/AlphaPeel/#files).
+
+## Build wheels
+
+ If you want to build the wheels yourself, we require an installation of Python 3 and you need to fork and clone the repository to your local directory first (see [user guide](https://alphapeel.readthedocs.io/en/latest/contribute.html#fork-the-repository))
+
+ Run the following to build the wheel distribution and the source distribution of the package.
+
+First, create the virtual environment:
+
+    python3 -m venv AlphaPeel_env
+
+Next, activate the environment:
+
+    source AlphaPeel_env/bin/activate
+
+Install build:
+
+    python3 -m pip install --upgrade build
+
+Build the distribution:
+
+    python3 -m build
+
+Now, the distributions of AlphaPeel should be available in ``dist/``.
+
+Finally, deactivate the environment:
+
+    deactivate
