@@ -39,5 +39,3 @@ Run the following to build the Python wheel and user guide. You will need an ins
     pip install --force-reinstall dist/AlphaPeel*.whl
     
     cd example; ./runScript.sh
-
-The wheel can be found in `dist/` and PDF of the user guide at `docs/build/latex/alphaplantimpute2.pdf`
