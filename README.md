@@ -20,7 +20,7 @@ AlphaPeel is part of a suite of software that our group has developed. It is ful
 
 ## Installation
 
-    pip install AlphaPeel/AlphaPeel*.whl
+    pip install AlphaPeel
 
 ## Build instructions
 
