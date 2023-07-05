@@ -17,13 +17,13 @@ Clone your forked repository
 
 Clone your forked repository into a local directory and initialise submodules at the same time by running the following command in your terminal:
 
-.. code-block:: console
+.. code-block:: bash
 
     git clone --recurse-submodules https://github.com/AlphaGenes/AlphaPeel.git
 
 Depending on the type of change you should use either main, devel, or other branch
 
-.. code-block:: console
+.. code-block:: bash
 
     cd AlphaPeel
     git branch # check branches
@@ -45,7 +45,7 @@ Make changes in your clone
 
 Make changes and commit them to your local clone repository. Adding #GitHubIssueNumber in the message links with the issue page.
 
-.. code-block:: console
+.. code-block:: bash
 
     git commit -m "Informative short message #GitHubIssueNumber"
 
@@ -56,21 +56,21 @@ Sometimes you have to update the submodules in line with your code changes in th
 
 First check the current state of the submodule:
 
-.. code-block:: console
+.. code-block:: bash
 
     git submodule status
 
 Next, check the lateset commit in the submodule's remote repository:
 
-.. code-block:: console
+.. code-block:: bash
     
     cd src/tinypeel/tinyhouse
     git log --oneline --max-count=1 origin/main
     cd ../../..
 
-If the commit hashes match, then the submodule reference is up to date. If you want to use the old submodule version, then missmatch is ok. Otherwise, update the referece using:
+If the commit hashes match, then the submodule reference is up to date. If you want to use the old submodule version, then mismatch is ok. Otherwise, update the referece using:
 
-.. code-block:: console
+.. code-block:: bash
 
     git submodule update --remote
     git commit -m "Updated submodule reference to X.Y.Z #GitHubIssueNumber" # provide version or hash
@@ -78,7 +78,7 @@ If the commit hashes match, then the submodule reference is up to date. If you w
 Create a pull request
 -----------------------
 
-`Create a pull request (PR) <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request#creating-the-pull-request>` to propose your changes to the repository. Your PR will be reviewed by maintainers.
+`Create a pull request (PR) <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request#creating-the-pull-request>`_ to propose your changes to the repository. Your PR will be reviewed by maintainers.
 
 Update the version of the package to publish the package
 --------------------------------------------------------
@@ -89,7 +89,7 @@ Update the version of the package to publish the package
 
 To release a new version of the package, we must update the ``version`` in ``pyproject.toml``. For example, if the current version of the package is ``1.1.3`` and the updated version should be ``1.1.4``, run:
 
-.. code-block:: console
+.. code-block:: bash
 
     vi pyproject.toml
 
@@ -115,20 +115,20 @@ to
 
 commit the change:
 
-.. code-block:: console
+.. code-block:: bash
 
     git commit -m "Bumped version to 1.1.4"
 
 tag the version:
 
-.. code-block:: console
+.. code-block:: bash
 
     git tag 1.1.4
     # git tag 1.1.4 --force # if you are reusing the tag
 
 and push:
 
-.. code-block:: console
+.. code-block:: bash
 
     git push # do we need this one or just the next one?
     git push --tags
