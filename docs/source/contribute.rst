@@ -37,7 +37,7 @@ Depending on the type of change you should use either main, devel, or other bran
     # (these will eventually be merged into the main branch by maintainers)
     git checkout devel
 
-    # Stable/publish code
+    # Stable code for wider use that will be published
     git checkout main
 
 Make changes in your clone 
@@ -52,15 +52,15 @@ Make changes and commit them to your local clone repository. Adding #GitHubIssue
 Update submodules?
 ------------------
 
-Sometimes you have to update the submodules in line with your code changes in the AlphaPeel or in the submodules.
+Sometimes you have to update the submodules in line with your code changes in the AlphaPeel or the submodules.
 
-First check the current state of the submodule:
+First, check the current state of the submodule:
 
 .. code-block:: bash
 
     git submodule status
 
-Next, check the lateset commit in the submodule's remote repository:
+Next, check the latest commit in the submodule's remote repository:
 
 .. code-block:: bash
     
