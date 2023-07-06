@@ -4,6 +4,9 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.11"
+  jobs:
+    post_create_environment:
+      - pip install sphinx-rtd-theme
 
 sphinx:
   configuration: docs/source/conf.py
