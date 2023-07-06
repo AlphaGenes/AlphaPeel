@@ -24,10 +24,6 @@ AlphaPeel is available on [PyPI](https://pypi.org/project/AlphaPeel):
 
     pip install AlphaPeel
 
-## User guide
-
-User guide is available on [Read the Docs](https://alphapeel.readthedocs.io/en/latest/).
-
 ## Distribution
 
 Wheel distribution and source distribution are both available on [PyPI](https://pypi.org/project/AlphaPeel/#files).
