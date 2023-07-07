@@ -148,8 +148,8 @@ and push:
 
 .. code-block:: bash
 
-    git push # do we need this one or just the next one?
-    git push --tags
+    git push # push code changes
+    git push --tags # push tag changes
     # git push --tags --force # if you are reusing the tag
 
 The above will trigger workflow actions to publish the package on PyPI and documentation on Read the Docs:
