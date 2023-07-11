@@ -91,6 +91,7 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
 # right now the posterior term is updated for all of the sires/dams no matter
 # whether or not they have been changed since the last update.
 
+def updatePosterior(pedigree, peelingInfo, sires, dams) :
 
 def updatePosterior(pedigree, peelingInfo, sires, dams):
     # if pedigree.mapSireToFamilies is None or pedigree.mapDamToFamilies is None:
@@ -103,7 +104,8 @@ def updatePosterior(pedigree, peelingInfo, sires, dams):
         updateDam(dam, peelingInfo)
 
 
-def updateSire(sire, peelingInfo):
+def updateSire(sire, peelingInfo) :
+
     famList = [fam.idn for fam in sire.families]
     sire = sire.idn
     peelingInfo.posterior[sire, :, :] = 0
@@ -124,13 +126,10 @@ def updateSire(sire, peelingInfo):
     peelingInfo.posterior[sire, :, :] /= np.sum(peelingInfo.posterior[sire, :, :], 0)
 
     for famId in famList:
-        peelingInfo.posteriorSire_minusFam[famId, :, :] = Peeling.expNorm1D(
-            peelingInfo.posteriorSire_minusFam[famId, :, :]
-        )
-        peelingInfo.posteriorSire_minusFam[famId, :, :] /= np.sum(
-            peelingInfo.posteriorSire_minusFam[famId, :, :], 0
-        )
-
+        peelingInfo.posteriorSire_minusFam[famId,:,:] = Peeling.expNorm1D(peelingInfo.posteriorSire_minusFam[famId,:,:])
+        peelingInfo.posteriorSire_minusFam[famId,:,:]  /= np.sum(peelingInfo.posteriorSire_minusFam[famId,:,:], 0)
+        
+def updateDam(dam, peelingInfo) :
 
 def updateDam(dam, peelingInfo):
     famList = [fam.idn for fam in dam.families]

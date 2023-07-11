@@ -12,12 +12,12 @@ from . import PeelingInfo
 
 import math
 
-#####################################################################
-# In this module we will update 3 things:                           #
-# 1) Our estimate for the MAF.                                      #
-# 2) Our estimate of the locus specific (sequencing) error rate.    #
-# 3) Our estimate of the locus specific recombination rate.         #
-#####################################################################
+#########################################################################
+### In this module we will update 3 things:                           ###  
+### 1) Our estimate for the MAF.                                      ### 
+### 2) Our estimate of the locus specific (sequencing) error rate.    ###
+### 3) Our estimate of the locus specific recombination rate.         ###
+#########################################################################
 
 
 # Estimating the minor allele frequency. This update is done by using an iterative approach
@@ -135,6 +135,7 @@ def addIndividualToUpdate(d, p, LLp, LLpp):
 #
 
 
+
 def updatePenetrance(pedigree, peelingInfo):
     peelingInfo.genoError = updateGenoError(pedigree, peelingInfo)
     peelingInfo.seqError = updateSeqError(pedigree, peelingInfo)
@@ -235,10 +236,12 @@ def updateSeqError_ind(counts, errors, refReads, altReads, genoProbs):
         errors[i] += genoProbs[3, i] * refReads[i]
 
 
-#
-# NOTE: The following code is designed to estimate the recombination rate between markers.
-# This is currently broken and does not give good estimates. Strongly recommend not using it, and the associated options have been disabled in tinyPeel.py
-#
+###
+### NOTE: The following code is designed to estimate the recombination rate between markers.
+### This is currently broken and does not give good estimates. Strongly recommend not using it, and the associated options have been disabled in tinyPeel.py
+###
+
+
 
 
 def updateSeg(peelingInfo):
