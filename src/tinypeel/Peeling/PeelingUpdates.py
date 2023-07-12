@@ -266,7 +266,6 @@ def estDistanceFromBreaks(loc1, loc2, nBreaks, peelingInfo):
 
 
 def getDistance(loc1, loc2, peelingInfo):
-
     patSeg1 = getSumSeg(loc1, peelingInfo)
     patSeg2 = getSumSeg(loc2, peelingInfo)
 

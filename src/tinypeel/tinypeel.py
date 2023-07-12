@@ -93,7 +93,6 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
 
 
 def updatePosterior(pedigree, peelingInfo, sires, dams):
-
     # if pedigree.mapSireToFamilies is None or pedigree.mapDamToFamilies is None:
     #     pedigree.setupFamilyMap()
 
@@ -105,7 +104,6 @@ def updatePosterior(pedigree, peelingInfo, sires, dams):
 
 
 def updateSire(sire, peelingInfo):
-
     famList = [fam.idn for fam in sire.families]
     sire = sire.idn
     peelingInfo.posterior[sire, :, :] = 0
@@ -135,7 +133,6 @@ def updateSire(sire, peelingInfo):
 
 
 def updateDam(dam, peelingInfo):
-
     famList = [fam.idn for fam in dam.families]
     dam = dam.idn
     peelingInfo.posterior[dam, :, :] = 0

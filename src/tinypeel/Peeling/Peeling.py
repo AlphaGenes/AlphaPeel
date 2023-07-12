@@ -14,6 +14,7 @@ import math
 PEEL_UP = 0
 PEEL_DOWN = 1
 
+
 # This is the main peeling function.
 @jit(
     nopython=True,
@@ -21,7 +22,6 @@ PEEL_DOWN = 1
     locals={"e": float32, "e4": float32, "e16": float32, "e1e": float32},
 )
 def peel(family, operation, peelingInfo, singleLocusMode):
-
     isSexChrom = peelingInfo.isSexChrom
 
     e = 0.000001
@@ -420,7 +420,6 @@ def expNorm1D(mat):
     locals={"e": float32, "e2": float32, "e1e": float32, "e2i": float32},
 )
 def collapsePointSeg(pointSeg, transmission):
-
     # This is the forward backward algorithm.
     # Segregation estimate state ordering: pp, pm, mp, mm
     nLoci = pointSeg.shape[1]

@@ -18,7 +18,6 @@ import math
 
 
 def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
-
     # NOTE: createSeg is added as an option to decrease memory usage during the single locus peeling steps.
     nLoci = pedigree.nLoci
 
