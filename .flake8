@@ -1,10 +1,14 @@
 [flake8]
-# from Black's documentation: 
-# https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#id2
+# Black by its default setting the maximum length to 88
 max-line-length = 88
 extend-ignore = 
+    # also the Black's default, whitespace before ':'
     E203,
-    F401, 
+    # this is for the line length, all the lines too long are comments now
     E501,
+    # imported functions not used, deal with it later
+    F401, 
+    # variable assigned not used, deal with it later
     F841,
+    # undefined name, deal with it later
     F821
