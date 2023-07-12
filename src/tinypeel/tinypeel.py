@@ -217,7 +217,7 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
         peelingInfo.segregation[:, :, :] = 0.25
 
 
-### ACTUAL PROGRAM BELOW
+# ACTUAL PROGRAM BELOW
 
 
 def getArgs():

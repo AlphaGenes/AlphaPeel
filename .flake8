@@ -7,5 +7,4 @@ extend-ignore =
     F401, 
     E501,
     F841,
-    E266,
     F821

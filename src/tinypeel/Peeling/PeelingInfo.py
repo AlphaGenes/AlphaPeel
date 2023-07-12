@@ -10,11 +10,11 @@ from ..tinyhouse import HaplotypeOperations
 
 import math
 
-#########################################################################
-### In this module we define the peeling info object.                 ###
-### This is a just in time container for the various                  ###
-### peeling probability calculations.                                 ###
-#########################################################################
+#####################################################################
+# In this module we define the peeling info object.                 #
+# This is a just in time container for the various                  #
+# peeling probability calculations.                                 #
+#####################################################################
 
 
 def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):

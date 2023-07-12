@@ -29,7 +29,7 @@ def peel(family, operation, peelingInfo, singleLocusMode):
     e4 = e / 4
     e16 = e / 16
 
-    ### Setup local variables from the peeling information container.
+    # Setup local variables from the peeling information container.
     anterior = peelingInfo.anterior
     penetrance = peelingInfo.penetrance
     posterior = peelingInfo.posterior
@@ -236,9 +236,9 @@ def peel(family, operation, peelingInfo, singleLocusMode):
             ) + e / 4
 
 
-#####
-##### The following are a large number of "helper" jit functions that replace the einstien sums in the original scripts.
-#####
+#
+# The following are a large number of "helper" jit functions that replace the einstien sums in the original scripts.
+#
 
 
 @jit(nopython=True, nogil=True)
