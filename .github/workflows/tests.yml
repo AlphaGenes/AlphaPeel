@@ -1,4 +1,4 @@
-name: Test the code
+name: Evaluate code syntax (and correctness in the future)
 on: [push, pull_request]
 
 jobs:
