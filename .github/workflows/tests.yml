@@ -1,0 +1,19 @@
+name: Evaluate code syntax (and correctness in the future)
+on: [push, pull_request]
+
+jobs:
+    pre-commit:
+        name: Run the pre-commit forks
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        
+        steps:
+            - uses: actions/checkout@v3
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                python-version: "3.x"
+            
+            - uses: pre-commit/action@v3.0.0
+              name: Run pre-commit
