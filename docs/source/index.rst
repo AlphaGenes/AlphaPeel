@@ -10,28 +10,29 @@ AlphaPeel
 
 .. toctree::
    
+   introduction
    get_started
    contribute
-   Usage
+   usage
 
 .. highlight:: none
 
 Introduction
 ~~~~~~~~~~~~
 
-|ap| is program to call, impute, and phase genotypes using a pedigree in potentially very large livestock populations. A complete description of the methods is given in Whalen et al. (2018; http://dx.doi.org/10.1186/s12711-018-0438-2).
+|Software| is program to call, impute, and phase genotypes using a pedigree in potentially very large livestock populations. A complete description of the methods is given in Whalen et al. (2018; http://dx.doi.org/10.1186/s12711-018-0438-2).
 
 Availability
 ------------
 
-|ap| is available as open-source from the `Github AlphaPeel <https://github.com/AlphaGenes/AlphaPeel>`_ website and can be easily installed using ``pip install AlphaPeel``.
+|Software| is available as open-source from the `Github AlphaPeel <https://github.com/AlphaGenes/AlphaPeel>`_ website and can be easily installed using ``pip install AlphaPeel``.
 
 Please report any issues at `<https://github.com/AlphaGenes/AlphaPeel/issues>`_.
 
 Conditions of use
 -----------------
 
-|ap| is part of a suite of software that our group has developed. It is fully and freely available for all use under the MIT License.
+|Software| is part of a suite of software that our group has developed. It is fully and freely available for all use under the MIT License.
 
 Suggested Citation:
 
@@ -41,13 +42,13 @@ Whalen, A, Ros-Freixedes, R, Wilson, DL, Gorjanc, G, Hickey, JM. (2018). *Hybrid
 Disclaimer
 ----------
 
-While every effort has been made to ensure that |ap| does what it claims to do, there is absolutely no guarantee that the results provided are correct. Use of |ap| is entirely at your own risk.
+While every effort has been made to ensure that |Software| does what it claims to do, there is absolutely no guarantee that the results provided are correct. Use of |Software| is entirely at your own risk.
 
 
 Program Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-|ap| takes in a number of command line arguments to control the program's behavior. To view a list of arguments, run |ap| without any command line arguments, i.e. ``AlphaPeel`` or ``AlphaPeel -h``. 
+|Software| takes in a number of command line arguments to control the program's behavior. To view a list of arguments, run |Software| without any command line arguments, i.e. ``AlphaPeel`` or ``AlphaPeel -h``. 
 
 
 Core Arguments 
@@ -58,7 +59,7 @@ Core Arguments
   Core arguments
     -out prefix              The output file prefix.
 
-The ``-out`` argument gives the output file prefix for where the outputs of |ap| should be stored. By default, |ap| outputs a file with imputed genotypes, ``prefix.genotypes``, phased haplotypes ``prefix.phase``, and genotype dosages ``prefix.dosages``. For more information on which files are created, see "Output Arguments", below.
+The ``-out`` argument gives the output file prefix for where the outputs of |Software| should be stored. By default, |Software| outputs a file with imputed genotypes, ``prefix.genotypes``, phased haplotypes ``prefix.phase``, and genotype dosages ``prefix.dosages``. For more information on which files are created, see "Output Arguments", below.
 
 Input Arguments 
 ----------------
@@ -79,9 +80,9 @@ Input Arguments
                           file is marker "1".
       -stopsnp STOPSNP      The last marker to consider.
 
-|ap| requires a pedigree file and one or more genotype files to run the analysis.
+|Software| requires a pedigree file and one or more genotype files to run the analysis.
 
-|ap| supports binary plink files, ``-bfile``, genotype files in the AlphaGenesFormat, ``-genotypes``, and sequence data read counts in the AlphaGenes format, ``-seqfile``. A pedigree file must be supplied using the ``-pedigree`` option. 
+|Software| supports binary plink files, ``-bfile``, genotype files in the AlphaGenesFormat, ``-genotypes``, and sequence data read counts in the AlphaGenes format, ``-seqfile``. A pedigree file must be supplied using the ``-pedigree`` option. 
 
 Use the ``-startsnp`` and ``-stopsnp`` comands to run the analysis only on a subset of markers.
 
@@ -120,13 +121,13 @@ Output Arguments
       -binary_call_files    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
-By default |ap| produces a dosages file, a segregation files and two parameter files (genotyping error and recombination rate). Creation of each of these files can be suppressed with the ``-no_dosages``, ``-no_seg``, and ``-no_params`` options. |ap| can also write out the genotype probability file (.haps) with the `-haps` argument.
+By default |Software| produces a dosages file, a segregation files and two parameter files (genotyping error and recombination rate). Creation of each of these files can be suppressed with the ``-no_dosages``, ``-no_seg``, and ``-no_params`` options. |Software| can also write out the genotype probability file (.haps) with the `-haps` argument.
 
 The ``-calling_threshold`` arguments controls which genotypes (and phased haplotypes) are called as part of the algorithm. A calling threshold of 0.9 indicates that genotypes are only called if greater than 90% of the final probability mass is on that genotype. Using a higher-value will increase the accuracy of called genotypes, but will result in fewer genotypes being called. Since there are three genotypes states,  "best-guess" genotypes are produced with a calling threshold less than ``0.33``. ``-calling_threshThe ``-binary_call_files`` option can be used to change the output to a plink binary format. 
 
 The order in which individuals are output can be changed by using the ``writekey`` option. This option changes the order in which individuals are written out to the order in which they were observed in the corresponding file. The ```-onlykeyed`` option suppresses the output of dummy individuals (not recommended for hybrid peeling). 
 
-The parameter ``-iothreads`` controls the number of threads/processes used by |ap|. |ap| uses additional threads to parse and format input and output files. Setting this option to a value greater than 1 is only recommended for very large files (i.e. >10,000 individuals).
+The parameter ``-iothreads`` controls the number of threads/processes used by |Software|. |Software| uses additional threads to parse and format input and output files. Setting this option to a value greater than 1 is only recommended for very large files (i.e. >10,000 individuals).
 
 
 Peeling arguments: 
@@ -163,7 +164,7 @@ Peeling arguments:
 For hybrid peeling, where a large amount (millions of segregating sites) of sequence data needs to be imputed, first run the program in multi-locus mode to generate a segregation file, and then run the program in single-locus mode with a known segregation file.
 
 
-The ``-error``, ``-seqerror`` and ``-length`` arguments control some of the parameters used in the model. |ap| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
+The ``-error``, ``-seqerror`` and ``-length`` arguments control some of the parameters used in the model. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
 
 The ``-esterrors`` option estimated the genotyping error rate based on observed information, this option is generally not necessary and can increase runtime. ``-estmaf`` estimates the minor allele frequency after each peeling cycle. This option can be useful if there are a large number of non-genotyped founders. 
 
@@ -229,13 +230,13 @@ Example: ::
 Binary plink file
 -----------------
 
-|ap| supports the use of binary plink files using the package ``AlphaPlinkPython``. |ap| will use the pedigree supplied by the ``.fam`` file if a pedigree file is not supplied. Otherwise the pedigree file will be used and the ``.fam`` file will be ignored. 
+|Software| supports the use of binary plink files using the package ``AlphaPlinkPython``. |Software| will use the pedigree supplied by the ``.fam`` file if a pedigree file is not supplied. Otherwise the pedigree file will be used and the ``.fam`` file will be ignored. 
 
 
 Map file 
 -----------------
 
-The map file gives the chromosome number and the marker name and the base pair position for each marker in two columns. |ap| needs to be run with all of the markers on the same chromosome. 
+The map file gives the chromosome number and the marker name and the base pair position for each marker in two columns. |Software| needs to be run with all of the markers on the same chromosome. 
 
 Example: ::
 
@@ -333,7 +334,7 @@ Example: ::
 Parameter files
 ---------------
 
-|ap| outputs three parameter files, ``.maf``, ``.seqError``, ``.genoError``. These give the minor allele frequency, sequencing error rates, and genotyping error rates used. All three files contain a single column with an entry for each marker. 
+|Software| outputs three parameter files, ``.maf``, ``.seqError``, ``.genoError``. These give the minor allele frequency, sequencing error rates, and genotyping error rates used. All three files contain a single column with an entry for each marker. 
 
 Example ``.maf`` file for four loci: 
 ::
@@ -344,4 +345,4 @@ Example ``.maf`` file for four loci:
   0.145847
 
 
-.. |ap| replace:: AlphaPeel
+.. |Software| replace:: AlphaPeel
