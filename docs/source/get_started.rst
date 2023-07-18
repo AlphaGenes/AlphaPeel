@@ -68,6 +68,7 @@ Install the package by using the built wheel distribution:
     python3 -m pip install dist/AlphaPeel*.whl
 
 Move to example folder to run an example:
+
 .. code-block:: bash
 
     cd example
@@ -75,6 +76,7 @@ Move to example folder to run an example:
 Run the example:
 
 .. code-block:: bash
+
     bash runScript.sh
 
 Deactivate the environment:
