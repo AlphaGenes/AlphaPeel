@@ -10,9 +10,10 @@ AlphaPeel
 
 .. toctree::
    
-   contribute
    get_started
-   Usage
+   contribute
+   Usage/file_formats
+   Usage/program_options
 
 .. highlight:: none
 
