@@ -11,6 +11,7 @@ AlphaPeel
 .. toctree::
    
    contribute
+   get_started
 
 .. highlight:: none
 

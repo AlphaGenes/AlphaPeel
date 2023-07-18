@@ -19,7 +19,7 @@ Clone your forked repository into a local directory and initialise submodules at
 
 .. code-block:: bash
 
-    git clone --recurse-submodules https://github.com/AlphaGenes/AlphaPeel.git
+    git clone --recurse-submodules URL_of_your_forked_repository
 
 Depending on the type of code change, you should use different branches. First, check the available branches:
 
