@@ -2,13 +2,13 @@
 Getting Started
 ===============
 
-Install AlphaPeel
+Install |Software|
 -----------------
 
 Install via pip
 ===============
 
-AlphaPeel is available on `PyPI <https://pypi.org/project/AlphaPeel>`_:
+|Software| is available on `PyPI <https://pypi.org/project/AlphaPeel>`_:
 
 .. code-block:: bash
 
@@ -17,7 +17,7 @@ AlphaPeel is available on `PyPI <https://pypi.org/project/AlphaPeel>`_:
 Install locally
 ===============
 
-You can also install AlphaPeel locally. Below are the local install instructions:
+You can also install |Software| locally. Below are the local install instructions:
 
 Clone the repository:
 
@@ -92,3 +92,5 @@ An example
 ----------
 
 Still in progress...
+
+.. |Software| replace:: AlphaPeel

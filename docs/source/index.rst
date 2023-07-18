@@ -12,6 +12,7 @@ AlphaPeel
    
    contribute
    get_started
+   Usage
 
 .. highlight:: none
 
