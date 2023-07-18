@@ -152,7 +152,7 @@ and push:
     git push --tags # push tag changes
     # git push --tags --force # if you are reusing the tag
 
-The above will trigger workflow actions to publish the package on PyPi and documentation on Read the Docs:
+The above will trigger workflow actions to publish the package on PyPI and documentation on Read the Docs:
 
-  * <https://pypi.org/project/AlphaPeel>_
-  * <https://alphapeel.readthedocs.io/en/stable/index.html>_
+  * `PyPI <https://pypi.org/project/AlphaPeel>`_
+  * `Read the Docs <https://alphapeel.readthedocs.io/en/stable/index.html>`_
