@@ -46,7 +46,7 @@ Small code changes can go directly to the ``devel`` branch, which will eventuall
     git checkout devel
     # now work on your code changes
 
-Stable code for wider use that will be published is in the ``main`` branches. While most changes will be happening on the ``devel`` branch, critical bugfixes, can go to `main` branch:
+Stable code for wider use that will be published is in the ``main`` branches. While most changes will be happening on the ``devel`` branch, critical bugfixes, can go to ``main`` branch:
 
 .. code-block:: bash
 
@@ -66,7 +66,7 @@ Make changes to the code and commit them to your local clone repository. Adding 
     git add fileThatYouHaveChanged
     git commit -m "Informative short message #GitHubIssueNumber"
 
-In the ``git add`` line above, don't use ``git add .`` because this last command will add all changes files to your commit, including temporary files that might not belong in the repository. Are you aware of `gitignore <https://git-scm.com/docs/gitignore>`_?
+In the ``git add`` line above, don't use ``git add .`` because this last command will add all changes files to your commit, including temporary files that might not belong in the repository. Are you aware of `.gitignore file <https://git-scm.com/docs/gitignore>`_?
 
 Update submodules?
 ------------------

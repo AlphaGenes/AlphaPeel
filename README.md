@@ -21,4 +21,3 @@ AlphaPeel is fully and freely available for all use under the MIT License.
 ## Installation
 
 See https://alphapeel.readthedocs.io/en/latest/get_started.html#install-software
-(the link is not available for now, but will be available soon)
