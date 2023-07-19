@@ -19,7 +19,7 @@ Clone your forked repository into a local directory and initialise submodules at
 
 .. code-block:: bash
 
-    git clone --recurse-submodules https://github.com/AlphaGenes/AlphaPeel.git
+    git clone --recurse-submodules URL_of_your_forked_repository
 
 Depending on the type of code change, you should use different branches. First, check the available branches:
 
@@ -28,7 +28,7 @@ Depending on the type of code change, you should use different branches. First, 
     cd AlphaPeel
     git branch # check available branches
 
-Large code changes should go to dedicated development branches, which will be later merged into the `devel` branch by maintainers:
+Large code changes should go to dedicated development branches, which will be later merged into the ``devel`` branch by maintainers:
 
 .. code-block:: bash
 
@@ -39,14 +39,14 @@ Large code changes should go to dedicated development branches, which will be la
 
 If you are fixing an unknown issue or adding a new feature, open an issue first to document what you plan to do, then follow the above process.
 
-Small code changes can go directly to the `devel` branch, which will eventually be merged into the main branch by maintainers:
+Small code changes can go directly to the ``devel`` branch, which will eventually be merged into the main branch by maintainers:
 
 .. code-block:: bash
 
     git checkout devel
     # now work on your code changes
 
-Stable code for wider use that will be published is in the `main` branches. While most changes will be happening on the `devel` branch, critical bugfixes, can go to `main` branch:
+Stable code for wider use that will be published is in the ``main`` branches. While most changes will be happening on the ``devel`` branch, critical bugfixes, can go to ``main`` branch:
 
 .. code-block:: bash
 
@@ -56,7 +56,7 @@ Stable code for wider use that will be published is in the `main` branches. Whil
 Make changes in your clone 
 --------------------------
 
-Make changes to the code and commit them to your local clone repository. Adding `#GitHubIssueNumber` in the message will link the commit with the issue page.
+Make changes to the code and commit them to your local clone repository. Adding ``#GitHubIssueNumber`` in the message will link the commit with the issue page.
 
 .. code-block:: bash
 
@@ -66,7 +66,7 @@ Make changes to the code and commit them to your local clone repository. Adding 
     git add fileThatYouHaveChanged
     git commit -m "Informative short message #GitHubIssueNumber"
 
-In the `git add` line above, don't use `git add .` because this last command will add all changes files to your commit, including temporary files that might not belong in the repository. Are you aware of <https://git-scm.com/docs/gitignore>_?
+In the ``git add`` line above, don't use ``git add .`` because this last command will add all changes files to your commit, including temporary files that might not belong in the repository. Are you aware of `.gitignore file <https://git-scm.com/docs/gitignore>`_?
 
 Update submodules?
 ------------------
@@ -152,7 +152,7 @@ and push:
     git push --tags # push tag changes
     # git push --tags --force # if you are reusing the tag
 
-The above will trigger workflow actions to publish the package on PyPi and documentation on Read the Docs:
+The above will trigger workflow actions to publish the package on PyPI and documentation on Read the Docs:
 
-  * <https://pypi.org/project/AlphaPeel>_
-  * <https://alphapeel.readthedocs.io/en/stable/index.html>_
+  * `PyPI <https://pypi.org/project/AlphaPeel>`_
+  * `Read the Docs <https://alphapeel.readthedocs.io/en/stable/index.html>`_

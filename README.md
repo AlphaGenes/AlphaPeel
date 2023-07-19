@@ -20,38 +20,4 @@ AlphaPeel is fully and freely available for all use under the MIT License.
 
 ## Installation
 
-AlphaPeel is available on [PyPI](https://pypi.org/project/AlphaPeel): 
-
-    pip install AlphaPeel
-
-## Distribution
-
-Wheel distribution and source distribution are both available on [PyPI](https://pypi.org/project/AlphaPeel/#files).
-
-## Build wheels
-
- If you want to build the wheels yourself, we require an installation of Python 3 and you need to fork and clone the repository to your local directory first (see [user guide](https://alphapeel.readthedocs.io/en/latest/contribute.html#fork-the-repository))
-
- Run the following to build the wheel distribution and the source distribution of the package.
-
-First, create the virtual environment:
-
-    python3 -m venv AlphaPeel_env
-
-Next, activate the environment:
-
-    source AlphaPeel_env/bin/activate
-
-Install build:
-
-    python3 -m pip install --upgrade build
-
-Build the distribution:
-
-    python3 -m build
-
-Now, the distributions of AlphaPeel should be available in ``dist/``.
-
-Finally, deactivate the environment:
-
-    deactivate
+See https://alphapeel.readthedocs.io/en/latest/get_started.html#install-software
