@@ -11,3 +11,4 @@ build/
 docs/build/
 example/outputs
 AlphaPeel_env
+tests/functional_tests/**/outputs
