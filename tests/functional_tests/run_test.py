@@ -84,9 +84,25 @@ def commands_and_paths():
                           -calling_threshold .1 \
                           -out test7/outputs/output"
 
-    command_7b = ""
+    command_7b = "AlphaPeel -genotypes test7b/genotypes.txt \
+                          -phasefile test7b/phasefile.txt \
+                          -penetrance test7b/penetrance.txt \
+                          -seqfile test7b/seqfile.txt \
+                          -pedigree test7b/pedigree.txt \
+                          -runType multi \
+                          -estmaf \
+                          -calling_threshold .1 \
+                          -out test7b/outputs/output"
 
-    command_7c = ""
+    command_7c = "AlphaPeel -genotypes test7c/genotypes.txt \
+                          -phasefile test7c/phasefile.txt \
+                          -penetrance test7c/penetrance.txt \
+                          -seqfile test7c/seqfile.txt \
+                          -pedigree test7c/pedigree.txt \
+                          -runType multi \
+                          -length 1.0 \
+                          -calling_threshold .1 \
+                          -out test7c/outputs/output"
 
     command_8 = ""
 
@@ -128,7 +144,7 @@ def test_cases(commands_and_paths):
     """
     Run the tests
     """
-    tests = ["1", "2", "7"]
+    tests = ["1", "2", "7", "7b", "7c"]
 
     for test_number in tests:
         command, path = (
