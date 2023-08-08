@@ -4,6 +4,19 @@ import subprocess
 import pytest
 
 
+def read_file(file_path):
+    """
+    INPUT:
+    file_path: str, the path of the file to be read
+    OUTPUT:
+    values: 2d list of str, store the values of the records
+    """
+    with open(file_path, "r") as file:
+        values = [line.strip().split() for line in file]
+
+    return values
+
+
 def read_and_sort_file(file_path, id_list=None, **kwargs):
     """
     INPUT:
@@ -12,8 +25,7 @@ def read_and_sort_file(file_path, id_list=None, **kwargs):
     OUTPUT:
     values: 2d list of str, store the sorted values of the (selected) records
     """
-    with open(file_path, "r") as file:
-        values = [line.strip().split() for line in file]
+    values = read_file(file_path)
 
     if id_list is not None:
         values = [row for row in values if row[0] in id_list]
@@ -68,7 +80,29 @@ def commands_and_paths():
 
     command_3c = ""
 
-    command_4 = ""
+    command_4 = """
+for method in id pedigree genotypes sequence; do
+    AlphaPeel -genotypes test4/genotypes.txt \
+                              -phasefile test4/phasefile.txt \
+                              -penetrance test4/penetrance.txt \
+                              -seqfile test4/seqfile.txt \
+                              -pedigree test4/pedigree.txt \
+                              -runType multi \
+                              -calling_threshold .1 \
+                              -out test4/outputs/output.$method \
+                              -writekey $method
+done
+AlphaPeel -genotypes test4/genotypes.txt \
+                          -phasefile test4/phasefile.txt \
+                          -penetrance test4/penetrance.txt \
+                          -seqfile test4/seqfile.txt \
+                          -pedigree test4/pedigree.txt \
+                          -runType multi \
+                          -calling_threshold .1 \
+                          -out test4/outputs/output.only \
+                          -writekey sequence \
+                          -onlykeyed
+"""
 
     command_5 = ""
 
@@ -144,7 +178,7 @@ def test_cases(commands_and_paths):
     """
     Run the tests
     """
-    tests = ["1", "2", "7", "7b", "7c"]
+    tests = ["1", "2", "4", "7", "7b", "7c"]
 
     for test_number in tests:
         command, path = (
@@ -156,17 +190,33 @@ def test_cases(commands_and_paths):
 
         subprocess.run(command, shell=True, capture_output=True, text=True)
 
-        output_file_path = path + "/output.called.0.1"
-        expected_file_path = path[:-7] + "/trueGenotypes.txt"
+        if test_number == "4":
+            methods = ["id", "pedigree", "genotypes", "sequence"]
+            answer = ["genotypes", "penetrance", "genotypes", "seq"]
+            for i in range(len(methods)):
+                output_file_path = path + f"/output.{methods[i]}.called.0.1"
+                output = read_file(output_file_path)
 
-        output = read_and_sort_file(output_file_path)
-        expected = read_and_sort_file(expected_file_path)
+                assert len(output) == 4
+                assert output[0][0] == answer[i]
 
-        if test_number == "2":
-            delete_columns(expected, [2, 6])
+            output_file_path = path + "/output.only.called.0.1"
+            output = read_file(output_file_path)
+            assert len(output) == 1
+            assert output[0][0] == "seq"
 
-        if test_number == "3":
-            delete_columns(expected, [2, 6])
-            delete_columns(output, [1, 3, 4, 5, 6])
+        else:
+            output_file_path = path + "/output.called.0.1"
+            expected_file_path = path[:-7] + "/trueGenotypes.txt"
 
-        assert output == expected
+            output = read_and_sort_file(output_file_path)
+            expected = read_and_sort_file(expected_file_path)
+
+            if test_number == "2":
+                delete_columns(expected, [2, 6])
+
+            if test_number == "3":
+                delete_columns(expected, [2, 6])
+                delete_columns(output, [1, 3, 4, 5, 6])
+
+            assert output == expected
