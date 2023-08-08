@@ -138,7 +138,40 @@ AlphaPeel -genotypes test4/genotypes.txt \
                           -calling_threshold .1 \
                           -out test7c/outputs/output"
 
-    command_8 = ""
+    command_8 = """
+AlphaPeel -genotypes test8/genotypes.txt \
+                          -phasefile test8/phasefile.txt \
+                          -penetrance test8/penetrance.txt \
+                          -seqfile test8/seqfile.txt \
+                          -pedigree test8/pedigree.txt \
+                          -runType multi \
+                          -no_dosages \
+                          -out test8/outputs/no_dosages
+AlphaPeel -genotypes test8/genotypes.txt \
+                          -phasefile test8/phasefile.txt \
+                          -penetrance test8/penetrance.txt \
+                          -seqfile test8/seqfile.txt \
+                          -pedigree test8/pedigree.txt \
+                          -runType multi \
+                          -no_seg \
+                          -out test8/outputs/no_seg
+AlphaPeel -genotypes test8/genotypes.txt \
+                          -phasefile test8/phasefile.txt \
+                          -penetrance test8/penetrance.txt \
+                          -seqfile test8/seqfile.txt \
+                          -pedigree test8/pedigree.txt \
+                          -runType multi \
+                          -no_params \
+                          -out test8/outputs/no_params
+AlphaPeel -genotypes test8/genotypes.txt \
+                          -phasefile test8/phasefile.txt \
+                          -penetrance test8/penetrance.txt \
+                          -seqfile test8/seqfile.txt \
+                          -pedigree test8/pedigree.txt \
+                          -runType multi \
+                          -haps \
+                          -out test8/outputs/haps
+"""
 
     local_variables = locals()
 
@@ -174,11 +207,26 @@ def delete_columns(two_d_list, col_del):
             del row[col_del[n] - n - 1]
 
 
+def check_for_files(file_prefix):
+    """
+    Check whether the output files exist
+    """
+    output = [
+        os.path.exists(f"{file_prefix}.dosages"),
+        os.path.exists(f"{file_prefix}.seg"),
+        os.path.exists(f"{file_prefix}.maf"),
+        os.path.exists(f"{file_prefix}.genoError"),
+        os.path.exists(f"{file_prefix}.seqError"),
+        os.path.exists(f"{file_prefix}.haps"),
+    ]
+    return output
+
+
 def test_cases(commands_and_paths):
     """
     Run the tests
     """
-    tests = ["1", "2", "4", "7", "7b", "7c"]
+    tests = ["1", "2", "4", "7", "7b", "7c", "8"]
 
     for test_number in tests:
         command, path = (
@@ -202,8 +250,43 @@ def test_cases(commands_and_paths):
 
             output_file_path = path + "/output.only.called.0.1"
             output = read_file(output_file_path)
+
             assert len(output) == 1
             assert output[0][0] == "seq"
+
+        elif test_number == "8":
+            assert check_for_files(path + "/no_dosages") == [
+                False,
+                True,
+                True,
+                True,
+                True,
+                False,
+            ]
+            assert check_for_files(path + "/no_seg") == [
+                True,
+                False,
+                True,
+                True,
+                True,
+                False,
+            ]
+            assert check_for_files(path + "/no_params") == [
+                True,
+                True,
+                False,
+                False,
+                False,
+                False,
+            ]
+            assert check_for_files(path + "/haps") == [
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+            ]
 
         else:
             output_file_path = path + "/output.called.0.1"
