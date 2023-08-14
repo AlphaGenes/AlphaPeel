@@ -4,7 +4,10 @@ on: [push, pull_request]
 jobs:
     pre-commit_and_pytest:
         name: Run the pre-commit forks
-        runs-on: ubuntu-latest
+        strategy:
+          matrix:
+            os: [ubuntu-latest, windows-latest, macos-latest]
+        runs-on: ${{ matrix.os }}
         permissions:
             contents: read
         
