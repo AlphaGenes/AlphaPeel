@@ -43,6 +43,8 @@ def commands_and_paths():
     commands = {}
     paths = {}
 
+    # Test 1: Can we read in unrelated individuals from multiple file formats and
+    # output the values to a normal dosage file
     command_1 = "AlphaPeel -genotypes test1/genotypes.txt \
                           -phasefile test1/phasefile.txt \
                           -penetrance test1/penetrance.txt \
@@ -53,6 +55,8 @@ def commands_and_paths():
                           -esterrors \
                           -out test1/outputs/output"
 
+    # Test 2: Can we read in a subset of values as in Test 1 output them and
+    # make sure it's the same chunk?
     command_2 = "AlphaPeel -genotypes test2/genotypes.txt \
                           -phasefile test2/phasefile.txt \
                           -penetrance test2/penetrance.txt \
@@ -64,7 +68,9 @@ def commands_and_paths():
                           -stopsnp 4 \
                           -out test2/outputs/output"
 
-    command_3 = "AlphaPeel -genotypes test3/genotypes.txt \
+    # Test 3: Can we read in values, call the values and output them as binary?
+    command_3 = """
+AlphaPeel -genotypes test3/genotypes.txt \
                           -phasefile test3/phasefile.txt \
                           -penetrance test3/penetrance.txt \
                           -seqfile test3/seqfile.txt \
@@ -74,12 +80,64 @@ def commands_and_paths():
                           -startsnp 2 \
                           -stopsnp 4 \
                           -binary_call_files \
-                          -out test3/outputs/output"
+                          -out test3/outputs/output
 
-    command_3b = ""
+plink --bfile test3/outputs/output.called.0.1 --real-ref-alleles --recode A --out test3/outputs/output.called.0.1
+plink --bfile test3/outputs/output.called.0.99 --real-ref-alleles --recode A --out test3/outputs/output.called.0.99
+"""
 
-    command_3c = ""
+    # Test 3b: Can we read in a binary file, run the algorithm call the values and check that the output is the same.
+    command_3b = """
+for nind in 1 2 3 4; do
 
+  AlphaPeel -genotypes test3b/genotypes-$nind.txt \
+                            -runType multi \
+                            -calling_threshold .1 \
+                            -binary_call_files \
+                            -out test3b/outputs/output.$nind
+  plink --bfile test3b/outputs/output.$nind.called.0.1 --real-ref-alleles --recode A --out test3b/outputs/output.$nind.called.0.1
+
+  AlphaPeel -bfile test3b/outputs/output.$nind.called.0.1 \
+                            -runType multi \
+                            -calling_threshold .1 \
+                            -binary_call_files \
+                            -out test3b/outputs/round2.$nind
+
+  plink --bfile test3b/outputs/round2.$nind.called.0.1 --real-ref-alleles --recode A --out test3b/outputs/round2.$nind.called.0.1
+
+done
+"""
+
+    # Test 3c: Will the pedigree file be correctly read from the bed file?
+    # Create the binary file. Re-run.
+    command_3c = """
+AlphaPeel -genotypes test3c/genotypes.txt \
+                          -runType multi \
+                          -calling_threshold .9 \
+                          -binary_call_files \
+                          -out test3c/outputs/output
+plink --bfile test3c/outputs/output.called.0.9 --real-ref-alleles --recode A --out test3c/outputs/output.called.0.9
+
+AlphaPeel -bfile test3c/outputs/output.called.0.9 \
+                          -runType multi \
+                          -calling_threshold .9 \
+                          -out test3c/outputs/noFamNoPedigree
+
+AlphaPeel -bfile test3c/outputs/output.called.0.9 \
+                          -pedigree test3c/pedigree.txt \
+                          -runType multi \
+                          -calling_threshold .9 \
+                          -out test3c/outputs/noFamPedigree
+
+cp test3c/fake.fam test3c/outputs/output.called.0.9.fam
+AlphaPeel -bfile test3c/outputs/output.called.0.9 \
+                          -runType multi \
+                          -calling_threshold .9 \
+                          -out test3c/outputs/famNoPedigree
+"""
+
+    # Test 4a-d: Can we read in values and return them in the correct order.
+    # Check id, pedigree, genotypes, sequence, segregation. Also check onlykeyed.
     command_4 = """
 for method in id pedigree genotypes sequence; do
     AlphaPeel -genotypes test4/genotypes.txt \
@@ -104,10 +162,14 @@ AlphaPeel -genotypes test4/genotypes.txt \
                           -onlykeyed
 """
 
+    # Test 5: Read in an error rate and output genotypes.
+    # Should use some silly values, and some not-so-silly values.
     command_5 = ""
 
+    # Test 6: Sex Chromosome
     command_6 = ""
 
+    # Test 7: Check -esterrors just to make sure it runs.
     command_7 = "AlphaPeel -genotypes test7/genotypes.txt \
                           -phasefile test7/phasefile.txt \
                           -penetrance test7/penetrance.txt \
@@ -118,6 +180,7 @@ AlphaPeel -genotypes test4/genotypes.txt \
                           -calling_threshold .1 \
                           -out test7/outputs/output"
 
+    # Test 7b: Check -estmaf just to make sure it runs.
     command_7b = "AlphaPeel -genotypes test7b/genotypes.txt \
                           -phasefile test7b/phasefile.txt \
                           -penetrance test7b/penetrance.txt \
@@ -128,6 +191,7 @@ AlphaPeel -genotypes test4/genotypes.txt \
                           -calling_threshold .1 \
                           -out test7b/outputs/output"
 
+    # Test 7c: Check -estmaf just to make sure it runs.
     command_7c = "AlphaPeel -genotypes test7c/genotypes.txt \
                           -phasefile test7c/phasefile.txt \
                           -penetrance test7c/penetrance.txt \
@@ -138,6 +202,8 @@ AlphaPeel -genotypes test4/genotypes.txt \
                           -calling_threshold .1 \
                           -out test7c/outputs/output"
 
+    # Test 8: Check to make sure the no_dosages, no_seg, no_params
+    # flags work, and the haps file works.
     command_8 = """
 AlphaPeel -genotypes test8/genotypes.txt \
                           -phasefile test8/phasefile.txt \
@@ -226,6 +292,7 @@ def test_cases(commands_and_paths):
     """
     Run the tests
     """
+    # the numbers of the tests to be run
     tests = ["1", "2", "4", "7", "7b", "7c", "8"]
 
     for test_number in tests:
@@ -236,6 +303,7 @@ def test_cases(commands_and_paths):
 
         make_directory(path)
 
+        # run the command
         subprocess.run(command, shell=True, capture_output=True, text=True)
 
         if test_number == "4":
