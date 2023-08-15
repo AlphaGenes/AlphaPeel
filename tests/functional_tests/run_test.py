@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import platform
 import pytest
 
 
@@ -35,6 +36,46 @@ def read_and_sort_file(file_path, id_list=None, **kwargs):
     return values
 
 
+def generate_file_path(file_type, test_number):
+    """
+    returns the corresponding path of the input files
+    """
+    return os.path.join(f"test{test_number}", f"{file_type}.txt")
+
+
+def standard_input_command(test_number):
+    """
+    returns the standard input command
+    """
+    command = f"""
+AlphaPeel -genotypes {generate_file_path('genotypes', test_number)} \
+                          -phasefile {generate_file_path('phasefile', test_number)} \
+                          -penetrance {generate_file_path('penetrance', test_number)} \
+                          -seqfile {generate_file_path('seqfile', test_number)} \
+                          -pedigree {generate_file_path('pedigree', test_number)} \
+"""
+    return command
+
+
+def output_path_command(test_number, file_prefix):
+    """
+    returns the output path command
+    """
+    path = os.path.join(f"test{test_number}", "outputs", file_prefix)
+    command = f"-out {path}"
+    return command
+
+
+def expand_env_var(var):
+    """
+    returns the environment variables used with the corresponding os
+    """
+    system = platform.system()
+    if system == "Windows":
+        return f"%{var}%"
+    return f"${var}"
+
+
 @pytest.fixture
 def commands_and_paths():
     """
@@ -45,28 +86,22 @@ def commands_and_paths():
 
     # Test 1: Can we read in unrelated individuals from multiple file formats and
     # output the values to a normal dosage file
-    command_1 = "AlphaPeel -genotypes test1/genotypes.txt \
-                          -phasefile test1/phasefile.txt \
-                          -penetrance test1/penetrance.txt \
-                          -seqfile test1/seqfile.txt \
-                          -pedigree test1/pedigree.txt \
+    test_number = "1"
+    command_1 = f"{standard_input_command(test_number)} \
                           -runType multi \
                           -calling_threshold .1 \
                           -esterrors \
-                          -out test1/outputs/output"
+                          {output_path_command(test_number, 'output')}"
 
     # Test 2: Can we read in a subset of values as in Test 1 output them and
     # make sure it's the same chunk?
-    command_2 = "AlphaPeel -genotypes test2/genotypes.txt \
-                          -phasefile test2/phasefile.txt \
-                          -penetrance test2/penetrance.txt \
-                          -seqfile test2/seqfile.txt \
-                          -pedigree test2/pedigree.txt \
+    test_number = 2
+    command_2 = f"{standard_input_command(test_number)} \
                           -runType multi \
                           -calling_threshold .1 \
                           -startsnp 2 \
                           -stopsnp 4 \
-                          -out test2/outputs/output"
+                          {output_path_command(test_number, 'output')}"
 
     # Test 3: Can we read in values, call the values and output them as binary?
     command_3 = """
@@ -138,26 +173,20 @@ AlphaPeel -bfile test3c/outputs/output.called.0.9 \
 
     # Test 4a-d: Can we read in values and return them in the correct order.
     # Check id, pedigree, genotypes, sequence, segregation. Also check onlykeyed.
-    command_4 = """
+    test_number = "4"
+    file_prefix = f"output.{expand_env_var('method')}"
+    command_4 = f"""
 for method in id pedigree genotypes sequence; do
-    AlphaPeel -genotypes test4/genotypes.txt \
-                              -phasefile test4/phasefile.txt \
-                              -penetrance test4/penetrance.txt \
-                              -seqfile test4/seqfile.txt \
-                              -pedigree test4/pedigree.txt \
+    {standard_input_command(test_number)} \
                               -runType multi \
                               -calling_threshold .1 \
-                              -out test4/outputs/output.$method \
-                              -writekey $method
+                              {output_path_command(test_number, file_prefix)} \
+                              -writekey {expand_env_var('method')}
 done
-AlphaPeel -genotypes test4/genotypes.txt \
-                          -phasefile test4/phasefile.txt \
-                          -penetrance test4/penetrance.txt \
-                          -seqfile test4/seqfile.txt \
-                          -pedigree test4/pedigree.txt \
+{standard_input_command(test_number)} \
                           -runType multi \
                           -calling_threshold .1 \
-                          -out test4/outputs/output.only \
+                          {output_path_command(test_number, 'output.only')} \
                           -writekey sequence \
                           -onlykeyed
 """
@@ -170,73 +199,49 @@ AlphaPeel -genotypes test4/genotypes.txt \
     command_6 = ""
 
     # Test 7: Check -esterrors just to make sure it runs.
-    command_7 = "AlphaPeel -genotypes test7/genotypes.txt \
-                          -phasefile test7/phasefile.txt \
-                          -penetrance test7/penetrance.txt \
-                          -seqfile test7/seqfile.txt \
-                          -pedigree test7/pedigree.txt \
+    test_number = "7"
+    command_7 = f"{standard_input_command(test_number)} \
                           -runType multi \
                           -esterrors \
                           -calling_threshold .1 \
-                          -out test7/outputs/output"
+                          {output_path_command(test_number, 'output')}"
 
     # Test 7b: Check -estmaf just to make sure it runs.
-    command_7b = "AlphaPeel -genotypes test7b/genotypes.txt \
-                          -phasefile test7b/phasefile.txt \
-                          -penetrance test7b/penetrance.txt \
-                          -seqfile test7b/seqfile.txt \
-                          -pedigree test7b/pedigree.txt \
+    test_number = "7b"
+    command_7b = f"{standard_input_command(test_number)} \
                           -runType multi \
                           -estmaf \
                           -calling_threshold .1 \
-                          -out test7b/outputs/output"
+                          {output_path_command(test_number, 'output')}"
 
     # Test 7c: Check -estmaf just to make sure it runs.
-    command_7c = "AlphaPeel -genotypes test7c/genotypes.txt \
-                          -phasefile test7c/phasefile.txt \
-                          -penetrance test7c/penetrance.txt \
-                          -seqfile test7c/seqfile.txt \
-                          -pedigree test7c/pedigree.txt \
+    test_number = "7c"
+    command_7c = f"{standard_input_command(test_number)} \
                           -runType multi \
                           -length 1.0 \
                           -calling_threshold .1 \
-                          -out test7c/outputs/output"
+                          {output_path_command(test_number, 'output')}"
 
     # Test 8: Check to make sure the no_dosages, no_seg, no_params
     # flags work, and the haps file works.
-    command_8 = """
-AlphaPeel -genotypes test8/genotypes.txt \
-                          -phasefile test8/phasefile.txt \
-                          -penetrance test8/penetrance.txt \
-                          -seqfile test8/seqfile.txt \
-                          -pedigree test8/pedigree.txt \
+    test_number = "8"
+    command_8 = f"""
+{standard_input_command('8')} \
                           -runType multi \
                           -no_dosages \
-                          -out test8/outputs/no_dosages
-AlphaPeel -genotypes test8/genotypes.txt \
-                          -phasefile test8/phasefile.txt \
-                          -penetrance test8/penetrance.txt \
-                          -seqfile test8/seqfile.txt \
-                          -pedigree test8/pedigree.txt \
+                          {output_path_command(test_number, 'no_dosages')}
+{standard_input_command('8')} \
                           -runType multi \
                           -no_seg \
-                          -out test8/outputs/no_seg
-AlphaPeel -genotypes test8/genotypes.txt \
-                          -phasefile test8/phasefile.txt \
-                          -penetrance test8/penetrance.txt \
-                          -seqfile test8/seqfile.txt \
-                          -pedigree test8/pedigree.txt \
+                          {output_path_command(test_number, 'no_seg')}
+{standard_input_command('8')} \
                           -runType multi \
                           -no_params \
-                          -out test8/outputs/no_params
-AlphaPeel -genotypes test8/genotypes.txt \
-                          -phasefile test8/phasefile.txt \
-                          -penetrance test8/penetrance.txt \
-                          -seqfile test8/seqfile.txt \
-                          -pedigree test8/pedigree.txt \
+                          {output_path_command(test_number, 'no_params')}
+{standard_input_command('8')} \
                           -runType multi \
                           -haps \
-                          -out test8/outputs/haps
+                          {output_path_command(test_number, 'haps')}
 """
 
     local_variables = locals()
@@ -328,7 +333,7 @@ def test_cases(commands_and_paths):
             assert output[0][0] == "seq"
 
         elif test_number == "8":
-            assert check_for_files(path + "/no_dosages") == [
+            assert check_for_files(os.path.join(path, "no_dosages")) == [
                 False,
                 True,
                 True,
@@ -336,7 +341,7 @@ def test_cases(commands_and_paths):
                 True,
                 False,
             ]
-            assert check_for_files(path + "/no_seg") == [
+            assert check_for_files(os.path.join(path, "no_seg")) == [
                 True,
                 False,
                 True,
@@ -344,7 +349,7 @@ def test_cases(commands_and_paths):
                 True,
                 False,
             ]
-            assert check_for_files(path + "/no_params") == [
+            assert check_for_files(os.path.join(path, "no_params")) == [
                 True,
                 True,
                 False,
@@ -352,7 +357,7 @@ def test_cases(commands_and_paths):
                 False,
                 False,
             ]
-            assert check_for_files(path + "/haps") == [
+            assert check_for_files(os.path.join(path, "haps")) == [
                 True,
                 True,
                 True,
