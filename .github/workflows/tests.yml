@@ -6,7 +6,7 @@ jobs:
         name: Run the pre-commit forks
         strategy:
           matrix:
-            os: [ubuntu-latest, macos-latest]
+            os: [ubuntu-latest, Windows, macos-latest]
         runs-on: ${{ matrix.os }}
         permissions:
             contents: read
