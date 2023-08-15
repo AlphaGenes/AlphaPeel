@@ -370,7 +370,14 @@ def test_cases(commands_and_paths):
             output_file_path = os.path.join(path, "output.called.0.1")
             expected_file_path = os.path.join(path[:-7], "trueGenotypes.txt")
 
-            assert [os.path.exists(path)] == [True]
+            assert os.listdir() == [
+                "output.seg",
+                "output.dosages",
+                "output.genoError",
+                "output.seqError",
+                "output.called.0.1",
+                "output.maf",
+            ]
             output = read_and_sort_file(output_file_path)
             expected = read_and_sort_file(expected_file_path)
 
