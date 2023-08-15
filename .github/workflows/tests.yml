@@ -44,4 +44,4 @@ jobs:
             - name: Run pytest
               run: |
                 cd tests/functional_tests/
-                pytest
+                pytest --maxfail=10

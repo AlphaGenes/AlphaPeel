@@ -49,10 +49,10 @@ def standard_input_command(test_number):
     """
     command = f"""
 AlphaPeel -genotypes {generate_file_path('genotypes', test_number)} \
-                          -phasefile {generate_file_path('phasefile', test_number)} \
-                          -penetrance {generate_file_path('penetrance', test_number)} \
-                          -seqfile {generate_file_path('seqfile', test_number)} \
-                          -pedigree {generate_file_path('pedigree', test_number)} \
+    -phasefile {generate_file_path('phasefile', test_number)} \
+    -penetrance {generate_file_path('penetrance', test_number)} \
+    -seqfile {generate_file_path('seqfile', test_number)} \
+    -pedigree {generate_file_path('pedigree', test_number)} \
 """
     return command
 
@@ -87,11 +87,11 @@ def commands_and_paths():
     # Test 1: Can we read in unrelated individuals from multiple file formats and
     # output the values to a normal dosage file
     test_number = "1"
-    command_1 = f"{standard_input_command(test_number)} \
-                          -runType multi \
-                          -calling_threshold .1 \
-                          -esterrors \
-                          {output_path_command(test_number, 'output')}"
+    command_1 = (
+        standard_input_command(test_number)
+        + "-runType multi -calling_threshold .1  -esterrors "
+        + output_path_command(test_number, "output")
+    )
 
     # Test 2: Can we read in a subset of values as in Test 1 output them and
     # make sure it's the same chunk?
