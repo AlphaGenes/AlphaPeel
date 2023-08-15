@@ -371,13 +371,13 @@ def test_cases(commands_and_paths):
             expected_file_path = os.path.join(path[:-7], "trueGenotypes.txt")
 
             if test_number == "1":
-                assert os.listdir("test1/outputs/") == [
-                    "output.seg",
+                assert sorted(os.listdir("test1/outputs/")) == [
+                    "output.called.0.1",
                     "output.dosages",
                     "output.genoError",
-                    "output.seqError",
-                    "output.called.0.1",
                     "output.maf",
+                    "output.seg",
+                    "output.seqError",
                 ]
             output = read_and_sort_file(output_file_path)
             expected = read_and_sort_file(expected_file_path)
