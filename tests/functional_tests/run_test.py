@@ -243,12 +243,15 @@ AlphaPeel -genotypes test8/genotypes.txt \
 
     for n in range(1, 9):
         test_n = str(n)
-        paths[test_n] = f"test{n}/outputs"
+        # paths[test_n] = f"test{n}/outputs"
+        paths[test_n] = os.path.join(f"test{n}", "outputs")
         commands[test_n] = local_variables["command_" + test_n]
         if n in [3, 7]:
-            paths[test_n + "b"] = f"test{n}b/outputs"
+            # paths[test_n + "b"] = f"test{n}b/outputs"
+            paths[test_n + "b"] = os.path.join(f"test{n}b", "outputs")
             commands[test_n + "b"] = local_variables["command_" + test_n + "b"]
-            paths[test_n + "c"] = f"test{n}c/outputs"
+            # paths[test_n + "c"] = f"test{n}c/outputs"
+            paths[test_n + "c"] = os.path.join(f"test{n}c", "outputs")
             commands[test_n + "c"] = local_variables["command_" + test_n + "c"]
 
     return commands, paths
@@ -310,13 +313,15 @@ def test_cases(commands_and_paths):
             methods = ["id", "pedigree", "genotypes", "sequence"]
             answer = ["genotypes", "penetrance", "genotypes", "seq"]
             for i in range(len(methods)):
-                output_file_path = path + f"/output.{methods[i]}.called.0.1"
+                # output_file_path = path + f"/output.{methods[i]}.called.0.1"
+                output_file_path = os.path.join(path, f"output.{methods[i]}.called.0.1")
                 output = read_file(output_file_path)
 
                 assert len(output) == 4
                 assert output[0][0] == answer[i]
 
-            output_file_path = path + "/output.only.called.0.1"
+            # output_file_path = path + "/output.only.called.0.1"
+            output_file_path = os.path.join(path, "output.only.called.0.1")
             output = read_file(output_file_path)
 
             assert len(output) == 1
@@ -357,8 +362,10 @@ def test_cases(commands_and_paths):
             ]
 
         else:
-            output_file_path = path + "/output.called.0.1"
-            expected_file_path = path[:-7] + "/trueGenotypes.txt"
+            # output_file_path = path + "/output.called.0.1"
+            output_file_path = os.path.join(path, "output.called.0.1")
+            # expected_file_path = path[:-7] + "/trueGenotypes.txt"
+            expected_file_path = os.path.join(path[:-7], "trueGenotypes.txt")
 
             output = read_and_sort_file(output_file_path)
             expected = read_and_sort_file(expected_file_path)
