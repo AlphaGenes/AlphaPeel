@@ -371,7 +371,7 @@ def test_cases(commands_and_paths):
             expected_file_path = os.path.join(path[:-7], "trueGenotypes.txt")
 
             if test_number == "1":
-                assert os.listdir() == [
+                assert os.listdir("test1/outputs/") == [
                     "output.seg",
                     "output.dosages",
                     "output.genoError",
