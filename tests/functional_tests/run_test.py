@@ -367,11 +367,10 @@ def test_cases(commands_and_paths):
             ]
 
         else:
-            # output_file_path = path + "/output.called.0.1"
             output_file_path = os.path.join(path, "output.called.0.1")
-            # expected_file_path = path[:-7] + "/trueGenotypes.txt"
             expected_file_path = os.path.join(path[:-7], "trueGenotypes.txt")
 
+            assert [os.path.exists(path)] == [True]
             output = read_and_sort_file(output_file_path)
             expected = read_and_sort_file(expected_file_path)
 
