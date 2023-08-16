@@ -79,16 +79,6 @@ def output_path_command(test_number, file_prefix):
     return command
 
 
-def expand_env_var(var):
-    """
-    returns the environment variables used with the corresponding os
-    """
-    system = platform.system()
-    if system == "Windows":
-        return f"$Env:{var}"
-    return f"${var}"
-
-
 @pytest.fixture
 def commands_and_paths():
     """
@@ -194,20 +184,21 @@ AlphaPeel -bfile test3c/outputs/output.called.0.9 \
     # Test 4a-d: Can we read in values and return them in the correct order.
     # Check id, pedigree, genotypes, sequence, segregation. Also check onlykeyed.
     test_number = "4"
-    file_prefix = f"output.{expand_env_var('method')}"
-    command_4 = (
-        "for method in id pedigree genotypes sequence; do"
-        + linesep
-        + standard_input_command(test_number)
-        + " -runType multi"
-        + " -calling_threshold .1 "
-        + output_path_command(test_number, file_prefix)
-        + " -writekey "
-        + expand_env_var("method")
-        + linesep
-        + "done"
-        + linesep
-        + standard_input_command(test_number)
+    methods = ["id", "pedigree", "genotypes", "sequence"]
+    command_4 = ""
+    for method in methods:
+        file_prefix = f"output.{method}"
+        command_4 += (
+            standard_input_command(test_number)
+            + " -runType multi"
+            + " -calling_threshold .1 "
+            + output_path_command(test_number, file_prefix)
+            + " -writekey "
+            + method
+            + linesep
+        )
+    command_4 += (
+        standard_input_command(test_number)
         + " -runType multi"
         + " -calling_threshold .1 "
         + output_path_command(test_number, "output.only")
