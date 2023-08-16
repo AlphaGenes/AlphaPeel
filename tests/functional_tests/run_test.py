@@ -323,6 +323,7 @@ def test_cases(commands_and_paths):
     """
     # the numbers of the tests to be run
     tests = ["1", "2", "4", "7", "7b", "7c", "8"]
+    os = platform.system()
 
     for test_number in tests:
         command, path = (
@@ -333,7 +334,12 @@ def test_cases(commands_and_paths):
         make_directory(path)
 
         # run the command
-        subprocess.run(command, shell=True, capture_output=True, text=True)
+        if os == "Windows":
+            commands = command.split(os.linesep)
+            for one_line_command in commands:
+                subprocess.run(command, shell=True, capture_output=True, text=True)
+        else:
+            subprocess.run(command, shell=True, capture_output=True, text=True)
 
         if test_number == "4":
             methods = ["id", "pedigree", "genotypes", "sequence"]
