@@ -85,7 +85,7 @@ def expand_env_var(var):
     """
     system = platform.system()
     if system == "Windows":
-        return f"%{var}%"
+        return f"$Env:{var}"
     return f"${var}"
 
 

@@ -3,7 +3,7 @@ on: [push, pull_request]
 
 jobs:
     pre-commit_and_pytest:
-        name: Run the pre-commit forks
+        name: Run pre-commit and pytest
         strategy:
           matrix:
             os: [ubuntu-latest, Windows-latest, macos-latest]
