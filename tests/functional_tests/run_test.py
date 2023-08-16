@@ -47,13 +47,26 @@ def standard_input_command(test_number):
     """
     returns the standard input command
     """
-    command = f"""
-AlphaPeel -genotypes {generate_file_path('genotypes', test_number)} \
-    -phasefile {generate_file_path('phasefile', test_number)} \
-    -penetrance {generate_file_path('penetrance', test_number)} \
-    -seqfile {generate_file_path('seqfile', test_number)} \
-    -pedigree {generate_file_path('pedigree', test_number)} \
-"""
+    #     command = f"""
+    # AlphaPeel -genotypes {generate_file_path('genotypes', test_number)} \
+    #     -phasefile {generate_file_path('phasefile', test_number)} \
+    #     -penetrance {generate_file_path('penetrance', test_number)} \
+    #     -seqfile {generate_file_path('seqfile', test_number)} \
+    #     -pedigree {generate_file_path('pedigree', test_number)} \
+    # """
+    command = (
+        "AlphaPeel -genotypes "
+        + generate_file_path("genotypes", test_number)
+        + " -phasefile "
+        + generate_file_path("phasefile", test_number)
+        + " -penetrance "
+        + generate_file_path("penetrance", test_number)
+        + " -seqfile "
+        + generate_file_path("seqfile", test_number)
+        + " -pedigree "
+        + generate_file_path("pedigree", test_number)
+    )
+
     return command
 
 
@@ -84,24 +97,31 @@ def commands_and_paths():
     commands = {}
     paths = {}
 
+    linesep = os.linesep
+
     # Test 1: Can we read in unrelated individuals from multiple file formats and
     # output the values to a normal dosage file
     test_number = "1"
     command_1 = (
         standard_input_command(test_number)
-        + "-runType multi -calling_threshold .1  -esterrors "
+        + " -runType multi"
+        + " -calling_threshold .1"
+        + " -esterrors "
         + output_path_command(test_number, "output")
     )
 
     # Test 2: Can we read in a subset of values as in Test 1 output them and
     # make sure it's the same chunk?
     test_number = 2
-    command_2 = f"{standard_input_command(test_number)} \
-                          -runType multi \
-                          -calling_threshold .1 \
-                          -startsnp 2 \
-                          -stopsnp 4 \
-                          {output_path_command(test_number, 'output')}"
+
+    command_2 = (
+        standard_input_command(test_number)
+        + " -runType multi"
+        + " -calling_threshold .1"
+        + " -startsnp 2"
+        + " -stopsnp 4 "
+        + output_path_command(test_number, "output")
+    )
 
     # Test 3: Can we read in values, call the values and output them as binary?
     command_3 = """
@@ -175,21 +195,25 @@ AlphaPeel -bfile test3c/outputs/output.called.0.9 \
     # Check id, pedigree, genotypes, sequence, segregation. Also check onlykeyed.
     test_number = "4"
     file_prefix = f"output.{expand_env_var('method')}"
-    command_4 = f"""
-for method in id pedigree genotypes sequence; do
-    {standard_input_command(test_number)} \
-                              -runType multi \
-                              -calling_threshold .1 \
-                              {output_path_command(test_number, file_prefix)} \
-                              -writekey {expand_env_var('method')}
-done
-{standard_input_command(test_number)} \
-                          -runType multi \
-                          -calling_threshold .1 \
-                          {output_path_command(test_number, 'output.only')} \
-                          -writekey sequence \
-                          -onlykeyed
-"""
+    command_4 = (
+        "for method in id pedigree genotypes sequence; do"
+        + linesep
+        + standard_input_command(test_number)
+        + " -runType multi"
+        + " -calling_threshold .1 "
+        + output_path_command(test_number, file_prefix)
+        + " -writekey "
+        + expand_env_var("method")
+        + linesep
+        + "done"
+        + linesep
+        + standard_input_command(test_number)
+        + " -runType multi"
+        + " -calling_threshold .1 "
+        + output_path_command(test_number, "output.only")
+        + " -writekey sequence"
+        + " -onlykeyed"
+    )
 
     # Test 5: Read in an error rate and output genotypes.
     # Should use some silly values, and some not-so-silly values.
@@ -200,62 +224,68 @@ done
 
     # Test 7: Check -esterrors just to make sure it runs.
     test_number = "7"
-    command_7 = f"{standard_input_command(test_number)} \
-                          -runType multi \
-                          -esterrors \
-                          -calling_threshold .1 \
-                          {output_path_command(test_number, 'output')}"
+    command_7 = (
+        standard_input_command(test_number)
+        + " -runType multi"
+        + " -esterrors"
+        + " -calling_threshold .1 "
+        + output_path_command(test_number, "output")
+    )
 
     # Test 7b: Check -estmaf just to make sure it runs.
     test_number = "7b"
-    command_7b = f"{standard_input_command(test_number)} \
-                          -runType multi \
-                          -estmaf \
-                          -calling_threshold .1 \
-                          {output_path_command(test_number, 'output')}"
+    command_7b = (
+        standard_input_command(test_number)
+        + " -runType multi"
+        + " -estmaf"
+        + " -calling_threshold .1 "
+        + output_path_command(test_number, "output")
+    )
 
     # Test 7c: Check -estmaf just to make sure it runs.
     test_number = "7c"
-    command_7c = f"{standard_input_command(test_number)} \
-                          -runType multi \
-                          -length 1.0 \
-                          -calling_threshold .1 \
-                          {output_path_command(test_number, 'output')}"
+    command_7c = (
+        standard_input_command(test_number)
+        + " -runType multi"
+        + " -length 1.0"
+        + " -calling_threshold .1 "
+        + output_path_command(test_number, "output")
+    )
 
     # Test 8: Check to make sure the no_dosages, no_seg, no_params
     # flags work, and the haps file works.
     test_number = "8"
-    command_8 = f"""
-{standard_input_command('8')} \
-                          -runType multi \
-                          -no_dosages \
-                          {output_path_command(test_number, 'no_dosages')}
-{standard_input_command('8')} \
-                          -runType multi \
-                          -no_seg \
-                          {output_path_command(test_number, 'no_seg')}
-{standard_input_command('8')} \
-                          -runType multi \
-                          -no_params \
-                          {output_path_command(test_number, 'no_params')}
-{standard_input_command('8')} \
-                          -runType multi \
-                          -haps \
-                          {output_path_command(test_number, 'haps')}
-"""
+    command_8 = (
+        standard_input_command("8")
+        + " -runType multi"
+        + " -no_dosages "
+        + output_path_command(test_number, "no_dosages")
+        + linesep
+        + standard_input_command("8")
+        + " -runType multi"
+        + " -no_seg "
+        + output_path_command(test_number, "no_seg")
+        + linesep
+        + standard_input_command("8")
+        + " -runType multi"
+        + " -no_params "
+        + output_path_command(test_number, "no_params")
+        + linesep
+        + standard_input_command("8")
+        + " -runType multi"
+        + " -haps "
+        + output_path_command(test_number, "haps")
+    )
 
     local_variables = locals()
 
     for n in range(1, 9):
         test_n = str(n)
-        # paths[test_n] = f"test{n}/outputs"
         paths[test_n] = os.path.join(f"test{n}", "outputs")
         commands[test_n] = local_variables["command_" + test_n]
         if n in [3, 7]:
-            # paths[test_n + "b"] = f"test{n}b/outputs"
             paths[test_n + "b"] = os.path.join(f"test{n}b", "outputs")
             commands[test_n + "b"] = local_variables["command_" + test_n + "b"]
-            # paths[test_n + "c"] = f"test{n}c/outputs"
             paths[test_n + "c"] = os.path.join(f"test{n}c", "outputs")
             commands[test_n + "c"] = local_variables["command_" + test_n + "c"]
 
@@ -318,14 +348,12 @@ def test_cases(commands_and_paths):
             methods = ["id", "pedigree", "genotypes", "sequence"]
             answer = ["genotypes", "penetrance", "genotypes", "seq"]
             for i in range(len(methods)):
-                # output_file_path = path + f"/output.{methods[i]}.called.0.1"
                 output_file_path = os.path.join(path, f"output.{methods[i]}.called.0.1")
                 output = read_file(output_file_path)
 
                 assert len(output) == 4
                 assert output[0][0] == answer[i]
 
-            # output_file_path = path + "/output.only.called.0.1"
             output_file_path = os.path.join(path, "output.only.called.0.1")
             output = read_file(output_file_path)
 
