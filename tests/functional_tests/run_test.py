@@ -47,13 +47,6 @@ def standard_input_command(test_number):
     """
     returns the standard input command
     """
-    #     command = f"""
-    # AlphaPeel -genotypes {generate_file_path('genotypes', test_number)} \
-    #     -phasefile {generate_file_path('phasefile', test_number)} \
-    #     -penetrance {generate_file_path('penetrance', test_number)} \
-    #     -seqfile {generate_file_path('seqfile', test_number)} \
-    #     -pedigree {generate_file_path('pedigree', test_number)} \
-    # """
     command = (
         "AlphaPeel -genotypes "
         + generate_file_path("genotypes", test_number)
