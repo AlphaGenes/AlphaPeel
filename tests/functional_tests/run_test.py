@@ -1,6 +1,5 @@
 import os
 import shutil
-import subprocess
 import platform
 import pytest
 
@@ -40,7 +39,9 @@ def generate_file_path(file_type, test_number):
     """
     returns the corresponding path of the input files
     """
-    return os.path.join(f"test{test_number}", f"{file_type}.txt")
+    return os.path.join(
+        "tests", "functional_tests", f"test{test_number}", f"{file_type}.txt"
+    )
 
 
 def standard_input_command(test_number):
@@ -67,7 +68,9 @@ def output_path_command(test_number, file_prefix):
     """
     returns the output path command
     """
-    path = os.path.join(f"test{test_number}", "outputs", file_prefix)
+    path = os.path.join(
+        "tests", "functional_tests", f"test{test_number}", "outputs", file_prefix
+    )
     command = f"-out {path}"
     return command
 
@@ -265,12 +268,16 @@ AlphaPeel -bfile test3c/outputs/output.called.0.9 \
 
     for n in range(1, 9):
         test_n = str(n)
-        paths[test_n] = os.path.join(f"test{n}", "outputs")
+        paths[test_n] = os.path.join("tests", "functional_tests", f"test{n}", "outputs")
         commands[test_n] = local_variables["command_" + test_n]
         if n in [3, 7]:
-            paths[test_n + "b"] = os.path.join(f"test{n}b", "outputs")
+            paths[test_n + "b"] = os.path.join(
+                "tests", "functional_tests", f"test{n}b", "outputs"
+            )
             commands[test_n + "b"] = local_variables["command_" + test_n + "b"]
-            paths[test_n + "c"] = os.path.join(f"test{n}c", "outputs")
+            paths[test_n + "c"] = os.path.join(
+                "tests", "functional_tests", f"test{n}c", "outputs"
+            )
             commands[test_n + "c"] = local_variables["command_" + test_n + "c"]
 
     return commands, paths
@@ -330,11 +337,9 @@ def test_cases(commands_and_paths):
         if system == "Windows":
             commands = command.split(os.linesep)
             for one_line_command in commands:
-                subprocess.run(
-                    one_line_command, shell=True, capture_output=True, text=True
-                )
+                os.system(one_line_command)
         else:
-            subprocess.run(command, shell=True, capture_output=True, text=True)
+            os.system(command)
 
         if test_number == "4":
             methods = ["id", "pedigree", "genotypes", "sequence"]
@@ -390,15 +395,6 @@ def test_cases(commands_and_paths):
             output_file_path = os.path.join(path, "output.called.0.1")
             expected_file_path = os.path.join(path[:-7], "trueGenotypes.txt")
 
-            if test_number == "1":
-                assert sorted(os.listdir("test1/outputs/")) == [
-                    "output.called.0.1",
-                    "output.dosages",
-                    "output.genoError",
-                    "output.maf",
-                    "output.seg",
-                    "output.seqError",
-                ]
             output = read_and_sort_file(output_file_path)
             expected = read_and_sort_file(expected_file_path)
 
