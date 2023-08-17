@@ -1,4 +1,3 @@
-import pytest
 import os
 import shutil
 import numpy as np
@@ -96,18 +95,13 @@ def get_gwas_cor(output, real):
     """
     Get correlation between the output and the real data
     """
-    # print(f"real.shape[1]: {real.shape[1]}")
-    # for i in range(real.shape[1]):
-    #     real[:, i]
-    #     output[:, i]
-
     cors = np.array(
         [np.corrcoef(real[:, i], output[:, i])[0, 1] for i in range(real.shape[1])]
     )
     return np.mean(cors)
 
 
-@pytest.fixture
+# @pytest.fixture
 def commands():
     """
     Return a list of commands
@@ -164,7 +158,7 @@ def commands():
     return [command_1, command_2, command_3, command_4, command_5, command_6]
 
 
-def test_cases(commands):
+def run_command(commands):
     """
     Run the tests
     """
@@ -189,3 +183,7 @@ def test_cases(commands):
     assess_peeling("peeling.single.dosages")
     assess_peeling("peeling.hybrid.dosages")
     assess_peeling("peeling.hybrid.seq.dosages")
+
+
+def test_code(benchmark):
+    benchmark(run_command, commands())
