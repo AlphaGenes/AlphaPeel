@@ -139,7 +139,7 @@ def commands():
         + " -segmapfile "
         + generate_file_path("segmap.txt")
         + " -segfile "
-        + os.path.join("tests", "accuracy_tests", "outputs", "seg.subset.txt")
+        + generate_file_path("seg.subset.txt")
         + " "
         + output_path_command("peeling.hybrid")
     )
@@ -151,7 +151,7 @@ def commands():
         + " -segmapfile "
         + generate_file_path("segmap.txt")
         + " -segfile "
-        + os.path.join("tests", "accuracy_tests", "outputs", "seg.subset.txt")
+        + generate_file_path("seg.subset.txt")
         + " "
         + output_path_command("peeling.hybrid.seq")
     )
