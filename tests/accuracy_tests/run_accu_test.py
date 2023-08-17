@@ -54,7 +54,7 @@ def standard_input_command(seq):
     seq(Boolean) indicates whether the input file is seqfile or genotypes
     """
     if seq:
-        command = "AlphaPeel -seq " + generate_file_path("sequence.2")
+        command = "AlphaPeel -seqfile " + generate_file_path("sequence.2")
     else:
         command = "AlphaPeel -genotypes " + generate_file_path("genotypes.txt")
     command += (
@@ -73,6 +73,38 @@ def output_path_command(file_prefix):
     path = os.path.join("tests", "accuracy_tests", "outputs", file_prefix)
     command = f"-out {path}"
     return command
+
+
+def assess_peeling(file_prefix):
+    """
+    assess the performance of the peeling
+    """
+
+    output_path = os.path.join("tests", "accuracy_tests", "outputs", file_prefix)
+    true_path = generate_file_path("trueGenotypes.txt")
+
+    new_file = np.loadtxt(output_path)
+    trueGenotypes = np.loadtxt(true_path)
+
+    print(" ")
+    print("Assessing peeling file: " + file_prefix)
+    newAcc = get_gwas_cor(new_file[:, 1:], trueGenotypes[:, 1:])
+    print("Accuracy: ", round(newAcc, 3))
+
+
+def get_gwas_cor(output, real):
+    """
+    Get correlation between the output and the real data
+    """
+    # print(f"real.shape[1]: {real.shape[1]}")
+    # for i in range(real.shape[1]):
+    #     real[:, i]
+    #     output[:, i]
+
+    cors = np.array(
+        [np.corrcoef(real[:, i], output[:, i])[0, 1] for i in range(real.shape[1])]
+    )
+    return np.mean(cors)
 
 
 @pytest.fixture
@@ -151,3 +183,9 @@ def test_cases(commands):
 
     os.system(commands[4])
     os.system(commands[5])
+
+    assess_peeling("peeling.dosages")
+    assess_peeling("peeling.multi.seq.dosages")
+    assess_peeling("peeling.single.dosages")
+    assess_peeling("peeling.hybrid.dosages")
+    assess_peeling("peeling.hybrid.seq.dosages")
