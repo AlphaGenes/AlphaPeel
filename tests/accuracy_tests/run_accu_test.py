@@ -101,37 +101,91 @@ def get_gwas_cor(output, real):
     return np.mean(cors)
 
 
-# @pytest.fixture
-def commands():
+def run_command(command):
     """
-    Return a list of commands
+    Run the tests
     """
-    command_1 = (
+    path = os.path.join("tests", "accuracy_tests", "outputs")
+    make_directory(path)
+    os.system(command)
+
+
+# def run_command(commands):
+#     """
+#     Run the tests
+#     """
+#     path = os.path.join("tests", "accuracy_tests", "outputs")
+#     make_directory(path)
+#     for i in range(4):
+#         os.system(commands[i])
+
+#     subset = np.floor(np.linspace(1, 1000, num=200))
+#     subset = np.concatenate(([0], subset), dtype=int, casting="unsafe")
+
+#     file_r = os.path.join(path, "peeling.seg")
+#     seg = read_file(file_r)
+#     file_w = os.path.join(path, "seg.subset.txt")
+#     write_file(file_w, seg[:, subset])
+
+#     os.system(commands[4])
+#     os.system(commands[5])
+
+#     assess_peeling("peeling.dosages")
+#     assess_peeling("peeling.multi.seq.dosages")
+#     assess_peeling("peeling.single.dosages")
+#     assess_peeling("peeling.hybrid.dosages")
+#     assess_peeling("peeling.hybrid.seq.dosages")
+
+
+def test_multi(benchmark):
+    command = (
         standard_input_command(seq=False)
         + " -runType multi "
         + output_path_command("peeling")
     )
-    command_2 = (
+    benchmark(run_command, command)
+
+    assess_peeling("peeling.dosages")
+
+
+def test_estsrrors_estmaf_multi(benchmark):
+    command = (
         standard_input_command(seq=False)
         + " -runType multi"
         + " -esterrors"
         + " -estmaf "
         + output_path_command("peeling.estErrorsAndMaf")
     )
-    # Multi locus with sequence
-    command_3 = (
+    benchmark(run_command, command)
+
+    assess_peeling("peeling.estErrorsAndMaf.dosages")
+
+
+def test_seq_multi(benchmark):
+    command = (
         standard_input_command(seq=True)
         + " -runType multi "
         + output_path_command("peeling.multi.seq")
     )
-    # Single locus
-    command_4 = (
+    benchmark(run_command, command)
+
+    assess_peeling("peeling.multi.seq.dosages")
+
+
+def test_estmaf_multi(benchmark):
+    command = (
         standard_input_command(seq=False)
         + " -runType single"
         + " -estmaf "
         + output_path_command("peeling.single")
     )
-    command_5 = (
+    benchmark(run_command, command)
+
+    assess_peeling("peeling.single.dosages")
+
+
+def test_hybrid_single(benchmark):
+    command = (
         standard_input_command(seq=False)
         + " -runType single"
         + " -mapfile "
@@ -143,7 +197,13 @@ def commands():
         + " "
         + output_path_command("peeling.hybrid")
     )
-    command_6 = (
+    benchmark(run_command, command)
+
+    assess_peeling("peeling.hybrid.dosages")
+
+
+def test_hybrid_seq_single(benchmark):
+    command = (
         standard_input_command(seq=True)
         + " -runType single"
         + " -mapfile "
@@ -155,35 +215,6 @@ def commands():
         + " "
         + output_path_command("peeling.hybrid.seq")
     )
-    return [command_1, command_2, command_3, command_4, command_5, command_6]
+    benchmark(run_command, command)
 
-
-def run_command(commands):
-    """
-    Run the tests
-    """
-    path = os.path.join("tests", "accuracy_tests", "outputs")
-    make_directory(path)
-    for i in range(4):
-        os.system(commands[i])
-
-    subset = np.floor(np.linspace(1, 1000, num=200))
-    subset = np.concatenate(([0], subset), dtype=int, casting="unsafe")
-
-    file_r = os.path.join(path, "peeling.seg")
-    seg = read_file(file_r)
-    file_w = os.path.join(path, "seg.subset.txt")
-    write_file(file_w, seg[:, subset])
-
-    os.system(commands[4])
-    os.system(commands[5])
-
-    assess_peeling("peeling.dosages")
-    assess_peeling("peeling.multi.seq.dosages")
-    assess_peeling("peeling.single.dosages")
-    assess_peeling("peeling.hybrid.dosages")
     assess_peeling("peeling.hybrid.seq.dosages")
-
-
-def test_code(benchmark):
-    benchmark(run_command, commands())
