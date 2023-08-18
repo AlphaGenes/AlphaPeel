@@ -34,10 +34,9 @@ def write_file(file_path, list_of_data):
     OUTPUT:
     values: 2d list of str, store the values of the records
     """
-    linesep = os.linesep
     with open(file_path, "w") as file:
         for row in list_of_data:
-            file.write(" ".join(row) + linesep)
+            file.write(" ".join(row) + "\n")
 
 
 def generate_file_path(file_name):
@@ -101,13 +100,13 @@ def get_gwas_cor(output, real):
     return np.mean(cors)
 
 
-def run_command(command):
-    """
-    Run the tests
-    """
-    path = os.path.join("tests", "accuracy_tests", "outputs")
-    make_directory(path)
-    os.system(command)
+# def run_command(command):
+#     """
+#     Run the tests
+#     """
+#     path = os.path.join("tests", "accuracy_tests", "outputs")
+#     make_directory(path)
+#     os.system(command)
 
 
 # def run_command(commands):
@@ -138,12 +137,14 @@ def run_command(command):
 
 
 def test_multi(benchmark):
+    path = os.path.join("tests", "accuracy_tests", "outputs")
+    make_directory(path)
     command = (
         standard_input_command(seq=False)
         + " -runType multi "
         + output_path_command("peeling")
     )
-    benchmark(run_command, command)
+    benchmark(os.system, command)
 
     assess_peeling("peeling.dosages")
 
@@ -156,7 +157,7 @@ def test_estsrrors_estmaf_multi(benchmark):
         + " -estmaf "
         + output_path_command("peeling.estErrorsAndMaf")
     )
-    benchmark(run_command, command)
+    benchmark(os.system, command)
 
     assess_peeling("peeling.estErrorsAndMaf.dosages")
 
@@ -167,7 +168,7 @@ def test_seq_multi(benchmark):
         + " -runType multi "
         + output_path_command("peeling.multi.seq")
     )
-    benchmark(run_command, command)
+    benchmark(os.system, command)
 
     assess_peeling("peeling.multi.seq.dosages")
 
@@ -179,12 +180,23 @@ def test_estmaf_multi(benchmark):
         + " -estmaf "
         + output_path_command("peeling.single")
     )
-    benchmark(run_command, command)
+    benchmark(os.system, command)
 
     assess_peeling("peeling.single.dosages")
 
 
 def test_hybrid_single(benchmark):
+    # generate seg file for first hybrid test
+    path = os.path.join("tests", "accuracy_tests", "outputs")
+
+    subset = np.floor(np.linspace(1, 1000, num=200))
+    subset = np.concatenate(([0], subset), dtype=int, casting="unsafe")
+
+    file_r = os.path.join(path, "peeling.seg")
+    seg = read_file(file_r)
+    file_w = generate_file_path("seg.subset.txt")
+    write_file(file_w, seg[:, subset])
+
     command = (
         standard_input_command(seq=False)
         + " -runType single"
@@ -197,7 +209,7 @@ def test_hybrid_single(benchmark):
         + " "
         + output_path_command("peeling.hybrid")
     )
-    benchmark(run_command, command)
+    benchmark(os.system, command)
 
     assess_peeling("peeling.hybrid.dosages")
 
@@ -215,6 +227,6 @@ def test_hybrid_seq_single(benchmark):
         + " "
         + output_path_command("peeling.hybrid.seq")
     )
-    benchmark(run_command, command)
+    benchmark(os.system, command)
 
     assess_peeling("peeling.hybrid.seq.dosages")
