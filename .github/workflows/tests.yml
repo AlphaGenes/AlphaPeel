@@ -1,4 +1,4 @@
-name: Evaluate code syntax (and correctness in the future)
+name: Evaluate code syntax and correctness
 on: [push, pull_request]
 
 jobs:
@@ -45,4 +45,4 @@ jobs:
             
             - name: Run pytest
               run: |
-                pytest --maxfail=10
+                pytest
