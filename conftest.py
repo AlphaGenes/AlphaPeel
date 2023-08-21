@@ -11,5 +11,6 @@ def pytest_runtest_makereport(item, call):
         and report.nodeid[:37] == "tests/accuracy_tests/run_accu_test.py"
     ):
         print("---" * 35)
-        Accuracy_report = report.sections[-1][-1].split("\n")[-2]
-        print(Accuracy_report)
+        print("nodeid: " + report.nodeid)
+        accuracy_report = report.sections[-1][-1].split("\n")[-2]
+        print(accuracy_report)
