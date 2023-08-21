@@ -100,42 +100,6 @@ def get_gwas_cor(output, real):
     return np.mean(cors)
 
 
-# def run_command(command):
-#     """
-#     Run the tests
-#     """
-#     path = os.path.join("tests", "accuracy_tests", "outputs")
-#     make_directory(path)
-#     os.system(command)
-
-
-# def run_command(commands):
-#     """
-#     Run the tests
-#     """
-#     path = os.path.join("tests", "accuracy_tests", "outputs")
-#     make_directory(path)
-#     for i in range(4):
-#         os.system(commands[i])
-
-#     subset = np.floor(np.linspace(1, 1000, num=200))
-#     subset = np.concatenate(([0], subset), dtype=int, casting="unsafe")
-
-#     file_r = os.path.join(path, "peeling.seg")
-#     seg = read_file(file_r)
-#     file_w = os.path.join(path, "seg.subset.txt")
-#     write_file(file_w, seg[:, subset])
-
-#     os.system(commands[4])
-#     os.system(commands[5])
-
-#     assess_peeling("peeling.dosages")
-#     assess_peeling("peeling.multi.seq.dosages")
-#     assess_peeling("peeling.single.dosages")
-#     assess_peeling("peeling.hybrid.dosages")
-#     assess_peeling("peeling.hybrid.seq.dosages")
-
-
 def test_multi(benchmark):
     path = os.path.join("tests", "accuracy_tests", "outputs")
     make_directory(path)
