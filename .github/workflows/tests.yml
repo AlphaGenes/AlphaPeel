@@ -2,7 +2,7 @@ name: Evaluate code syntax (and correctness in the future)
 on: [push, pull_request]
 
 jobs:
-    pre-commit:
+    pre-commit_and_pytest:
         name: Run the pre-commit forks
         runs-on: ubuntu-latest
         permissions:
@@ -17,3 +17,28 @@ jobs:
             
             - uses: pre-commit/action@v3.0.0
               name: Run pre-commit
+
+            - name: Install pypa/build
+              run: >-
+                python3 -m
+                pip install
+                --upgrade 
+                build
+            
+            - name: Initialize submodules
+              run: |
+                  git submodule update --init
+  
+            - name: Build SDist and wheel
+              run: python3 -m build
+
+            - name: Install AlphaPeel
+              run: pip install dist/*.whl
+
+            - name: Install pytest
+              run: pip install pytest
+            
+            - name: Run pytest
+              run: |
+                cd tests/functional_tests/
+                pytest
