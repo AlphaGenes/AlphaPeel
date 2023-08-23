@@ -12,5 +12,5 @@ def pytest_runtest_makereport(item, call):
     ):
         print("---" * 35)
         print("nodeid: " + report.nodeid)
-        accuracy_report = report.sections[-1][-1].split("\n")[-2]
-        print(accuracy_report)
+        accuracy_report = report.sections[-1][-1].split("\n")[-13:-1]
+        print("\n".join(accuracy_report))

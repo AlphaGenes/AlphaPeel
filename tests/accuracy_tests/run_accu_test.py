@@ -86,18 +86,56 @@ def assess_peeling(file_prefix):
 
     print(" ")
     print("Assessing peeling file: " + file_prefix)
-    newAcc = get_gwas_cor(new_file[:, 1:], trueGenotypes[:, 1:])
-    print("Accuracy: ", round(newAcc, 3))
+
+    Acc = get_marker_accu(new_file[:, 1:], trueGenotypes[:, 1:])
+    print("Marker Accuracy:", round(Acc, 3))
+    for gen in range(5):
+        Acc = get_marker_accu(
+            new_file[gen * 200 : (gen + 1) * 200],
+            trueGenotypes[gen * 200 : (gen + 1) * 200],
+        )
+        print(f"Marker Accuracy Generation {gen + 1}:", round(Acc, 3))
+
+    Acc = get_ind_accu(new_file[:, 1:], trueGenotypes[:, 1:], None)
+    print("Individual Accuracy:", round(Acc, 3))
+    for gen in range(5):
+        Acc = get_ind_accu(new_file[:, 1:], trueGenotypes[:, 1:], gen)
+        print(f"Individual Accuracy Generation {gen + 1}:", round(Acc, 3))
 
 
-def get_gwas_cor(output, real):
+def get_marker_accu(output, real):
     """
-    Get correlation between the output and the real data
+    Get marker accuracy between the output and the real data
     """
-    cors = np.array(
+    accus = np.array(
         [np.corrcoef(real[:, i], output[:, i])[0, 1] for i in range(real.shape[1])]
     )
-    return np.mean(cors)
+    return np.nanmean(accus)
+
+
+def get_ind_accu(output, real, gen=None):
+    """
+    Get individual accuracy between the output and the real data
+    """
+    accus = np.array(
+        [np.corrcoef(real[i, :], output[i, :])[0, 1] for i in range(real.shape[0])]
+    )
+    if type(gen) == int:
+        accus = accus[gen * 200 : (gen + 1) * 200]
+    return np.nanmean(accus)
+
+
+def test_single(benchmark):
+    path = os.path.join("tests", "accuracy_tests", "outputs")
+    make_directory(path)
+    command = (
+        standard_input_command(seq=False)
+        + " -runType single "
+        + output_path_command("peeling.single")
+    )
+    benchmark(os.system, command)
+
+    assess_peeling("peeling.single.dosages")
 
 
 def test_multi(benchmark):
@@ -106,11 +144,11 @@ def test_multi(benchmark):
     command = (
         standard_input_command(seq=False)
         + " -runType multi "
-        + output_path_command("peeling")
+        + output_path_command("peeling.multi")
     )
     benchmark(os.system, command)
 
-    assess_peeling("peeling.dosages")
+    assess_peeling("peeling.multi.dosages")
 
 
 def test_estsrrors_estmaf_multi(benchmark):
@@ -140,23 +178,35 @@ def test_seq_multi(benchmark):
 def test_estmaf_multi(benchmark):
     command = (
         standard_input_command(seq=False)
-        + " -runType single"
+        + " -runType multi"
         + " -estmaf "
-        + output_path_command("peeling.single")
+        + output_path_command("peeling.multi.estmaf")
     )
     benchmark(os.system, command)
 
-    assess_peeling("peeling.single.dosages")
+    assess_peeling("peeling.multi.estmaf.dosages")
+
+
+def test_estmaf_single(benchmark):
+    command = (
+        standard_input_command(seq=False)
+        + " -runType single"
+        + " -estmaf "
+        + output_path_command("peeling.single.estmaf")
+    )
+    benchmark(os.system, command)
+
+    assess_peeling("peeling.single.estmaf.dosages")
 
 
 def test_hybrid_single(benchmark):
     # generate seg file for first hybrid test
     path = os.path.join("tests", "accuracy_tests", "outputs")
 
-    subset = np.floor(np.linspace(1, 1000, num=200))
-    subset = np.concatenate(([0], subset), dtype=int, casting="unsafe")
+    subset = np.floor(np.linspace(1, 1000, num=200)).astype(dtype=int)
+    subset = np.concatenate(([0], subset))
 
-    file_r = os.path.join(path, "peeling.seg")
+    file_r = os.path.join(path, "peeling.multi.seg")
     seg = read_file(file_r)
     file_w = generate_file_path("seg.subset.txt")
     write_file(file_w, seg[:, subset])
