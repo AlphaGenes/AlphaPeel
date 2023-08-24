@@ -1,6 +1,7 @@
 import os
 import shutil
 import numpy as np
+import warnings
 
 
 def make_directory(path):
@@ -87,45 +88,55 @@ def assess_peeling(file_prefix):
     print(" ")
     print("Assessing peeling file: " + file_prefix)
 
-    Acc = get_marker_accu(new_file[:, 1:], trueGenotypes[:, 1:])
-    print("Marker Accuracy:", round(Acc, 3))
+    Marker_accu = [str(get_marker_accu(new_file[:, 1:], trueGenotypes[:, 1:]))]
     for gen in range(5):
-        Acc = get_marker_accu(
-            new_file[gen * 200 : (gen + 1) * 200],
-            trueGenotypes[gen * 200 : (gen + 1) * 200],
+        Marker_accu.append(
+            str(
+                get_marker_accu(
+                    new_file[gen * 200 : (gen + 1) * 200],
+                    trueGenotypes[gen * 200 : (gen + 1) * 200],
+                )
+            )
         )
-        print(f"Marker Accuracy Generation {gen + 1}:", round(Acc, 3))
 
-    Acc = get_ind_accu(new_file[:, 1:], trueGenotypes[:, 1:], None)
-    print("Individual Accuracy:", round(Acc, 3))
+    print("Marker_accuracies", " ".join(Marker_accu))
+
+    Ind_accu = [str(get_ind_accu(new_file[:, 1:], trueGenotypes[:, 1:], None))]
     for gen in range(5):
-        Acc = get_ind_accu(new_file[:, 1:], trueGenotypes[:, 1:], gen)
-        print(f"Individual Accuracy Generation {gen + 1}:", round(Acc, 3))
+        Ind_accu.append(str(get_ind_accu(new_file[:, 1:], trueGenotypes[:, 1:], gen)))
+
+    print("Individual_accuracies", " ".join(Ind_accu))
 
 
 def get_marker_accu(output, real):
     """
     Get marker accuracy between the output and the real data
     """
-    accus = np.array(
-        [np.corrcoef(real[:, i], output[:, i])[0, 1] for i in range(real.shape[1])]
-    )
-    return np.nanmean(accus)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        accus = np.array(
+            [np.corrcoef(real[:, i], output[:, i])[0, 1] for i in range(real.shape[1])]
+        )
+    return round(np.nanmean(accus), 3)
 
 
 def get_ind_accu(output, real, gen=None):
     """
     Get individual accuracy between the output and the real data
     """
-    accus = np.array(
-        [np.corrcoef(real[i, :], output[i, :])[0, 1] for i in range(real.shape[0])]
-    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        accus = np.array(
+            [np.corrcoef(real[i, :], output[i, :])[0, 1] for i in range(real.shape[0])]
+        )
     if type(gen) == int:
         accus = accus[gen * 200 : (gen + 1) * 200]
-    return np.nanmean(accus)
+    return round(np.nanmean(accus), 3)
 
 
 def test_single(benchmark):
+    if os.path.exists("tests/accuracy_tests/accu_report.txt"):
+        os.remove("tests/accuracy_tests/accu_report.txt")
     path = os.path.join("tests", "accuracy_tests", "outputs")
     make_directory(path)
     command = (
@@ -136,6 +147,18 @@ def test_single(benchmark):
     benchmark(os.system, command)
 
     assess_peeling("peeling.single.dosages")
+
+
+def test_single_estmaf(benchmark):
+    command = (
+        standard_input_command(seq=False)
+        + " -runType single"
+        + " -estmaf "
+        + output_path_command("peeling.single.estmaf")
+    )
+    benchmark(os.system, command)
+
+    assess_peeling("peeling.single.estmaf.dosages")
 
 
 def test_multi(benchmark):
@@ -151,7 +174,19 @@ def test_multi(benchmark):
     assess_peeling("peeling.multi.dosages")
 
 
-def test_estsrrors_estmaf_multi(benchmark):
+def test_multi_estmaf(benchmark):
+    command = (
+        standard_input_command(seq=False)
+        + " -runType multi"
+        + " -estmaf "
+        + output_path_command("peeling.multi.estmaf")
+    )
+    benchmark(os.system, command)
+
+    assess_peeling("peeling.multi.estmaf.dosages")
+
+
+def test_multi_estmaf_estsrrors(benchmark):
     command = (
         standard_input_command(seq=False)
         + " -runType multi"
@@ -164,7 +199,7 @@ def test_estsrrors_estmaf_multi(benchmark):
     assess_peeling("peeling.estErrorsAndMaf.dosages")
 
 
-def test_seq_multi(benchmark):
+def test_multi_seq(benchmark):
     command = (
         standard_input_command(seq=True)
         + " -runType multi "
@@ -173,30 +208,6 @@ def test_seq_multi(benchmark):
     benchmark(os.system, command)
 
     assess_peeling("peeling.multi.seq.dosages")
-
-
-def test_estmaf_multi(benchmark):
-    command = (
-        standard_input_command(seq=False)
-        + " -runType multi"
-        + " -estmaf "
-        + output_path_command("peeling.multi.estmaf")
-    )
-    benchmark(os.system, command)
-
-    assess_peeling("peeling.multi.estmaf.dosages")
-
-
-def test_estmaf_single(benchmark):
-    command = (
-        standard_input_command(seq=False)
-        + " -runType single"
-        + " -estmaf "
-        + output_path_command("peeling.single.estmaf")
-    )
-    benchmark(os.system, command)
-
-    assess_peeling("peeling.single.estmaf.dosages")
 
 
 def test_hybrid_single(benchmark):
@@ -228,7 +239,7 @@ def test_hybrid_single(benchmark):
     assess_peeling("peeling.hybrid.dosages")
 
 
-def test_hybrid_seq_single(benchmark):
+def test_hybrid_single_seq(benchmark):
     command = (
         standard_input_command(seq=True)
         + " -runType single"
