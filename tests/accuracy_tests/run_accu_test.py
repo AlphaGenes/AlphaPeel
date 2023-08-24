@@ -162,8 +162,6 @@ def test_single_estmaf(benchmark):
 
 
 def test_multi(benchmark):
-    path = os.path.join("tests", "accuracy_tests", "outputs")
-    make_directory(path)
     command = (
         standard_input_command(seq=False)
         + " -runType multi "
@@ -186,7 +184,7 @@ def test_multi_estmaf(benchmark):
     assess_peeling("peeling.multi.estmaf.dosages")
 
 
-def test_multi_estmaf_estsrrors(benchmark):
+def test_multi_estmaf_esterrors(benchmark):
     command = (
         standard_input_command(seq=False)
         + " -runType multi"
@@ -208,6 +206,31 @@ def test_multi_seq(benchmark):
     benchmark(os.system, command)
 
     assess_peeling("peeling.multi.seq.dosages")
+
+
+def test_multi_estmaf_seq(benchmark):
+    command = (
+        standard_input_command(seq=True)
+        + " -runType multi"
+        + " -estmaf "
+        + output_path_command("peeling.multi.estmaf.seq")
+    )
+    benchmark(os.system, command)
+
+    assess_peeling("peeling.multi.estmaf.seq.dosages")
+
+
+def test_multi_estmaf_esterrors_seq(benchmark):
+    command = (
+        standard_input_command(seq=True)
+        + " -runType multi"
+        + " -estmaf"
+        + " -esterrors "
+        + output_path_command("peeling.estErrorsAndMaf.seq")
+    )
+    benchmark(os.system, command)
+
+    assess_peeling("peeling.estErrorsAndMaf.seq.dosages")
 
 
 def test_hybrid_single(benchmark):
