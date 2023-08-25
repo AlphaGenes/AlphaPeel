@@ -53,15 +53,30 @@ def pytest_terminal_summary(terminalreporter):
         ind_accu, key=operator.itemgetter(*columns[1:]), reverse=True
     )
 
-    format_first_row = "{:<45} " + "{:<20} " * 6
-    format_row = "{:<45} " + "{:<20.3f} " * 6
+    format_first_row = "{:<35} " + "{:<20} " * 6
+    format_row = "{:<35} " + "{:<20.3f} " * 6
 
-    terminalreporter.write_sep("-", "Accuracy")
+    terminalreporter.write_sep("-", "Marker Accuracy")
     terminalreporter.write_line(format_first_row.format(*columns))
-    for test in accu:
+    for test in mkr_accu:
         terminalreporter.write_line(
             format_row.format(
-                test["Type"].decode("UTF-8")[:-11],
+                test["Type"].decode("UTF-8").split("$")[0],
+                test["Population Accu"],
+                test["Gen1 Accu"],
+                test["Gen2 Accu"],
+                test["Gen3 Accu"],
+                test["Gen4 Accu"],
+                test["Gen5 Accu"],
+            )
+        )
+
+    terminalreporter.write_sep("-", "Individual Accuracy")
+    terminalreporter.write_line(format_first_row.format(*columns))
+    for test in ind_accu:
+        terminalreporter.write_line(
+            format_row.format(
+                test["Type"].decode("UTF-8").split("$")[0],
                 test["Population Accu"],
                 test["Gen1 Accu"],
                 test["Gen2 Accu"],
