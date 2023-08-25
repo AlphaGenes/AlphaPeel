@@ -1,6 +1,6 @@
 rm outputs/*
 
-tinypeel=TinyPeel
+tinypeel=AlphaPeel
 ##AlphaPeel
 
 $tinypeel -genotypes baseData/genotypes.txt \
