@@ -353,7 +353,7 @@ def test_cases(commands_and_paths):
     Run the tests
     """
     # the numbers of the tests to be run
-    tests = ["1", "2", "4", "6", "7", "7b", "7c", "8"]
+    tests = ["1", "2", "4", "5", "6", "7", "7b", "7c", "8"]
     system = platform.system()
 
     for test_number in tests:
@@ -421,6 +421,18 @@ def test_cases(commands_and_paths):
                 True,
                 True,
             ]
+
+        elif test_number == "5":
+            for method in ["chance", "normal"]:
+                output_file_path = os.path.join(path, f"{method}.called.0.1")
+                expected_file_path = os.path.join(
+                    path[:-7], f"{method}.trueGenotypes.txt"
+                )
+
+                output = read_and_sort_file(output_file_path)
+                expected = read_and_sort_file(expected_file_path)
+
+                assert output == expected
 
         else:
             output_file_path = os.path.join(path, "output.called.0.1")
