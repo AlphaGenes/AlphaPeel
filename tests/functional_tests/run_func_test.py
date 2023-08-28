@@ -204,10 +204,41 @@ AlphaPeel -bfile test3c/outputs/output.called.0.9 \
 
     # Test 5: Read in an error rate and output genotypes.
     # Should use some silly values, and some not-so-silly values.
-    command_5 = ""
+    test_number = "5"
+    command_5 = (
+        standard_input_command(test_number)
+        + " -runType multi"
+        + " -calling_threshold .1"
+        + " -seqerror 0.5"
+        + " -error 1.0"
+        + " -nophasefounders"
+        + " -haps "
+        + output_path_command(test_number, "chance")
+        + linesep
+        + standard_input_command(test_number)
+        + " -runType multi"
+        + " -calling_threshold .1"
+        + " -seqerror 0.001"
+        + " -error 0.01"
+        + " -haps "
+        + output_path_command(test_number, "normal")
+    )
 
     # Test 6: Sex Chromosome
-    command_6 = ""
+    test_number = "6"
+    command_6 = (
+        "AlphaPeel"
+        + " -genotypes "
+        + generate_file_path("genotypes", test_number)
+        + " -pedigree "
+        + generate_file_path("pedigree", test_number)
+        + " -seqfile "
+        + generate_file_path("seqfile", test_number)
+        + " -runType multi"
+        + " -calling_threshold .1"
+        + " -sexchrom "
+        + output_path_command(test_number, "output")
+    )
 
     # Test 7: Check -esterrors just to make sure it runs.
     test_number = "7"
@@ -322,7 +353,7 @@ def test_cases(commands_and_paths):
     Run the tests
     """
     # the numbers of the tests to be run
-    tests = ["1", "2", "4", "7", "7b", "7c", "8"]
+    tests = ["1", "2", "4", "6", "7", "7b", "7c", "8"]
     system = platform.system()
 
     for test_number in tests:
@@ -404,5 +435,8 @@ def test_cases(commands_and_paths):
             if test_number == "3":
                 delete_columns(expected, [2, 6])
                 delete_columns(output, [1, 3, 4, 5, 6])
+
+            if test_number == "6":
+                output = output[:4]
 
             assert output == expected
