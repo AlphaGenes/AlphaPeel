@@ -5,10 +5,4 @@ extend-ignore =
     # also the Black's default, whitespace before ':'
     E203,
     # this is for the line length, all the lines too long are comments now
-    E501,
-    # imported functions not used, deal with it later
-    F401, 
-    # variable assigned not used, deal with it later
-    F841,
-    # undefined name, deal with it later
-    F821
+    E501

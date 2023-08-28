@@ -1,16 +1,10 @@
-import concurrent.futures
-from numba import jit, float32, int8, int64, optional, boolean
-from numba.experimental import jitclass
+from numba import jit
 import numpy as np
-from collections import OrderedDict
 
 from ..tinyhouse import InputOutput
 from ..tinyhouse import ProbMath
-from ..tinyhouse import HaplotypeOperations
 
 from . import PeelingInfo
-
-import math
 
 #####################################################################
 # In this module we will update 3 things:                           #
@@ -21,7 +15,7 @@ import math
 
 
 # Estimating the minor allele frequency. This update is done by using an iterative approach
-# which minimizes the likelihood of the observed genotypes conditional on them having been
+# which maximizes the likelihood of the observed genotypes conditional on them having been
 # generated from hardy-weinberg equilibrium with a fixed maf value. To speed up, we use
 # Newton style updates to re-estimate the minor allele frequency.
 # There is math on how to do this... somewhere?
@@ -33,7 +27,7 @@ def updateMaf(pedigree, peelingInfo):
             "Updating error rates and minor allele frequencies for sex chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
 
-    maf = np.full(peelingInfo.nLoci, 0.5, dtype=np.float32)
+    maf = peelingInfo.maf
     for i in range(peelingInfo.nLoci):
         maf[i] = newtonMafUpdates(peelingInfo, i)
 
@@ -67,7 +61,7 @@ def newtonMafUpdates(peelingInfo, index):
 
 @jit(nopython=True)
 def getNewtonUpdate(p, peelingInfo, index):
-    # Log likelihood of the liklihood's first + second derivitives
+    # Log liklihood's first + second derivitives
     LLp = 0
     LLpp = 0
 
@@ -241,64 +235,64 @@ def updateSeqError_ind(counts, errors, refReads, altReads, genoProbs):
 #
 
 
-def updateSeg(peelingInfo):
-    # Idea: Split the chromosome into ~10 blocks with slightly different starts/stops. Estimate at each one and then sum.
-    # Not sure if this is the best way, but probably will work okay.
+# def updateSeg(peelingInfo):
+#     # Idea: Split the chromosome into ~10 blocks with slightly different starts/stops. Estimate at each one and then sum.
+#     # Not sure if this is the best way, but probably will work okay.
 
-    distances = [
-        estDistanceFromBreaks(0, peelingInfo.nLoci - 1, nBreaks, peelingInfo)
-        for nBreaks in [5, 10, 20]
-    ]
-    distance = np.mean(distances[0:2])
-    print(distances, ":", distance)
+#     distances = [
+#         estDistanceFromBreaks(0, peelingInfo.nLoci - 1, nBreaks, peelingInfo)
+#         for nBreaks in [5, 10, 20]
+#     ]
+#     distance = np.mean(distances[0:2])
+#     print(distances, ":", distance)
 
-    setupTransmission(distance, peelingInfo)
-
-
-def estDistanceFromBreaks(loc1, loc2, nBreaks, peelingInfo):
-    breakPoints = np.floor(np.linspace(loc1, loc2, nBreaks)).astype(dtype=np.int64)
-    distances = [
-        getDistance(breakPoints[i], breakPoints[i + 1], peelingInfo)
-        for i in range(nBreaks - 1)
-    ]
-    print(nBreaks, ":", distances)
-    return sum(distances)
+#     setupTransmission(distance, peelingInfo)
 
 
-def getDistance(loc1, loc2, peelingInfo):
-    patSeg1 = getSumSeg(loc1, peelingInfo)
-    patSeg2 = getSumSeg(loc2, peelingInfo)
-
-    patValid = ((patSeg1 > 0.99) | (patSeg1 < 0.01)) & (
-        (patSeg2 > 0.99) | (patSeg2 < 0.01)
-    )
-
-    # matValid = ((matSeg1 > .99) | (matSeg1 < .01)) & ((matSeg2 > .99) | (matSeg2 < .01))
-
-    # patRecomb = np.mean(np.abs(patSeg1[patValid] - patSeg2[patValid]))
-    # matRecomb = np.mean(np.abs(matSeg1[matValid] - matSeg2[matValid]))
-
-    # recomb = (patRecomb + matRecomb)/2
-
-    # difference = np.abs(np.round(patSeg1[patValid]) - np.round(patSeg2[patValid]))
-    # return np.mean(difference)
-
-    entropy1 = 1 - (-patSeg1 * np.log2(patSeg1) - (1 - patSeg1) * np.log2(1 - patSeg1))
-    entropy2 = 1 - (-patSeg2 * np.log2(patSeg2) - (1 - patSeg2) * np.log2(1 - patSeg2))
-
-    difference = patSeg1 * (1 - patSeg2) + (1 - patSeg1) * patSeg2
-    est = np.sum(entropy1 * entropy2 * difference) / np.sum(entropy1 * entropy2)
-    # return est
-    return haldane(est)
+# def estDistanceFromBreaks(loc1, loc2, nBreaks, peelingInfo):
+#     breakPoints = np.floor(np.linspace(loc1, loc2, nBreaks)).astype(dtype=np.int64)
+#     distances = [
+#         getDistance(breakPoints[i], breakPoints[i + 1], peelingInfo)
+#         for i in range(nBreaks - 1)
+#     ]
+#     print(nBreaks, ":", distances)
+#     return sum(distances)
 
 
-def getSumSeg(loc, peelingInfo):
-    seg = peelingInfo.segregation[:, :, loc]
-    sumSeg = np.sum(seg, 1)
-    patSeg = (seg[:, 2] + seg[:, 3]) / sumSeg
-    # matSeg = (seg[:,1] + seg[:,3])/sumSeg
-    return patSeg
+# def getDistance(loc1, loc2, peelingInfo):
+#     patSeg1 = getSumSeg(loc1, peelingInfo)
+#     patSeg2 = getSumSeg(loc2, peelingInfo)
+
+#     patValid = ((patSeg1 > 0.99) | (patSeg1 < 0.01)) & (
+#         (patSeg2 > 0.99) | (patSeg2 < 0.01)
+#     )
+
+#     # matValid = ((matSeg1 > .99) | (matSeg1 < .01)) & ((matSeg2 > .99) | (matSeg2 < .01))
+
+#     # patRecomb = np.mean(np.abs(patSeg1[patValid] - patSeg2[patValid]))
+#     # matRecomb = np.mean(np.abs(matSeg1[matValid] - matSeg2[matValid]))
+
+#     # recomb = (patRecomb + matRecomb)/2
+
+#     # difference = np.abs(np.round(patSeg1[patValid]) - np.round(patSeg2[patValid]))
+#     # return np.mean(difference)
+
+#     entropy1 = 1 - (-patSeg1 * np.log2(patSeg1) - (1 - patSeg1) * np.log2(1 - patSeg1))
+#     entropy2 = 1 - (-patSeg2 * np.log2(patSeg2) - (1 - patSeg2) * np.log2(1 - patSeg2))
+
+#     difference = patSeg1 * (1 - patSeg2) + (1 - patSeg1) * patSeg2
+#     est = np.sum(entropy1 * entropy2 * difference) / np.sum(entropy1 * entropy2)
+#     # return est
+#     return haldane(est)
 
 
-def haldane(difference):
-    return -np.log(1.0 - 2.0 * difference) / 2.0
+# def getSumSeg(loc, peelingInfo):
+#     seg = peelingInfo.segregation[:, :, loc]
+#     sumSeg = np.sum(seg, 1)
+#     patSeg = (seg[:, 2] + seg[:, 3]) / sumSeg
+#     # matSeg = (seg[:,1] + seg[:,3])/sumSeg
+#     return patSeg
+
+
+# def haldane(difference):
+#     return -np.log(1.0 - 2.0 * difference) / 2.0
