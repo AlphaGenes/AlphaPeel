@@ -1,16 +1,10 @@
-import concurrent.futures
-from numba import jit, float32, int8, int64, optional, boolean
-from numba.experimental import jitclass
+from numba import jit
 import numpy as np
-from collections import OrderedDict
 
 from ..tinyhouse import InputOutput
 from ..tinyhouse import ProbMath
-from ..tinyhouse import HaplotypeOperations
 
 from . import PeelingInfo
-
-import math
 
 #####################################################################
 # In this module we will update 3 things:                           #
@@ -21,7 +15,7 @@ import math
 
 
 # Estimating the minor allele frequency. This update is done by using an iterative approach
-# which minimizes the likelihood of the observed genotypes conditional on them having been
+# which maximizes the likelihood of the observed genotypes conditional on them having been
 # generated from hardy-weinberg equilibrium with a fixed maf value. To speed up, we use
 # Newton style updates to re-estimate the minor allele frequency.
 # There is math on how to do this... somewhere?
@@ -33,7 +27,7 @@ def updateMaf(pedigree, peelingInfo):
             "Updating error rates and minor allele frequencies for sex chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
 
-    maf = np.full(peelingInfo.nLoci, 0.5, dtype=np.float32)
+    maf = peelingInfo.maf
     for i in range(peelingInfo.nLoci):
         maf[i] = newtonMafUpdates(peelingInfo, i)
 
@@ -67,7 +61,7 @@ def newtonMafUpdates(peelingInfo, index):
 
 @jit(nopython=True)
 def getNewtonUpdate(p, peelingInfo, index):
-    # Log likelihood of the liklihood's first + second derivitives
+    # Log liklihood's first + second derivitives
     LLp = 0
     LLpp = 0
 
@@ -241,18 +235,18 @@ def updateSeqError_ind(counts, errors, refReads, altReads, genoProbs):
 #
 
 
-def updateSeg(peelingInfo):
-    # Idea: Split the chromosome into ~10 blocks with slightly different starts/stops. Estimate at each one and then sum.
-    # Not sure if this is the best way, but probably will work okay.
+# def updateSeg(peelingInfo):
+#     # Idea: Split the chromosome into ~10 blocks with slightly different starts/stops. Estimate at each one and then sum.
+#     # Not sure if this is the best way, but probably will work okay.
 
-    distances = [
-        estDistanceFromBreaks(0, peelingInfo.nLoci - 1, nBreaks, peelingInfo)
-        for nBreaks in [5, 10, 20]
-    ]
-    distance = np.mean(distances[0:2])
-    print(distances, ":", distance)
+#     distances = [
+#         estDistanceFromBreaks(0, peelingInfo.nLoci - 1, nBreaks, peelingInfo)
+#         for nBreaks in [5, 10, 20]
+#     ]
+#     distance = np.mean(distances[0:2])
+#     print(distances, ":", distance)
 
-    setupTransmission(distance, peelingInfo)
+#     setupTransmission(distance, peelingInfo)
 
 
 def estDistanceFromBreaks(loc1, loc2, nBreaks, peelingInfo):
@@ -269,9 +263,9 @@ def getDistance(loc1, loc2, peelingInfo):
     patSeg1 = getSumSeg(loc1, peelingInfo)
     patSeg2 = getSumSeg(loc2, peelingInfo)
 
-    patValid = ((patSeg1 > 0.99) | (patSeg1 < 0.01)) & (
-        (patSeg2 > 0.99) | (patSeg2 < 0.01)
-    )
+    # patValid = ((patSeg1 > 0.99) | (patSeg1 < 0.01)) & (
+    #     (patSeg2 > 0.99) | (patSeg2 < 0.01)
+    # )
 
     # matValid = ((matSeg1 > .99) | (matSeg1 < .01)) & ((matSeg2 > .99) | (matSeg2 < .01))
 

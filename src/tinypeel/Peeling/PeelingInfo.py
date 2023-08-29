@@ -1,14 +1,11 @@
-import concurrent.futures
-from numba import jit, float32, int8, int64, optional, boolean
+from numba import jit, float32, int64, optional, boolean
 from numba.experimental import jitclass
 import numpy as np
 from collections import OrderedDict
 
-from ..tinyhouse import InputOutput
 from ..tinyhouse import ProbMath
 from ..tinyhouse import HaplotypeOperations
 
-import math
 
 #####################################################################
 # In this module we define the peeling info object.                 #
@@ -160,7 +157,6 @@ def getHetMidpoint(geno):
     nLoci = len(geno)
     midpoint = int(nLoci / 2)
     index = 0
-    changed = False
     while index < nLoci / 2:
         if midpoint + index < nLoci:
             if geno[midpoint + index] == 1:

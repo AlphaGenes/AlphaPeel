@@ -1,9 +1,6 @@
 import numpy as np
-from numba import jit, float32, int32, int64, optional
-from numba.experimental import jitclass
 
 from .tinyhouse import Pedigree
-from .tinyhouse import ProbMath
 from .tinyhouse import InputOutput
 
 from .Peeling import Peeling
@@ -46,7 +43,7 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
             with concurrent.futures.ThreadPoolExecutor(
                 max_workers=nWorkers
             ) as executor:
-                results = executor.map(
+                executor.map(
                     Peeling.peel,
                     jit_families,
                     repeat(Peeling.PEEL_DOWN),
@@ -65,7 +62,7 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
             with concurrent.futures.ThreadPoolExecutor(
                 max_workers=nWorkers
             ) as executor:
-                results = executor.map(
+                executor.map(
                     Peeling.peel,
                     jit_families,
                     repeat(Peeling.PEEL_UP),
@@ -191,7 +188,6 @@ def getLociAndDistance(snpMap, segMap):
 
 
 def generateSingleLocusSegregation(peelingInfo, pedigree, args):
-    segInfo = None
     if args.segfile is not None:
         # This just gets the locations in the map files.
         snpMap = np.array(

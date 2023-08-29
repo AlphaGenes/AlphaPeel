@@ -1,0 +1,14 @@
+genotypes_0 0 0 0 0 0
+genotypes_1 1 1 1 1 1
+genotypes_2 2 2 2 2 2
+phase_aa 0 0 0 0 0
+phase_aA 1 1 1 1 1
+phase_Aa 1 1 1 1 1
+phase_AA 2 2 2 2 2
+seq_0 0 0 0 0 0
+seq_1 1 1 1 1 1
+seq_2 2 2 2 2 2
+penetrance_aa 0 0 0 0 0 
+penetrance_aA 1 1 1 1 1
+penetrance_Aa 1 1 1 1 1
+penetrance_AA 2 2 2 2 2

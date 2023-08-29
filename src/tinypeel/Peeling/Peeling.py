@@ -1,14 +1,6 @@
-import concurrent.futures
-from numba import jit, float32, int8, int64, optional, boolean
-from numba.experimental import jitclass
+from numba import jit, float32
 import numpy as np
-from collections import OrderedDict
 
-from ..tinyhouse import InputOutput
-from ..tinyhouse import ProbMath
-from ..tinyhouse import HaplotypeOperations
-
-import math
 
 # Defining variables for peel up and peel down. Ideally these would be characters, but numba does not support characters.
 PEEL_UP = 0
@@ -27,7 +19,6 @@ def peel(family, operation, peelingInfo, singleLocusMode):
     e = 0.000001
     e1e = 1 - e
     e4 = e / 4
-    e16 = e / 16
 
     # Setup local variables from the peeling information container.
     anterior = peelingInfo.anterior
