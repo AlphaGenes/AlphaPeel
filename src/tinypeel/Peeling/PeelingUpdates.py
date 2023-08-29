@@ -249,50 +249,50 @@ def updateSeqError_ind(counts, errors, refReads, altReads, genoProbs):
 #     setupTransmission(distance, peelingInfo)
 
 
-# def estDistanceFromBreaks(loc1, loc2, nBreaks, peelingInfo):
-#     breakPoints = np.floor(np.linspace(loc1, loc2, nBreaks)).astype(dtype=np.int64)
-#     distances = [
-#         getDistance(breakPoints[i], breakPoints[i + 1], peelingInfo)
-#         for i in range(nBreaks - 1)
-#     ]
-#     print(nBreaks, ":", distances)
-#     return sum(distances)
+def estDistanceFromBreaks(loc1, loc2, nBreaks, peelingInfo):
+    breakPoints = np.floor(np.linspace(loc1, loc2, nBreaks)).astype(dtype=np.int64)
+    distances = [
+        getDistance(breakPoints[i], breakPoints[i + 1], peelingInfo)
+        for i in range(nBreaks - 1)
+    ]
+    print(nBreaks, ":", distances)
+    return sum(distances)
 
 
-# def getDistance(loc1, loc2, peelingInfo):
-#     patSeg1 = getSumSeg(loc1, peelingInfo)
-#     patSeg2 = getSumSeg(loc2, peelingInfo)
+def getDistance(loc1, loc2, peelingInfo):
+    patSeg1 = getSumSeg(loc1, peelingInfo)
+    patSeg2 = getSumSeg(loc2, peelingInfo)
 
-#     patValid = ((patSeg1 > 0.99) | (patSeg1 < 0.01)) & (
-#         (patSeg2 > 0.99) | (patSeg2 < 0.01)
-#     )
+    # patValid = ((patSeg1 > 0.99) | (patSeg1 < 0.01)) & (
+    #     (patSeg2 > 0.99) | (patSeg2 < 0.01)
+    # )
 
-#     # matValid = ((matSeg1 > .99) | (matSeg1 < .01)) & ((matSeg2 > .99) | (matSeg2 < .01))
+    # matValid = ((matSeg1 > .99) | (matSeg1 < .01)) & ((matSeg2 > .99) | (matSeg2 < .01))
 
-#     # patRecomb = np.mean(np.abs(patSeg1[patValid] - patSeg2[patValid]))
-#     # matRecomb = np.mean(np.abs(matSeg1[matValid] - matSeg2[matValid]))
+    # patRecomb = np.mean(np.abs(patSeg1[patValid] - patSeg2[patValid]))
+    # matRecomb = np.mean(np.abs(matSeg1[matValid] - matSeg2[matValid]))
 
-#     # recomb = (patRecomb + matRecomb)/2
+    # recomb = (patRecomb + matRecomb)/2
 
-#     # difference = np.abs(np.round(patSeg1[patValid]) - np.round(patSeg2[patValid]))
-#     # return np.mean(difference)
+    # difference = np.abs(np.round(patSeg1[patValid]) - np.round(patSeg2[patValid]))
+    # return np.mean(difference)
 
-#     entropy1 = 1 - (-patSeg1 * np.log2(patSeg1) - (1 - patSeg1) * np.log2(1 - patSeg1))
-#     entropy2 = 1 - (-patSeg2 * np.log2(patSeg2) - (1 - patSeg2) * np.log2(1 - patSeg2))
+    entropy1 = 1 - (-patSeg1 * np.log2(patSeg1) - (1 - patSeg1) * np.log2(1 - patSeg1))
+    entropy2 = 1 - (-patSeg2 * np.log2(patSeg2) - (1 - patSeg2) * np.log2(1 - patSeg2))
 
-#     difference = patSeg1 * (1 - patSeg2) + (1 - patSeg1) * patSeg2
-#     est = np.sum(entropy1 * entropy2 * difference) / np.sum(entropy1 * entropy2)
-#     # return est
-#     return haldane(est)
-
-
-# def getSumSeg(loc, peelingInfo):
-#     seg = peelingInfo.segregation[:, :, loc]
-#     sumSeg = np.sum(seg, 1)
-#     patSeg = (seg[:, 2] + seg[:, 3]) / sumSeg
-#     # matSeg = (seg[:,1] + seg[:,3])/sumSeg
-#     return patSeg
+    difference = patSeg1 * (1 - patSeg2) + (1 - patSeg1) * patSeg2
+    est = np.sum(entropy1 * entropy2 * difference) / np.sum(entropy1 * entropy2)
+    # return est
+    return haldane(est)
 
 
-# def haldane(difference):
-#     return -np.log(1.0 - 2.0 * difference) / 2.0
+def getSumSeg(loc, peelingInfo):
+    seg = peelingInfo.segregation[:, :, loc]
+    sumSeg = np.sum(seg, 1)
+    patSeg = (seg[:, 2] + seg[:, 3]) / sumSeg
+    # matSeg = (seg[:,1] + seg[:,3])/sumSeg
+    return patSeg
+
+
+def haldane(difference):
+    return -np.log(1.0 - 2.0 * difference) / 2.0
