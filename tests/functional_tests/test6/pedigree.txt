@@ -4,7 +4,7 @@ genotypes_M genotypes_0 genotypes_2 M
 genotypes_F genotypes_0 genotypes_2 F
 sequence_0 0 0 M
 sequence_2 0 0 F
-sequence_M0 sequence_0 sequence_2 M 
-sequence_F0 sequence_0 sequence_2 F
+sequence_M1 sequence_0 sequence_2 M 
+sequence_F1 sequence_0 sequence_2 F
 sequence_M9 sequence_0 sequence_2 M 
 sequence_F9 sequence_0 sequence_2 F

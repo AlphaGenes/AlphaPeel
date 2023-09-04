@@ -97,7 +97,7 @@ def commands_and_paths():
     )
 
     # Test 2: Can we read in a subset of values as in Test 1 output them and
-    # make sure it's the same chunk?
+    # make sure it's the same chunk? (=testing startsnp and stopsnp)
     test_number = 2
 
     command_2 = (
@@ -127,7 +127,8 @@ plink --bfile test3/outputs/output.called.0.1 --real-ref-alleles --recode A --ou
 plink --bfile test3/outputs/output.called.0.99 --real-ref-alleles --recode A --out test3/outputs/output.called.0.99
 """
 
-    # Test 3b: Can we read in a binary file, run the algorithm call the values and check that the output is the same.
+    # Test 3b: Can we read in a binary file,
+    # run the algorithm to call the values and check that the output is the same.
     command_3b = """
 for nind in 1 2 3 4; do
 
@@ -260,7 +261,7 @@ AlphaPeel -bfile test3c/outputs/output.called.0.9 \
         + output_path_command(test_number, "output")
     )
 
-    # Test 7c: Check -estmaf just to make sure it runs.
+    # Test 7c: Check -length just to make sure it runs. (to estrecomb later)
     test_number = "7c"
     command_7c = (
         standard_input_command(test_number)
