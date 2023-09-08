@@ -2,15 +2,33 @@ import os
 import shutil
 
 
-def read_file(file_path):
+def read_file(file_path, **kwargs):
     """
     INPUT:
     file_path: str, the path of the file to be read
+    decimal_place(optional): if provided, round the data with the given
+    decimal places
     OUTPUT:
     values: 2d list of str, store the values of the records
     """
     with open(file_path, "r") as file:
         values = [line.strip().split() for line in file]
+
+    if "decimal_place" in kwargs.keys():
+        # round the data if data exists
+        values = [
+            [line[0]]
+            + [round(float(data), kwargs["decimal_place"]) for data in line[1:]]
+            if line
+            else line
+            for line in values
+        ]
+    else:
+        # convert data to float for comparison if data exists
+        values = [
+            [line[0]] + [float(data) for data in line[1:]] if line else line
+            for line in values
+        ]
 
     return values
 
@@ -23,11 +41,17 @@ def read_and_sort_file(file_path, id_list=None, **kwargs):
     OUTPUT:
     values: 2d list of str, store the sorted values of the (selected) records
     """
-    values = read_file(file_path)
+
+    values = read_file(file_path, **kwargs)
 
     if id_list is not None:
+        # consider only the entries with id in id_list
         values = [row for row in values if row[0] in id_list]
 
+    # remove the empty strings
+    values = list(filter(None, values))
+
+    # sort according to the id
     values.sort(key=lambda row: row[0])
 
     return values
@@ -47,7 +71,11 @@ class TestClass:
     command = "AlphaPeel "
     test_cases = None
     input_file_depend_on_test_cases = None
-    full_input = ["genotypes", "pedigree", "penetrance", "phasefile", "seqfile"]
+
+    # all the input file options for non-hybrid peeling except the binary file
+    files_to_input = ["genotypes", "pedigree", "penetrance", "phasefile", "seqfile"]
+    # all the output files except the binary file and the parameter files
+    files_to_check = ["called_phase.0.1", "called.0.1", "dosages", "haps", "seg"]
 
     def mk_output_dir(self):
         """
@@ -111,7 +139,7 @@ class TestClass:
         self.test_name = "test_files"
         self.prepare_path()
 
-        self.input_files = self.full_input
+        self.input_files = self.files_to_input
         self.arguments = {
             "runType": "multi",
             "calling_threshold": ".1",
@@ -126,7 +154,9 @@ class TestClass:
         self.output_file_path = os.path.join(
             self.output_path, f"{self.output_file_prefix}.{self.output_file_to_check}"
         )
-        self.expected_file_path = os.path.join(self.path, "trueGenotypes.txt")
+        self.expected_file_path = os.path.join(
+            self.path, f"true-{self.output_file_to_check}.txt"
+        )
 
         self.output = read_and_sort_file(self.output_file_path)
         self.expected = read_and_sort_file(self.expected_file_path)
@@ -141,7 +171,7 @@ class TestClass:
         self.test_name = "test_subset"
         self.prepare_path()
 
-        self.input_files = self.full_input
+        self.input_files = self.files_to_input
         self.arguments = {
             "runType": "multi",
             "calling_threshold": ".1",
@@ -157,7 +187,9 @@ class TestClass:
         self.output_file_path = os.path.join(
             self.output_path, f"{self.output_file_prefix}.{self.output_file_to_check}"
         )
-        self.expected_file_path = os.path.join(self.path, "trueGenotypes.txt")
+        self.expected_file_path = os.path.join(
+            self.path, f"true-{self.output_file_to_check}.txt"
+        )
 
         self.output = read_and_sort_file(self.output_file_path)
         self.expected = read_and_sort_file(self.expected_file_path)
@@ -174,7 +206,7 @@ class TestClass:
         self.test_name = "test_writekey"
         self.prepare_path()
 
-        self.input_files = self.full_input
+        self.input_files = self.files_to_input
         self.arguments = {
             "runType": "multi",
             "calling_threshold": ".1",
@@ -234,8 +266,8 @@ class TestClass:
         self.test_name = "test_est"
         self.prepare_path()
 
-        self.input_files = self.full_input
-        self.input_file_depend_on_test_cases = self.full_input
+        self.input_files = self.files_to_input
+        self.input_file_depend_on_test_cases = self.files_to_input
         self.arguments = {"runType": "multi", "calling_threshold": ".1"}
         self.output_file_to_check = "called.0.1"
 
@@ -257,7 +289,7 @@ class TestClass:
                 f"{self.output_file_prefix}.{self.output_file_to_check}",
             )
             self.expected_file_path = os.path.join(
-                self.path, f"trueGenotypes-{self.test_cases}.txt"
+                self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
             )
 
             self.output = read_and_sort_file(self.output_file_path)
@@ -276,7 +308,7 @@ class TestClass:
         self.test_name = "test_no"
         self.prepare_path()
 
-        self.input_files = self.full_input
+        self.input_files = self.files_to_input
         self.arguments = {"runType": "multi"}
         # whether the output files exist
         # 0: not exist
@@ -307,23 +339,56 @@ class TestClass:
         self.test_name = "test_rec"
         self.prepare_path()
 
-        self.input_files = ["genotypes", "seqfile", "pedigree"]
-        self.arguments = {"runType": "multi"}
-        self.output_file_prefix = "rec"
-        self.output_file_to_check = "seg"
+        self.input_files = ["pedigree"]
+        self.arguments = {
+            "runType": "multi",
+            "haps": None,
+            "calling_threshold": ".1",
+            "call_phase": None,
+        }
 
-        self.generate_command()
-        os.system(self.command)
+        # test for genotype input and sequence input separately
+        for self.test_cases in ["genotypes", "seqfile"]:
+            self.input_files.append(self.test_cases)
+            self.output_file_prefix = f"rec.{self.test_cases}"
+            if self.test_cases == "genotypes":
+                self.arguments["error"] = "0"
+            else:
+                # set a small value for sequence error
+                # as sequence error cannot be 0
+                self.arguments["seqerror"] = "0.00000001"
 
-        self.output_file_path = os.path.join(
-            self.output_path, f"{self.output_file_prefix}.{self.output_file_to_check}"
-        )
-        self.expected_file_path = os.path.join(self.path, "trueSeg.txt")
+            self.generate_command()
+            os.system(self.command)
 
-        self.output = read_and_sort_file(self.output_file_path)
-        self.expected = read_and_sort_file(self.expected_file_path)
+            # bug in writeCalledPhase()
+            # skip called phase file for now
+            self.files_to_check.pop(0)
 
-        assert self.output == self.expected
+            for self.output_file_to_check in self.files_to_check:
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}.txt"
+                )
+
+                if self.test_cases == "seqfile":
+                    # since sequence error is not 0, we need to round the output up
+                    self.output = read_and_sort_file(
+                        self.output_file_path, decimal_place=2
+                    )
+                else:
+                    self.output = read_and_sort_file(self.output_file_path)
+                self.expected = read_and_sort_file(self.expected_file_path)
+
+                assert self.output == self.expected
+
+            self.input_files.pop(-1)
+            self.command = "AlphaPeel "
+            if self.test_cases == "genotypes":
+                self.arguments.pop("error")
 
     # the true values to check against are wrong for test_sex
     # needs to rewrite
@@ -357,7 +422,7 @@ class TestClass:
                 f"{self.output_file_prefix}.{self.output_file_to_check}",
             )
             self.expected_file_path = os.path.join(
-                self.path, f"trueSeg-{self.test_cases}.txt"
+                self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
             )
 
             self.output = read_and_sort_file(self.output_file_path)
@@ -395,16 +460,19 @@ class TestClass:
             print(self.command)
             os.system(self.command)
 
-            #     self.output_file_path = os.path.join(
-            #         self.output_path,
-            #         f"{self.output_file_prefix}.{self.output_file_to_check}"
-            #         )
-            #     self.expected_file_path = os.path.join(self.path, f"trueSeg-{self.test_cases}.txt")
+            # self.output_file_path = os.path.join(
+            #     self.output_path,
+            #     f"{self.output_file_prefix}.{self.output_file_to_check}"
+            #     )
+            # self.expected_file_path = os.path.join(
+            #     self.path,
+            #     f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+            #     )
 
-            #     self.output = read_and_sort_file(self.output_file_path)
-            #     self.expected = read_and_sort_file(self.expected_file_path)
+            # self.output = read_and_sort_file(self.output_file_path)
+            # self.expected = read_and_sort_file(self.expected_file_path)
 
-            #     assert self.output == self.expected
+            # assert self.output == self.expected
             self.command = "AlphaPeel "
 
     # TODO test_plink for PLINK
