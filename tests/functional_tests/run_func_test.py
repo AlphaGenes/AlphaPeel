@@ -1,18 +1,34 @@
 import os
 import shutil
-import platform
-import pytest
 
 
-def read_file(file_path):
+def read_file(file_path, **kwargs):
     """
     INPUT:
     file_path: str, the path of the file to be read
+    decimal_place(optional): if provided, round the data with the given
+    decimal places
     OUTPUT:
     values: 2d list of str, store the values of the records
     """
     with open(file_path, "r") as file:
         values = [line.strip().split() for line in file]
+
+    if "decimal_place" in kwargs.keys():
+        # round the data if data exists
+        values = [
+            [line[0]]
+            + [round(float(data), kwargs["decimal_place"]) for data in line[1:]]
+            if line
+            else line
+            for line in values
+        ]
+    else:
+        # convert data to float for comparison if data exists
+        values = [
+            [line[0]] + [float(data) for data in line[1:]] if line else line
+            for line in values
+        ]
 
     return values
 
@@ -25,303 +41,20 @@ def read_and_sort_file(file_path, id_list=None, **kwargs):
     OUTPUT:
     values: 2d list of str, store the sorted values of the (selected) records
     """
-    values = read_file(file_path)
+
+    values = read_file(file_path, **kwargs)
 
     if id_list is not None:
+        # consider only the entries with id in id_list
         values = [row for row in values if row[0] in id_list]
 
+    # remove the empty strings
+    values = list(filter(None, values))
+
+    # sort according to the id
     values.sort(key=lambda row: row[0])
 
     return values
-
-
-def generate_file_path(file_type, test_number):
-    """
-    returns the corresponding path of the input files
-    """
-    return os.path.join(
-        "tests", "functional_tests", f"test{test_number}", f"{file_type}.txt"
-    )
-
-
-def standard_input_command(test_number):
-    """
-    returns the standard input command
-    """
-    command = (
-        "AlphaPeel -genotypes "
-        + generate_file_path("genotypes", test_number)
-        + " -phasefile "
-        + generate_file_path("phasefile", test_number)
-        + " -penetrance "
-        + generate_file_path("penetrance", test_number)
-        + " -seqfile "
-        + generate_file_path("seqfile", test_number)
-        + " -pedigree "
-        + generate_file_path("pedigree", test_number)
-    )
-
-    return command
-
-
-def output_path_command(test_number, file_prefix):
-    """
-    returns the output path command
-    """
-    path = os.path.join(
-        "tests", "functional_tests", f"test{test_number}", "outputs", file_prefix
-    )
-    command = f"-out {path}"
-    return command
-
-
-@pytest.fixture
-def commands_and_paths():
-    """
-    Return a dictionary of commands and a dictionary of paths
-    """
-    commands = {}
-    paths = {}
-
-    linesep = os.linesep
-
-    # Test 1: Can we read in unrelated individuals from multiple file formats and
-    # output the values to a normal dosage file
-    test_number = "1"
-    command_1 = (
-        standard_input_command(test_number)
-        + " -runType multi"
-        + " -calling_threshold .1"
-        + " -esterrors "
-        + output_path_command(test_number, "output")
-    )
-
-    # Test 2: Can we read in a subset of values as in Test 1 output them and
-    # make sure it's the same chunk?
-    test_number = 2
-
-    command_2 = (
-        standard_input_command(test_number)
-        + " -runType multi"
-        + " -calling_threshold .1"
-        + " -startsnp 2"
-        + " -stopsnp 4 "
-        + output_path_command(test_number, "output")
-    )
-
-    # Test 3: Can we read in values, call the values and output them as binary?
-    command_3 = """
-AlphaPeel -genotypes test3/genotypes.txt \
-                          -phasefile test3/phasefile.txt \
-                          -penetrance test3/penetrance.txt \
-                          -seqfile test3/seqfile.txt \
-                          -pedigree test3/pedigree.txt \
-                          -runType multi \
-                          -calling_threshold .1 0.99\
-                          -startsnp 2 \
-                          -stopsnp 4 \
-                          -binary_call_files \
-                          -out test3/outputs/output
-
-plink --bfile test3/outputs/output.called.0.1 --real-ref-alleles --recode A --out test3/outputs/output.called.0.1
-plink --bfile test3/outputs/output.called.0.99 --real-ref-alleles --recode A --out test3/outputs/output.called.0.99
-"""
-
-    # Test 3b: Can we read in a binary file, run the algorithm call the values and check that the output is the same.
-    command_3b = """
-for nind in 1 2 3 4; do
-
-  AlphaPeel -genotypes test3b/genotypes-$nind.txt \
-                            -runType multi \
-                            -calling_threshold .1 \
-                            -binary_call_files \
-                            -out test3b/outputs/output.$nind
-  plink --bfile test3b/outputs/output.$nind.called.0.1 --real-ref-alleles --recode A --out test3b/outputs/output.$nind.called.0.1
-
-  AlphaPeel -bfile test3b/outputs/output.$nind.called.0.1 \
-                            -runType multi \
-                            -calling_threshold .1 \
-                            -binary_call_files \
-                            -out test3b/outputs/round2.$nind
-
-  plink --bfile test3b/outputs/round2.$nind.called.0.1 --real-ref-alleles --recode A --out test3b/outputs/round2.$nind.called.0.1
-
-done
-"""
-
-    # Test 3c: Will the pedigree file be correctly read from the bed file?
-    # Create the binary file. Re-run.
-    command_3c = """
-AlphaPeel -genotypes test3c/genotypes.txt \
-                          -runType multi \
-                          -calling_threshold .9 \
-                          -binary_call_files \
-                          -out test3c/outputs/output
-plink --bfile test3c/outputs/output.called.0.9 --real-ref-alleles --recode A --out test3c/outputs/output.called.0.9
-
-AlphaPeel -bfile test3c/outputs/output.called.0.9 \
-                          -runType multi \
-                          -calling_threshold .9 \
-                          -out test3c/outputs/noFamNoPedigree
-
-AlphaPeel -bfile test3c/outputs/output.called.0.9 \
-                          -pedigree test3c/pedigree.txt \
-                          -runType multi \
-                          -calling_threshold .9 \
-                          -out test3c/outputs/noFamPedigree
-
-cp test3c/fake.fam test3c/outputs/output.called.0.9.fam
-AlphaPeel -bfile test3c/outputs/output.called.0.9 \
-                          -runType multi \
-                          -calling_threshold .9 \
-                          -out test3c/outputs/famNoPedigree
-"""
-
-    # Test 4a-d: Can we read in values and return them in the correct order.
-    # Check id, pedigree, genotypes, sequence, segregation. Also check onlykeyed.
-    test_number = "4"
-    methods = ["id", "pedigree", "genotypes", "sequence"]
-    command_4 = ""
-    for method in methods:
-        file_prefix = f"output.{method}"
-        command_4 += (
-            standard_input_command(test_number)
-            + " -runType multi"
-            + " -calling_threshold .1 "
-            + output_path_command(test_number, file_prefix)
-            + " -writekey "
-            + method
-            + linesep
-        )
-    command_4 += (
-        standard_input_command(test_number)
-        + " -runType multi"
-        + " -calling_threshold .1 "
-        + output_path_command(test_number, "output.only")
-        + " -writekey sequence"
-        + " -onlykeyed"
-    )
-
-    # Test 5: Read in an error rate and output genotypes.
-    # Should use some silly values, and some not-so-silly values.
-    test_number = "5"
-    command_5 = (
-        standard_input_command(test_number)
-        + " -runType multi"
-        + " -calling_threshold .1"
-        + " -seqerror 0.5"
-        + " -error 1.0"
-        + " -nophasefounders"
-        + " -haps "
-        + output_path_command(test_number, "chance")
-        + linesep
-        + standard_input_command(test_number)
-        + " -runType multi"
-        + " -calling_threshold .1"
-        + " -seqerror 0.001"
-        + " -error 0.01"
-        + " -haps "
-        + output_path_command(test_number, "normal")
-    )
-
-    # Test 6: Sex Chromosome
-    test_number = "6"
-    command_6 = (
-        "AlphaPeel"
-        + " -genotypes "
-        + generate_file_path("genotypes", test_number)
-        + " -pedigree "
-        + generate_file_path("pedigree", test_number)
-        + " -seqfile "
-        + generate_file_path("seqfile", test_number)
-        + " -runType multi"
-        + " -calling_threshold .1"
-        + " -sexchrom "
-        + output_path_command(test_number, "output")
-    )
-
-    # Test 7: Check -esterrors just to make sure it runs.
-    test_number = "7"
-    command_7 = (
-        standard_input_command(test_number)
-        + " -runType multi"
-        + " -esterrors"
-        + " -calling_threshold .1 "
-        + output_path_command(test_number, "output")
-    )
-
-    # Test 7b: Check -estmaf just to make sure it runs.
-    test_number = "7b"
-    command_7b = (
-        standard_input_command(test_number)
-        + " -runType multi"
-        + " -estmaf"
-        + " -calling_threshold .1 "
-        + output_path_command(test_number, "output")
-    )
-
-    # Test 7c: Check -estmaf just to make sure it runs.
-    test_number = "7c"
-    command_7c = (
-        standard_input_command(test_number)
-        + " -runType multi"
-        + " -length 1.0"
-        + " -calling_threshold .1 "
-        + output_path_command(test_number, "output")
-    )
-
-    # Test 8: Check to make sure the no_dosages, no_seg, no_params
-    # flags work, and the haps file works.
-    test_number = "8"
-    command_8 = (
-        standard_input_command("8")
-        + " -runType multi"
-        + " -no_dosages "
-        + output_path_command(test_number, "no_dosages")
-        + linesep
-        + standard_input_command("8")
-        + " -runType multi"
-        + " -no_seg "
-        + output_path_command(test_number, "no_seg")
-        + linesep
-        + standard_input_command("8")
-        + " -runType multi"
-        + " -no_params "
-        + output_path_command(test_number, "no_params")
-        + linesep
-        + standard_input_command("8")
-        + " -runType multi"
-        + " -haps "
-        + output_path_command(test_number, "haps")
-    )
-
-    local_variables = locals()
-
-    for n in range(1, 9):
-        test_n = str(n)
-        paths[test_n] = os.path.join("tests", "functional_tests", f"test{n}", "outputs")
-        commands[test_n] = local_variables["command_" + test_n]
-        if n in [3, 7]:
-            paths[test_n + "b"] = os.path.join(
-                "tests", "functional_tests", f"test{n}b", "outputs"
-            )
-            commands[test_n + "b"] = local_variables["command_" + test_n + "b"]
-            paths[test_n + "c"] = os.path.join(
-                "tests", "functional_tests", f"test{n}c", "outputs"
-            )
-            commands[test_n + "c"] = local_variables["command_" + test_n + "c"]
-
-    return commands, paths
-
-
-def make_directory(path):
-    """
-    Prepare a empty folder at the input path
-    """
-    if os.path.exists(path):
-        shutil.rmtree(path)
-
-    os.mkdir(path)
 
 
 def delete_columns(two_d_list, col_del):
@@ -333,122 +66,418 @@ def delete_columns(two_d_list, col_del):
             del row[col_del[n] - n - 1]
 
 
-def check_for_files(file_prefix):
-    """
-    Check whether the output files exist
-    """
-    output = [
-        os.path.exists(f"{file_prefix}.dosages"),
-        os.path.exists(f"{file_prefix}.seg"),
-        os.path.exists(f"{file_prefix}.maf"),
-        os.path.exists(f"{file_prefix}.genoError"),
-        os.path.exists(f"{file_prefix}.seqError"),
-        os.path.exists(f"{file_prefix}.haps"),
-    ]
-    return output
+class TestClass:
+    path = os.path.join("tests", "functional_tests")
+    command = "AlphaPeel "
+    test_cases = None
+    input_file_depend_on_test_cases = None
 
+    # all the input file options for non-hybrid peeling except the binary file
+    files_to_input = ["genotypes", "pedigree", "penetrance", "phasefile", "seqfile"]
+    # all the output files except the binary file and the parameter files
+    files_to_check = ["called_phase.0.1", "called.0.1", "dosages", "haps", "seg"]
 
-def test_cases(commands_and_paths):
-    """
-    Run the tests
-    """
-    # the numbers of the tests to be run
-    tests = ["1", "2", "4", "5", "6", "7", "7b", "7c", "8"]
-    system = platform.system()
+    def mk_output_dir(self):
+        """
+        Prepare a empty folder at the input path
+        """
+        if os.path.exists(self.output_path):
+            shutil.rmtree(self.output_path)
 
-    for test_number in tests:
-        command, path = (
-            commands_and_paths[0][test_number],
-            commands_and_paths[1][test_number],
+        os.mkdir(self.output_path)
+
+    def generate_command(self):
+        """
+        generate the command for the test
+        """
+        for file in self.input_files:
+            if (
+                (self.test_cases is not None)
+                and (self.input_file_depend_on_test_cases is not None)
+                and (file in self.input_file_depend_on_test_cases)
+            ):
+                self.command += f"-{file} {os.path.join(self.path, f'{file}-{self.test_cases}.txt')} "
+            else:
+                self.command += f"-{file} {os.path.join(self.path, f'{file}.txt')} "
+
+        for key, value in self.arguments.items():
+            if value is not None:
+                self.command += f"-{key} {value} "
+            else:
+                self.command += f"-{key} "
+
+        self.command += (
+            f"-out {os.path.join(self.output_path, self.output_file_prefix)}"
         )
 
-        make_directory(path)
+    def prepare_path(self):
+        """
+        Initialize the paths for the test
+        """
+        self.path = os.path.join(self.path, self.test_name)
+        self.output_path = os.path.join(self.path, "outputs")
+        self.mk_output_dir()
 
-        # run the command
-        if system == "Windows":
-            commands = command.split(os.linesep)
-            for one_line_command in commands:
-                os.system(one_line_command)
-        else:
-            os.system(command)
+    def check_files(self):
+        """
+        Check the existence of the output files
+        """
 
-        if test_number == "4":
-            methods = ["id", "pedigree", "genotypes", "sequence"]
-            answer = ["genotypes", "penetrance", "genotypes", "seq"]
-            for i in range(len(methods)):
-                output_file_path = os.path.join(path, f"output.{methods[i]}.called.0.1")
-                output = read_file(output_file_path)
+        def check(file_type):
+            return os.path.exists(
+                os.path.join(self.output_path, f"{self.output_file_prefix}.{file_type}")
+            )
 
-                assert len(output) == 4
-                assert output[0][0] == answer[i]
+        files = ["dosages", "seg", "maf", "genoError", "seqError", "haps"]
+        return [check(file) for file in files]
 
-            output_file_path = os.path.join(path, "output.only.called.0.1")
-            output = read_file(output_file_path)
+    def test_files(self):
+        """
+        Can we read in unrelated individuals from multiple file formats and
+        output the values to a normal dosage file
+        """
+        self.test_name = "test_files"
+        self.prepare_path()
 
-            assert len(output) == 1
-            assert output[0][0] == "seq"
+        self.input_files = self.files_to_input
+        self.arguments = {
+            "runType": "multi",
+            "calling_threshold": ".1",
+            "esterrors": None,
+        }
+        self.output_file_prefix = "files"
+        self.output_file_to_check = "called.0.1"
 
-        elif test_number == "8":
-            assert check_for_files(os.path.join(path, "no_dosages")) == [
-                False,
-                True,
-                True,
-                True,
-                True,
-                False,
-            ]
-            assert check_for_files(os.path.join(path, "no_seg")) == [
-                True,
-                False,
-                True,
-                True,
-                True,
-                False,
-            ]
-            assert check_for_files(os.path.join(path, "no_params")) == [
-                True,
-                True,
-                False,
-                False,
-                False,
-                False,
-            ]
-            assert check_for_files(os.path.join(path, "haps")) == [
-                True,
-                True,
-                True,
-                True,
-                True,
-                True,
-            ]
+        self.generate_command()
+        os.system(self.command)
 
-        elif test_number == "5":
-            for method in ["chance", "normal"]:
-                output_file_path = os.path.join(path, f"{method}.called.0.1")
-                expected_file_path = os.path.join(
-                    path[:-7], f"{method}.trueGenotypes.txt"
+        self.output_file_path = os.path.join(
+            self.output_path, f"{self.output_file_prefix}.{self.output_file_to_check}"
+        )
+        self.expected_file_path = os.path.join(
+            self.path, f"true-{self.output_file_to_check}.txt"
+        )
+
+        self.output = read_and_sort_file(self.output_file_path)
+        self.expected = read_and_sort_file(self.expected_file_path)
+
+        assert self.output == self.expected
+
+    def test_subset(self):
+        """
+        Can we read in a subset of values as in Test 1 output them and
+        make sure it's the same chunk? (=testing startsnp and stopsnp)
+        """
+        self.test_name = "test_subset"
+        self.prepare_path()
+
+        self.input_files = self.files_to_input
+        self.arguments = {
+            "runType": "multi",
+            "calling_threshold": ".1",
+            "startsnp": "2",
+            "stopsnp": "4",
+        }
+        self.output_file_prefix = "subset"
+        self.output_file_to_check = "called.0.1"
+
+        self.generate_command()
+        os.system(self.command)
+
+        self.output_file_path = os.path.join(
+            self.output_path, f"{self.output_file_prefix}.{self.output_file_to_check}"
+        )
+        self.expected_file_path = os.path.join(
+            self.path, f"true-{self.output_file_to_check}.txt"
+        )
+
+        self.output = read_and_sort_file(self.output_file_path)
+        self.expected = read_and_sort_file(self.expected_file_path)
+
+        delete_columns(self.expected, [2, 6])
+
+        assert self.output == self.expected
+
+    def test_writekey(self):
+        """
+        Can we read in values and return them in the correct order.
+        Check id, pedigree, genotypes, sequence, segregation. Also check onlykeyed.
+        """
+        self.test_name = "test_writekey"
+        self.prepare_path()
+
+        self.input_files = self.files_to_input
+        self.arguments = {
+            "runType": "multi",
+            "calling_threshold": ".1",
+            "writekey": None,
+        }
+
+        methods = ["id", "pedigree", "genotypes", "sequence"]
+        answer = {
+            "id": "genotypes",
+            "pedigree": "penetrance",
+            "genotypes": "genotypes",
+            "sequence": "seq",
+        }
+
+        self.output_file_to_check = "called.0.1"
+
+        for self.test_cases in methods:
+            self.arguments["writekey"] = self.test_cases
+            self.output_file_prefix = f"writekey.{self.test_cases}"
+
+            self.generate_command()
+            os.system(self.command)
+
+            self.output_file_path = os.path.join(
+                self.output_path,
+                f"{self.output_file_prefix}.{self.output_file_to_check}",
+            )
+
+            self.output = read_file(self.output_file_path)
+
+            assert len(self.output) == 4
+            assert self.output[0][0] == answer[self.test_cases]
+
+            self.command = "AlphaPeel "
+
+        self.test_cases = "onlykeyed"
+        self.arguments["onlykeyed"] = None
+        self.output_file_prefix = f"writekey.{self.test_cases}"
+
+        self.generate_command()
+        print(self.command)
+        os.system(self.command)
+
+        self.output_file_path = os.path.join(
+            self.output_path, f"{self.output_file_prefix}.{self.output_file_to_check}"
+        )
+
+        self.output = read_file(self.output_file_path)
+
+        assert len(self.output) == 1
+        assert self.output[0][0] == "seq"
+
+    def test_est(self):
+        """
+        Check -esterrors, -estmaf, -length just to make sure it runs.
+        """
+        self.test_name = "test_est"
+        self.prepare_path()
+
+        self.input_files = self.files_to_input
+        self.input_file_depend_on_test_cases = self.files_to_input
+        self.arguments = {"runType": "multi", "calling_threshold": ".1"}
+        self.output_file_to_check = "called.0.1"
+
+        for self.test_cases in ["esterror", "estmaf", "length"]:
+            # TODO estrecombrate instead of just adding length
+            if self.test_cases != "length":
+                self.arguments[self.test_cases] = None
+            else:
+                # Do we need to continue use this value for lengh
+                # as it is the same as the default value
+                self.arguments["length"] = "1.0"
+            self.output_file_prefix = f"est.{self.test_cases}"
+
+            self.generate_command()
+            os.system(self.command)
+
+            self.output_file_path = os.path.join(
+                self.output_path,
+                f"{self.output_file_prefix}.{self.output_file_to_check}",
+            )
+            self.expected_file_path = os.path.join(
+                self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+            )
+
+            self.output = read_and_sort_file(self.output_file_path)
+            self.expected = read_and_sort_file(self.expected_file_path)
+
+            assert self.output == self.expected
+
+            self.arguments.pop(self.test_cases)
+            self.command = "AlphaPeel "
+
+    def test_no(self):
+        """
+        Check to make sure the no_dosages, no_seg, no_params
+        flags work, and the haps file works.
+        """
+        self.test_name = "test_no"
+        self.prepare_path()
+
+        self.input_files = self.files_to_input
+        self.arguments = {"runType": "multi"}
+        # whether the output files exist
+        # 0: not exist
+        # 1: exist
+        expect = {
+            "no_dosages": [0, 1, 1, 1, 1, 0],
+            "no_seg": [1, 0, 1, 1, 1, 0],
+            "no_params": [1, 1, 0, 0, 0, 0],
+            "haps": [1, 1, 1, 1, 1, 1],
+        }
+
+        for self.test_cases in ["no_dosages", "no_seg", "no_params", "haps"]:
+            self.arguments[self.test_cases] = None
+            self.output_file_prefix = f"no.{self.test_cases}"
+
+            self.generate_command()
+            os.system(self.command)
+
+            assert self.check_files() == expect[self.test_cases]
+
+            self.arguments.pop(self.test_cases)
+            self.command = "AlphaPeel "
+
+    def test_rec(self):
+        """
+        Run the test of the recombination functionality of AlphaPeel
+        """
+        self.test_name = "test_rec"
+        self.prepare_path()
+
+        self.input_files = ["pedigree"]
+        self.arguments = {
+            "runType": "multi",
+            "haps": None,
+            "calling_threshold": ".1",
+            "call_phase": None,
+        }
+
+        # test for genotype input and sequence input separately
+        for self.test_cases in ["genotypes", "seqfile"]:
+            self.input_files.append(self.test_cases)
+            self.output_file_prefix = f"rec.{self.test_cases}"
+            if self.test_cases == "genotypes":
+                self.arguments["error"] = "0"
+            else:
+                # set a small value for sequence error
+                # as sequence error cannot be 0
+                self.arguments["seqerror"] = "0.00000001"
+
+            self.generate_command()
+            os.system(self.command)
+
+            # bug in writeCalledPhase()
+            # skip called phase file for now
+            self.files_to_check.pop(0)
+
+            for self.output_file_to_check in self.files_to_check:
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}.txt"
                 )
 
-                output = read_and_sort_file(output_file_path)
-                expected = read_and_sort_file(expected_file_path)
+                if self.test_cases == "seqfile":
+                    # since sequence error is not 0, we need to round the output up
+                    self.output = read_and_sort_file(
+                        self.output_file_path, decimal_place=2
+                    )
+                else:
+                    self.output = read_and_sort_file(self.output_file_path)
+                self.expected = read_and_sort_file(self.expected_file_path)
 
-                assert output == expected
+                assert self.output == self.expected
 
-        else:
-            output_file_path = os.path.join(path, "output.called.0.1")
-            expected_file_path = os.path.join(path[:-7], "trueGenotypes.txt")
+            self.input_files.pop(-1)
+            self.command = "AlphaPeel "
+            if self.test_cases == "genotypes":
+                self.arguments.pop("error")
 
-            output = read_and_sort_file(output_file_path)
-            expected = read_and_sort_file(expected_file_path)
+    # the true values to check against are wrong for test_sex
+    # needs to rewrite
+    def test_sex(self):
+        """
+        Run the test of the sex chromosome functionality of AlphaPeel
+        -sexchrom still under development...
+        """
+        self.test_name = "test_sex"
+        self.prepare_path()
 
-            if test_number == "2":
-                delete_columns(expected, [2, 6])
+        self.arguments = {"runType": "multi", "sexchrom": None}
+        self.input_files = ["genotypes", "seqfile", "pedigree"]
+        self.input_file_depend_on_test_cases = ["genotypes", "seqfile"]
 
-            if test_number == "3":
-                delete_columns(expected, [2, 6])
-                delete_columns(output, [1, 3, 4, 5, 6])
+        for self.test_cases in ["a", "b", "c", "d"]:
+            # test case a: homozygous generation 2
+            #           b: heterozygous generation 2
+            #           c: with recombination in M2
+            #           d: missing values in generation 2
 
-            if test_number == "6":
-                output = output[:4]
+            self.output_file_prefix = f"sex.{self.test_cases}"
+            self.output_file_to_check = "seg"
 
-            assert output == expected
+            self.generate_command()
+            print(self.command)
+            os.system(self.command)
+
+            self.output_file_path = os.path.join(
+                self.output_path,
+                f"{self.output_file_prefix}.{self.output_file_to_check}",
+            )
+            self.expected_file_path = os.path.join(
+                self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+            )
+
+            self.output = read_and_sort_file(self.output_file_path)
+            self.expected = read_and_sort_file(self.expected_file_path)
+
+            assert self.output == self.expected
+            self.command = "AlphaPeel "
+
+    # the true values to check against for test_error is not written yet
+    def test_error(self):
+        """
+        Run the test of the correcting errors functionality of AlphaPeel
+        """
+        self.test_name = "test_error"
+        self.prepare_path()
+
+        # using default error rates: genotype error rate: 0.01
+        #                            sequence error rate: 0.001
+        self.arguments = {"runType": "multi"}
+        self.input_files = ["genotypes", "seqfile", "pedigree"]
+        self.input_file_depend_on_test_cases = ["genotypes", "seqfile"]
+
+        for self.test_cases in ["a", "b", "c", "d"]:
+            # test case a: somatic mutation at locus 5 of M1 in genotype and seqfile
+            #           b: germline mutation at locus 5 of M1 in genotype and seqfile
+            #           c: somatic mutation at locus 5 of M1 in seqfile only,
+            #              with genotype value missing
+            #           d: germline mutation at locus 5 of M1 in seqfile only,
+            #              with genotype value missing
+
+            self.output_file_prefix = f"error.{self.test_cases}"
+            self.output_file_to_check = "genotypes"
+
+            self.generate_command()
+            print(self.command)
+            os.system(self.command)
+
+            # self.output_file_path = os.path.join(
+            #     self.output_path,
+            #     f"{self.output_file_prefix}.{self.output_file_to_check}"
+            #     )
+            # self.expected_file_path = os.path.join(
+            #     self.path,
+            #     f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+            #     )
+
+            # self.output = read_and_sort_file(self.output_file_path)
+            # self.expected = read_and_sort_file(self.expected_file_path)
+
+            # assert self.output == self.expected
+            self.command = "AlphaPeel "
+
+    # TODO test_plink for PLINK
+    #      a. binary PLINK output
+    #      b. binary output + input
+    #      c. pedigree
+
+    # TODO test_onlykeyed for onlykeyed with halffounders
