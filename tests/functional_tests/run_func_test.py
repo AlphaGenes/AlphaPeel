@@ -475,9 +475,34 @@ class TestClass:
             # assert self.output == self.expected
             self.command = "AlphaPeel "
 
+    def test_onlykeyed(self):
+        """
+        Run the test for the half-founders with onlykeyed option
+        """
+        self.test_name = "test_onlykeyed"
+        self.prepare_path()
+
+        self.input_files = ["genotypes", "pedigree"]
+        self.arguments = {"runType": "multi", "onlykeyed": None}
+        self.output_file_prefix = "onlykeyed"
+        self.output_file_to_check = "dosages"
+
+        self.generate_command()
+        os.system(self.command)
+
+        self.output_file_path = os.path.join(
+            self.output_path, f"{self.output_file_prefix}.{self.output_file_to_check}"
+        )
+
+        self.output = read_file(self.output_file_path)
+
+        # no dummy individuals output
+        assert len(self.output) == 6
+
+        for ind in self.output:
+            assert "MotherOf" not in ind[0] and "FatherOf" not in ind[0]
+
     # TODO test_plink for PLINK
     #      a. binary PLINK output
     #      b. binary output + input
     #      c. pedigree
-
-    # TODO test_onlykeyed for onlykeyed with halffounders
