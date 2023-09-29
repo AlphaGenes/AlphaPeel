@@ -15,7 +15,7 @@ def read_file(file_path, **kwargs):
         values = [line.strip().split() for line in file]
 
     if "decimal_place" in kwargs.keys():
-        # round the data if data exists
+        # round the data if data and rounding decimal place exist
         values = [
             [line[0]]
             + [round(float(data), kwargs["decimal_place"]) for data in line[1:]]

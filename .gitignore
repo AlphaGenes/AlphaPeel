@@ -17,3 +17,6 @@ tests/accuracy_tests/outputs/
 tests/accuracy_tests/outputs/**
 .pytest_cache
 tests/accuracy_tests/accu_report.txt
+.Rproj.user
+tests/accuracy_tests/baseData/baseData.Rproj
+tests/accuracy_tests/sim_for_alphapeel_accu_test/.Rhistory
