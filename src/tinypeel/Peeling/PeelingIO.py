@@ -189,7 +189,7 @@ def doubleIfNotMissing(calledGenotypes):
 def setMissing(calledGenotypes, matrix, thresh):
     nLoci = len(calledGenotypes)
     for i in range(nLoci):
-        if matrix[calledGenotypes[i], i] <= thresh:
+        if matrix[calledGenotypes[i], i] < thresh:
             calledGenotypes[i] = 9
 
 
