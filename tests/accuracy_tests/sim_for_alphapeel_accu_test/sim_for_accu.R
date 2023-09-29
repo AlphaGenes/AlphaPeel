@@ -152,8 +152,8 @@ for (locus in 1:nLoci) {
 }
 
 # generating segregation file
-segregation <- matrix(0, nrow = nInd * 4, ncol = nLoci)
-segregation[1:(4 * nInd / nGen),] <- matrix(rep(0.25, times = nLoci * 4 * nInd / nGen), nrow = 4 * nInd / nGen, ncol = nLoci)
+segregation <- matrix(0, nrow = nInd * 4, ncol = nLoci + 1)
+segregation[1:(4 * nInd / nGen), 2:(nLoci + 1)] <- matrix(rep(0.25, times = nLoci * 4 * nInd / nGen), nrow = 4 * nInd / nGen, ncol = nLoci)
 
 for (ind in ((nInd / nGen) + 1):nInd) {
   indrecHist <- recHist[[ind]][[1]]
@@ -190,31 +190,59 @@ for (ind in ((nInd / nGen) + 1):nInd) {
   
   startRow <- 4 * (ind - 1) + 1
   endRow <- 4 * ind
-  segregation[startRow:endRow, ] <- maternalPattern * paternalPattern
+  segregation[startRow:endRow, 1] <- ind
+  segregation[startRow:endRow, 2 : (nLoci + 1)] <- maternalPattern * paternalPattern
+}
+
+# generating genotype probability file
+geno_prob <- matrix(0, nrow = nInd * 4, ncol = nLoci + 1)
+for (ind in (1:nInd)) {
+  for (locus in (1:nLoci)) {
+    currentGeno <- haplotypes[((ind - 1) * 2 + 1):(ind * 2), locus]
+    if (all(currentGeno == c(0, 0)) == TRUE) {
+      current_geno_prob <- c(1, 0, 0, 0)
+    }
+    else {
+      if (all(currentGeno == c(0, 1)) == TRUE) {
+        current_geno_prob <- c(0, 1, 0, 0)
+      }
+      else {
+        if (all(currentGeno == c(1, 0)) == TRUE) {
+          current_geno_prob <- c(0, 0, 1, 0)
+        }
+        else {
+          current_geno_prob <- c(0, 0, 0, 1)
+        }
+      }
+    }
+    geno_prob[((ind - 1) * 4 + 1):(ind * 4), 1] <- ind
+    geno_prob[((ind - 1) * 4 + 1):(ind * 4), (locus + 1)] <- matrix(current_geno_prob, nrow = 4, ncol = 1)
+  }
 }
 
 # TODO: generating recombination rate
 
 # write the files
 # modify the name for genotypes and haplotypes files later when calling threshold is known
-write.table(genotypes, "true-genotypes.txt", row.names = TRUE, col.names = FALSE, quote = FALSE)
-write.table(haplotypes, "true-haplotypes.txt", row.names = TRUE, col.names = FALSE, quote = FALSE)
+write.table(genotypes, "true-called.txt", row.names = TRUE, col.names = FALSE, quote = FALSE)
+write.table(haplotypes, "true-called_phase.txt", row.names = TRUE, col.names = FALSE, quote = FALSE)
 write.table(sequence, "seqfile.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
 write.table(pedigree, "pedigree.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
 write.table(geno_error, "true-genoError.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
 write.table(seq_error, "true-seqError.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
 write.table(maf, "true-maf.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
 write.table(genotypes_w_missing, "genotypes.txt", row.names = TRUE, col.names = FALSE, quote = FALSE)
-write.table(segregation, "true-seg.txt", row.names = TRUE, col.names = FALSE, quote = FALSE)
+write.table(segregation, "true-seg.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(geno_prob, "true-haps.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
 
 
 # Map files for peeling
 
 nLoci = ncol(genotypes)
 values = data.frame(1, paste0("1-", 1:nLoci), 1:nLoci)
-write.table(values, "map.txt", row.names=F, col.names=F, quote=F)
+write.table(values, "map.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
 
 subset = floor(seq(1, nLoci, length.out = 200))
 subsetValues = values[subset,]
-write.table(subsetValues, "segmap.txt", row.names=F, col.names=F, quote=F)
+write.table(subsetValues, "segmap.txt", row.names = FALSE, col.names = FALSE, quote = FALSE)
 
