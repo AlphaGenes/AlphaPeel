@@ -91,7 +91,6 @@ def writeGenotypes(pedigree, genoProbFunc):
                 writeCalledGenotypes(
                     pedigree, genoProbFunc, args.out + ".called." + str(thresh), thresh
                 )
-
     if args.haps_call_threshold is not None and args.call_phase:
         for thresh in args.haps_call_threshold:
             if thresh < 0.5:
