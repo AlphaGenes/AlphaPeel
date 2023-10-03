@@ -79,10 +79,8 @@ def writeGenotypes(pedigree, genoProbFunc):
     if args.haps:
         writeGenoProbs(pedigree, genoProbFunc, args.out + ".haps")
 
-    if args.geno_call_threshold is not None:
-        for thresh in args.geno_call_threshold:
-            if thresh < 1 / 3:
-                thresh = 1 / 3
+    if args.calling_threshold is not None:
+        for thresh in args.calling_threshold:
             if args.binary_call_files:
                 writeBinaryCalledGenotypes(
                     pedigree, genoProbFunc, args.out + ".called." + str(thresh), thresh
@@ -91,16 +89,14 @@ def writeGenotypes(pedigree, genoProbFunc):
                 writeCalledGenotypes(
                     pedigree, genoProbFunc, args.out + ".called." + str(thresh), thresh
                 )
-    if args.haps_call_threshold is not None and args.call_phase:
-        for thresh in args.haps_call_threshold:
-            if thresh < 0.5:
-                thresh = 0.5
-            writeCalledPhase(
-                pedigree,
-                genoProbFunc,
-                args.out + ".called_phase." + str(thresh),
-                thresh,
-            )
+
+            if args.call_phase:
+                writeCalledPhase(
+                    pedigree,
+                    genoProbFunc,
+                    args.out + ".called_phase." + str(thresh),
+                    thresh,
+                )
 
 
 def writeGenoProbs(pedigree, genoProbFunc, outputFile):
@@ -193,7 +189,7 @@ def doubleIfNotMissing(calledGenotypes):
 def setMissing(calledGenotypes, matrix, thresh):
     nLoci = len(calledGenotypes)
     for i in range(nLoci):
-        if matrix[calledGenotypes[i], i] <= thresh:
+        if matrix[calledGenotypes[i], i] < thresh:
             calledGenotypes[i] = 9
 
 

@@ -74,12 +74,10 @@ Output Arguments
                             running for chip imputation and not hybrid peeling).
       -no_params            Flag to suppress writing the parameter files.
       -haps                 Flag to enable writing out the genotype probabilities.
-      -geno_call_threshold [GENO_CALL_THRESHOLD [GENO_CALL_THRESHOLD]...]
-                        Genotype calling threshold(s). Multiple space separated values allowed. 
-                        Any value less than 1 / 3 would be replaced by 1 / 3.  
-      -haps_call_threshold [HAPS_CALL_THRESHOLD [HAPS_CALL_THRESHOLD]...]
-                        Haplotype calling threshold(s). Multiple space separated values allowed. 
-                        Any value less than 0.5 would be replaced by 0.5.
+      -calling_threshold [CALLING_THRESHOLD [CALLING_THRESHOLD ...]]
+                            Genotype calling threshold(s). Multiple space
+                            separated values allowed. Use. .3 for best guess
+                            genotype.
       -binary_call_files    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
@@ -208,6 +206,7 @@ Example: ::
   1 snp_b 192152913
   1 snp_c 65429279
   1 snp_d 107421759
+
 
 Output file formats
 -------------------
