@@ -8,16 +8,6 @@ Program options
 
 |Software| takes in several command line arguments to control the program's behaviour. To view a list of arguments, run |Software| without any command line arguments, i.e. ``AlphaPeel`` or ``AlphaPeel -h``. 
 
-Core Arguments 
---------------
-
-::
-  
-  Core arguments
-    -out prefix              The output file prefix.
-
-The ``-out`` argument gives the output file prefix for where the outputs of |Software| should be stored. By default, |Software| outputs a file with imputed genotypes, ``prefix.genotypes``, phased haplotypes ``prefix.phase``, and genotype dosages ``prefix.dosages``. For more information on which files are created see "Output Arguments" below.
-
 Input Arguments 
 ---------------
 
@@ -49,6 +39,8 @@ Output Arguments
 ::
 
     Output options:
+      -out prefix           The output file prefix. All file outputs will be stored
+                            as "prefix.dosage" and so on.
       -writekey WRITEKEY    Determines the order in which individuals are ordered
                             in the output file based on their order in the
                             corresponding input file. Individuals not in the input
@@ -57,7 +49,7 @@ Output Arguments
                             with the "-onlykeyed" option. Options: id, pedigree,
                             genotypes, sequence, segregation. Default: id.
       -onlykeyed            Flag to suppress the individuals not present in
-                            the file used with -outputkey. It also suppresses "dummy"
+                            the file used with "-outputkey". It also suppresses "dummy"
                             individuals.
       -iothreads IOTHREADS  Number of threads to use for input/output. Default: 1.
 
@@ -70,12 +62,12 @@ Output Arguments
       -haps                 Flag to enable writing out the genotype probabilities.
       -calling_threshold [CALLING_THRESHOLD [CALLING_THRESHOLD ...]]
                             Genotype calling threshold(s). Multiple space
-                            separated values allowed. Use. .3 for best guess
+                            separated values allowed. Use .3 for best guess
                             genotype.
       -binary_call_files    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
-By default |Software| produces a dosages file, a segregation files and two parameter files (genotyping error and recombination rate). Creation of each of these files can be suppressed with the ``-no_dosages``, ``-no_seg``, and ``-no_params`` options. |Software| can also write out the genotype probability file (.haps) with the `-haps` argument.
+By default |Software| produces a dosages file, a segregation files and two parameter files (genotyping error and recombination rate). Creation of these files can be suppressed with the ``-no_dosages``, ``-no_seg``, and ``-no_params`` options. |Software| can also write out the genotype probability file (.haps) with the `-haps` argument.
 
 The ``-calling_threshold`` arguments controls which genotypes (and phased haplotypes) are called as part of the algorithm. A calling threshold of 0.9 indicates that genotypes are only called if greater than 90% of the final probability mass is on that genotype. Using a higher-value will increase the accuracy of called genotypes, but will result in fewer genotypes being called. Since there are three genotypes states,  "best-guess" genotypes are produced with a calling threshold less than ``0.33``. ``-calling_threshThe ``-binary_call_files`` option can be used to change the output to a plink binary format. 
 
