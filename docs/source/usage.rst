@@ -49,7 +49,7 @@ Output Arguments
                             with the "-onlykeyed" option. Options: id, pedigree,
                             genotypes, sequence, segregation. Default: id.
       -onlykeyed            Flag to suppress the individuals not present in
-                            the file used with "-outputkey". It also suppresses "dummy"
+                            the file used with "-writekey". It also suppresses "dummy"
                             individuals.
       -iothreads IOTHREADS  Number of threads to use for input/output. Default: 1.
 
