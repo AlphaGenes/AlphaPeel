@@ -252,7 +252,7 @@ def getArgs():
     output_parser = parser.add_argument_group("Output Options")
 
     output_parser.add_argument(
-        "-no_dosages",
+        "-no_dosage",
         action="store_true",
         required=False,
         help="Flag to suppress the dosage files.",
