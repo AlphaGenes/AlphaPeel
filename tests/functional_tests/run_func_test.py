@@ -302,7 +302,7 @@ class TestClass:
 
     def test_no(self):
         """
-        Check to make sure the no_dosages, no_seg, no_params
+        Check to make sure the no_dosage, no_seg, no_params
         flags work, and the haps file works.
         """
         self.test_name = "test_no"
@@ -314,13 +314,13 @@ class TestClass:
         # 0: not exist
         # 1: exist
         expect = {
-            "no_dosages": [0, 1, 1, 1, 1, 0],
+            "no_dosage": [0, 1, 1, 1, 1, 0],
             "no_seg": [1, 0, 1, 1, 1, 0],
             "no_params": [1, 1, 0, 0, 0, 0],
             "haps": [1, 1, 1, 1, 1, 1],
         }
 
-        for self.test_cases in ["no_dosages", "no_seg", "no_params", "haps"]:
+        for self.test_cases in ["no_dosage", "no_seg", "no_params", "haps"]:
             self.arguments[self.test_cases] = None
             self.output_file_prefix = f"no.{self.test_cases}"
 

@@ -74,7 +74,7 @@ def writeOutParamaters(peelingInfo):
 
 def writeGenotypes(pedigree, genoProbFunc):
     args = InputOutput.args
-    if not args.no_dosages:
+    if not args.no_dosage:
         writeDosages(pedigree, genoProbFunc, args.out + ".dosages")
     if args.haps:
         writeGenoProbs(pedigree, genoProbFunc, args.out + ".haps")
