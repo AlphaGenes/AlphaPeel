@@ -255,7 +255,7 @@ def getArgs():
         "-no_dosage",
         action="store_true",
         required=False,
-        help="Flag to suppress the dosage files.",
+        help="Flag to suppress the output of the dosage file.",
     )
     output_parser.add_argument(
         "-no_seg",
