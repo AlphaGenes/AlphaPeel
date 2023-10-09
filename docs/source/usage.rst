@@ -81,7 +81,7 @@ The ``-calling_threshold`` arguments controls which genotypes (and phased haplot
 
 The order in which individuals are output can be changed by using the ``writekey`` option. This option changes the order in which individuals are written out to the order in which they were observed in the corresponding file. The ```-onlykeyed`` option suppresses the output of dummy individuals (not recommended for hybrid peeling). 
 
-The parameter ``-iothreads`` controls the number of threads/processes used by |Software|. |Software| uses additional threads to parse and format input and output files. Setting this option to a value greater than 1 is only recommended for very large files (i.e. >10,000 individuals).
+The argument ``-iothreads`` controls the number of threads/processes used by |Software|. |Software| uses additional threads to parse and format input and output files. Setting this option to a value greater than 1 is only recommended for very large files (i.e. >10,000 individuals).
 
 Peeling arguments 
 ------------------
