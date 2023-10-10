@@ -237,7 +237,7 @@ $tinypeel -genotypes test7c/genotypes.txt \
                           -out test7c/outputs/output
 Rscript checkResults.r 7c
 
-# Test 8: Check to make sure the no_dosages, no_seg, no_params flags work, and the haps file works.
+# Test 8: Check to make sure the no_dosage, no_seg, no_params flags work, and the haps file works.
 
 rm -rf test8/outputs
 mkdir   test8/outputs
@@ -248,8 +248,8 @@ $tinypeel -genotypes test8/genotypes.txt \
                           -seqfile test8/seqfile.txt \
                           -pedigree test8/pedigree.txt \
                           -runType multi \
-                          -no_dosages \
-                          -out test8/outputs/no_dosages
+                          -no_dosage \
+                          -out test8/outputs/no_dosage
 $tinypeel -genotypes test8/genotypes.txt \
                           -phasefile test8/phasefile.txt \
                           -penetrance test8/penetrance.txt \
