@@ -43,7 +43,7 @@ nLociAll <- 2000
 nLociHD <- nLociAll
 nLociLD <- 100
 
-nChr <- 2
+nChr <- 1
 nLociAllPerChr <- floor(nLociAll / nChr)
 nLociHDPerChr <- nLociHD / nChr
 nLociLDPerChr <- nLociLD / nChr
