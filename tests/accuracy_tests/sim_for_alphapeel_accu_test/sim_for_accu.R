@@ -43,8 +43,8 @@ nLociAll <- 2000
 nLociHD <- nLociAll
 nLociLD <- 100
 
-nChr <- 1
-nLociAllPerChr <- nLociAll / nChr
+nChr <- 2
+nLociAllPerChr <- floor(nLociAll / nChr)
 nLociHDPerChr <- nLociHD / nChr
 nLociLDPerChr <- nLociLD / nChr
 
@@ -53,9 +53,11 @@ genoError <- 0.001
 seqDepth <- 3
 seqError <- 0.01
 
+nSegMap <- 200
+
 # ----- SimParam and base population -----
 
-founderGenomes <- runMacs(nInd = nIndPerGen, nChr = nChr,segSites = nLociAllPerChr)
+founderGenomes <- runMacs(nInd = nIndPerGen, nChr = nChr, segSites = nLociAllPerChr)
 SP <- SimParam$new(founderGenomes)
 SP$setSexes("yes_rand")
 SP$setTrackPed(TRUE)
@@ -90,6 +92,7 @@ for (generation in 1:(nGen - 1)) {
 
 pedigree <- getPed(pop = allPop)
 pedigree <- pedigree[, c("id", "father", "mother")]
+
 
 # ----- Haplotypes ----
 
@@ -241,12 +244,23 @@ for (ind in (nIndPerGen + 1):nInd) {
   segregation[startRow:endRow, 2:(nLociAll + 1)] <- maternalPattern * paternalPattern
 }
 
-# ---- TODO: Realised recombination rate ----
+# ----- Realised recombination rate -----
 
-# I think this would be best done by:
-# 1) Allocating a vector of 0 for nLociAll
-# 2) Accumulating the number of recombinations per locus by parsing the recHist
-#    object - for every recombination event we bump the number for one
+rec_count <- matrix(data = 0, nrow = nLociAll, ncol = 1)
+for (ind in ((nIndPerGen + 1):nInd)) {
+  indRecHist <- recHist[[ind]][[1]]
+  for (haplo in (1:2)) {
+    nComb <- nrow(indRecHist[[haplo]])
+    if (nComb > 1) {
+      for (comb in (2:nComb)) {
+        locus <- indRecHist[[haplo]][comb, 2]
+        rec_count[locus, ] <- rec_count[locus, ] + 1
+      }
+    }
+  }
+}
+
+rec_rate <- rec_count / (nInd * 2)
 
 # ---- Write the files to disk ----
 
@@ -275,13 +289,30 @@ write.table(x = maf, file = "true-maf.txt",
 write.table(x = segregation, "true-seg.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
-# TODO: make this code general in terms of the number of chromosomes (see at the top of the script)
-values <- data.frame(1, paste0("1-", 1:nLociAll), 1:nLociAll)
-write.table(x = values, file = "map.txt",
+# ----- Map file -----
+
+values <- data.frame(1, paste0(1, "-", 1:nLociAllPerChr), 1:nLociAllPerChr)
+colnames(values) <- c("Chromosome number", "Marker name", "Base pair position")
+for (chr in (2:nChr)) {
+  if (chr < nChr) {
+    value <- data.frame(chr, paste0(chr, "-", 1:nLociAllPerChr), (((chr - 1) * nLociAllPerChr + 1):(chr * nLociAllPerChr)))
+  } else if (chr == nChr) {
+    # needed when nLociAll is not divisible by nChr
+    nLociAllLastChr <- (nLociAll - (nLociAllPerChr * (nChr - 1)))
+    value <- data.frame(chr, paste0(chr, "-", 1:(nLociAllLastChr)), (((chr - 1) * nLociAllPerChr + 1):nLociAll))
+  } else {
+    # only one chromosome
+    break
+  }
+  colnames(value) <- c("Chromosome number", "Marker name", "Base pair position")
+  values <- rbind(values, value)
+}
+write.table(x = values, file = "map.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
-# TODO: convert 200 to an expression so this code will be more general
-subset <- floor(seq(1, nLociAll, length.out = 200))
+# ----- Segregation map file -----
+
+subset <- floor(seq(1, nLociAll, length.out = nSegMap))
 subsetValues <- values[subset,]
 write.table(x = subsetValues, file = "segmap.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
