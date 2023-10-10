@@ -248,19 +248,21 @@ for (ind in (nIndPerGen + 1):nInd) {
 
 rec_count <- matrix(data = 0, nrow = nLociAll, ncol = 1)
 for (ind in ((nIndPerGen + 1):nInd)) {
-  indRecHist <- recHist[[ind]][[1]]
-  for (haplo in (1:2)) {
-    nComb <- nrow(indRecHist[[haplo]])
-    if (nComb > 1) {
-      for (comb in (2:nComb)) {
-        locus <- indRecHist[[haplo]][comb, 2]
-        rec_count[locus, ] <- rec_count[locus, ] + 1
+  for (chr in (1:nChr)) {
+    indRecHist <- recHist[[ind]][[chr]]
+    for (haplo in (1:2)) {
+      nComb <- nrow(indRecHist[[haplo]])
+      if (nComb > 1) {
+        for (comb in (2:nComb)) {
+          locus <- indRecHist[[haplo]][comb, 2]
+          rec_count[locus + ((chr - 1) * nLociAllPerChr), ] <- rec_count[locus + ((chr - 1) * nLociAllPerChr), ] + 1
+        }
       }
     }
   }
 }
 
-rec_rate <- rec_count / (nInd * 2)
+rec_prob <- rec_count / (nInd * 2)
 
 # ---- Write the files to disk ----
 
