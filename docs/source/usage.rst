@@ -58,7 +58,7 @@ Output Arguments
       -no_dosage            Flag to suppress the dosage files.
       -no_seg               Flag to suppress the segregation files (e.g. when
                             running for chip imputation and not hybrid peeling).
-      -no_params            Flag to suppress writing the parameter files.
+      -no_params            Flag to suppress writing the model parameter files.
       -haps                 Flag to enable writing out the genotype probabilities.
       -calling_threshold [CALLING_THRESHOLD [CALLING_THRESHOLD ...]]
                             Genotype calling threshold(s). Multiple space
@@ -67,7 +67,7 @@ Output Arguments
       -binary_call_files    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
-By default |Software| produces a dosage file, a segregation files and two parameter files (genotyping error and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, ``-no_seg``, and ``-no_params`` options. |Software| can also write out the genotype probability file (.haps) with the `-haps` argument.
+By default |Software| produces a dosage file, a segregation files and two model parameter files (genotyping error and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, ``-no_seg``, and ``-no_params`` options. |Software| can also write out the genotype probability file (.haps) with the `-haps` argument.
 
 The ``-calling_threshold`` arguments controls which genotypes (and phased haplotypes) are called as part of the algorithm. A calling threshold of 0.9 indicates that genotypes are only called if greater than 90% of the final probability mass is on that genotype. Using a higher-value will increase the accuracy of called genotypes, but will result in fewer genotypes being called. Since there are three genotypes states,  "best-guess" genotypes are produced with a calling threshold less than ``0.33``. ``-calling_threshThe ``-binary_call_files`` option can be used to change the output to a plink binary format. 
 
@@ -109,7 +109,7 @@ Peeling arguments
 
 For hybrid peeling, where a large amount (millions of segregating sites) of sequence allele read counts needs to be imputed, first run the program in multi-locus mode to generate a segregation file, and then run the program in single-locus mode with a known segregation file.
 
-The ``-error``, ``-seqerror`` and ``-length`` arguments control some of the parameters used in the model. ``-seqerror`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
+The ``-error``, ``-seqerror`` and ``-length`` arguments control some of the model parameters used in the model. ``-seqerror`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
 
 The ``-esterrors`` option estimated the genotyping error rate based on observed information, this option is generally not necessary and can increase runtime. ``-estmaf`` estimates the minor allele frequency after each peeling cycle. This option can be useful if there are a large number of non-genotyped founders. 
 
@@ -295,7 +295,7 @@ Example:
 Model parameter files
 ===============
 
-|Software| outputs three parameter files, ``.maf``, ``.seqError``, ``.genoError``. These give the minor allele frequency, sequencing error rates, and genotyping error rates used. All three files contain a single column with an entry for each marker. 
+|Software| outputs three model parameter files, ``.maf``, ``.seqError``, ``.genoError``. These give the minor allele frequency, sequencing error rates, and genotyping error rates used. All three files contain a single column with an entry for each marker.
 
 Example ``.maf`` file for four loci: 
 
