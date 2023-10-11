@@ -267,7 +267,7 @@ def getArgs():
         "-no_params",
         action="store_true",
         required=False,
-        help="Flag to suppress writing the parameter files.",
+        help="Flag to suppress writing the model parameter files.",
     )
 
     output_parser.add_argument(
