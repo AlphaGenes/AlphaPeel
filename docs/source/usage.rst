@@ -49,7 +49,7 @@ Output Arguments
                             with the "-onlykeyed" option. Options: id, pedigree,
                             genotypes, sequence, segregation. Default: id.
       -onlykeyed            Flag to suppress the individuals not present in
-                            the file used with "-outputkey". It also suppresses "dummy"
+                            the file used with "-writekey". It also suppresses "dummy"
                             individuals.
       -iothreads IOTHREADS  Number of threads to use for input/output. Default: 1.
 
@@ -119,11 +119,10 @@ Hybrid peeling arguments
 ::
 
     Single locus arguments:
-      -mapfile MAPFILE      A map file (chr marker_name position) for genotype data.
+      -segfile SEGFILE      A segregation probabilities file for hybrid peeling.
       -segmapfile SEGMAPFILE
-                            a map file for the segregation estimates for hybrid
-                            peeling.
-      -segfile SEGFILE      A segregation file for hybrid peeling.
+                            A map file for loci in the segregation probabilities file.
+      -mapfile MAPFILE      A map file for all loci in hybrid peeling.
 
 In order to run hybrid peeling the user needs to supply a ``-mapfile`` which gives the genetic positions for the SNPs in the sequence allele read counts data supplied, a ``-segmapfile`` which gives the genetic position for the SNPs in the segregation file, and a ``-segfile`` which gives the segregation values generated via multi-locus iterative peeling. These arguments are not required for running in multi-locus mode.
 
