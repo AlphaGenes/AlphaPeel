@@ -293,7 +293,7 @@ Example:
   id4    0.8794    0.8821    0.8927    0.9122
 
 Model parameter files
-===============
+=====================
 
 |Software| outputs three model parameter files, ``.maf``, ``.seqError``, ``.genoError``. These give the minor allele frequency, sequencing error rates, and genotyping error rates used. All three files contain a single column with an entry for each marker.
 
