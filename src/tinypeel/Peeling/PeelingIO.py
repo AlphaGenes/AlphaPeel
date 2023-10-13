@@ -90,7 +90,7 @@ def writeGenotypes(pedigree, genoProbFunc):
                     pedigree, genoProbFunc, args.out + ".called." + str(thresh), thresh
                 )
 
-            if args.call_phase:
+            if args.hap:
                 writeCalledPhase(
                     pedigree,
                     genoProbFunc,
