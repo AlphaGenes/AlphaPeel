@@ -264,13 +264,13 @@ write.table(x = genotypesObs_w_error, file = "genotypes.txt",
 write.table(x = sequenceReads, file = "seqfile.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
-write.table(x = haplotypes, file = "true-called_phase.0.5.txt", 
+write.table(x = haplotypes, file = "true-called_phase.0.1.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
 write.table(x = phasedGenotypes, file = "true-haps.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = genotypes, file = "true-called.0.3333333333333333.txt", 
+write.table(x = genotypes, file = "true-called.0.1.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
-write.table(x = genotypes, file = "true-genotypes.txt", 
+write.table(x = genotypes, file = "true-dosages.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
 
 write.table(x = geno_error, file = "true-genoError.txt", 
