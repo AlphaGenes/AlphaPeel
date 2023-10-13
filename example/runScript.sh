@@ -21,7 +21,7 @@ AlphaPeel -genotypes data/genotypes.txt \
          -runType multi \
          -maxthreads 6 \
          -calling_threshold 0.98 \
-         -call_phase
+         -hap
 
 # Example 2: Performing single-locus "hybrid" peeling with sequence data and pre-computed segregation estimates (generated from Example 1).
 AlphaPeel -seqfile data/sequence.txt \

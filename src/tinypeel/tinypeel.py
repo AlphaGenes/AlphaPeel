@@ -291,10 +291,10 @@ def getArgs():
         help="Flag to write out the called genotype files as a binary plink output [Not yet implemented].",
     )
     output_parser.add_argument(
-        "-call_phase",
+        "-hap",
         action="store_true",
         required=False,
-        help="Flag to call the phase as well as the genotypes.",
+        help="Flag to call and write out the haplotypes.",
     )
 
     InputOutput.add_arguments_from_dictionary(

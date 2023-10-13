@@ -8,7 +8,7 @@ Program options
 
 |Software| takes in several command line arguments to control the program's behaviour. To view a list of arguments, run |Software| without any command line arguments, i.e. ``AlphaPeel`` or ``AlphaPeel -h``. 
 
-Input Arguments 
+Input Arguments
 ---------------
 
 ::
@@ -40,7 +40,7 @@ Output Arguments
 
     Output options:
       -out PREFIX           The output file prefix. All file outputs will be stored
-                            as "PREFIX.dosage" and so on.
+                            as "PREFIX.dosage.txt" and so on.
       -writekey WRITEKEY    Determines the order in which individuals are ordered
                             in the output file based on their order in the
                             corresponding input file. Individuals not in the input
@@ -60,6 +60,7 @@ Output Arguments
                             running for chip imputation and not hybrid peeling).
       -no_params            Flag to suppress writing the model parameter files.
       -haps                 Flag to enable writing out the genotype probabilities.
+      -hap                  Flag to call and write out the haplotypes.
       -calling_threshold [CALLING_THRESHOLD [CALLING_THRESHOLD ...]]
                             Genotype calling threshold(s). Multiple space
                             separated values allowed. Use .3 for best guess

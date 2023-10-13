@@ -18,6 +18,6 @@ assessPeeling = function(filePrefix){
 
 }
 
-assessPeeling("multilocus.dosages")
-assessPeeling("hybrid.dosages")
+assessPeeling("multilocus.dosage.txt")
+assessPeeling("hybrid.dosage.txt")
 
