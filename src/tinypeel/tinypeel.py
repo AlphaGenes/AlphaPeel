@@ -294,7 +294,7 @@ def getArgs():
         "-hap",
         action="store_true",
         required=False,
-        help="call the haplotypes.",
+        help="Flag to call and write out the haplotypes.",
     )
 
     InputOutput.add_arguments_from_dictionary(
