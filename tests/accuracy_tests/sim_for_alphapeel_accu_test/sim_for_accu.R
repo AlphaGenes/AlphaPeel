@@ -34,26 +34,17 @@ source(file = url)
 
 # ----- Simulation parameters -----
 
-nInd <- 1000
-nGen <- 5
+parameters <- read.table("../simulation_parameters.txt")
+nparams <- nrow(parameters)
+for (parameter in (1:nparams)) {
+  eval(parse(text = paste0(parameters$V1[parameter], "<-", parameters$V2[parameter])))
+}
+
 nIndPerGen <- nInd / nGen
-nParents <- 100
 
-nLociAll <- 2000
-nLociHD <- nLociAll
-nLociLD <- 100
-
-nChr <- 1
 nLociAllPerChr <- floor(nLociAll / nChr)
 nLociHDPerChr <- nLociHD / nChr
 nLociLDPerChr <- nLociLD / nChr
-
-genoError <- 0.001
-
-seqDepth <- 3
-seqError <- 0.01
-
-nSegMap <- 200
 
 # ----- SimParam and base population -----
 
