@@ -270,6 +270,8 @@ write.table(x = phasedGenotypes, file = "true-haps.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 write.table(x = genotypes, file = "true-called.0.3333333333333333.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
+write.table(x = genotypes, file = "true-genotypes.txt", 
+            row.names = TRUE, col.names = FALSE, quote = FALSE)
 
 write.table(x = geno_error, file = "true-genoError.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
