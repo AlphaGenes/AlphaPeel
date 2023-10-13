@@ -40,7 +40,7 @@ Output Arguments
 
     Output options:
       -out PREFIX           The output file prefix. All file outputs will be stored
-                            as "PREFIX.dosage" and so on.
+                            as "PREFIX.dosage.txt" and so on.
       -writekey WRITEKEY    Determines the order in which individuals are ordered
                             in the output file based on their order in the
                             corresponding input file. Individuals not in the input
