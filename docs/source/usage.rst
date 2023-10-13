@@ -60,6 +60,7 @@ Output Arguments
                             running for chip imputation and not hybrid peeling).
       -no_params            Flag to suppress writing the model parameter files.
       -haps                 Flag to enable writing out the genotype probabilities.
+      -hap                  Flag to call the haplotypes.
       -calling_threshold [CALLING_THRESHOLD [CALLING_THRESHOLD ...]]
                             Genotype calling threshold(s). Multiple space
                             separated values allowed. Use .3 for best guess

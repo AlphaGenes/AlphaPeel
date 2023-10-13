@@ -294,7 +294,7 @@ def getArgs():
         "-hap",
         action="store_true",
         required=False,
-        help="Flag to call the phase as well as the genotypes.",
+        help="call the haplotypes.",
     )
 
     InputOutput.add_arguments_from_dictionary(
