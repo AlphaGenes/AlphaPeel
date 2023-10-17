@@ -155,6 +155,8 @@ summary(geno_error[, 1])
 # ----- Sequence reads -----
 
 sequenceReads <- simulateSeqReads(genotypes, depth = seqDepth, error = seqError)
+idColumn <- matrix(c(rep(1:nInd, each = 2)), nrow = nInd * 2, ncol = 1)
+sequenceReads <- cbind(idColumn, sequenceReads)
 
 # ----- Realised sequence error rate -----
 
