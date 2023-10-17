@@ -68,7 +68,7 @@ Output Arguments
       -binary_call_files    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
-By default |Software| produces a dosage file, a segregation files and two model parameter files (genotyping error and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, ``-no_seg``, and ``-no_params`` options. |Software| can also write out the genotype probability file (.haps) with the `-phased_geno_prob` argument.
+By default |Software| produces a dosage file, a segregation files and two model parameter files (genotyping error and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, ``-no_seg``, and ``-no_params`` options. |Software| can also write out the genotype probability file (.phased_geno_prob.txt) with the `-phased_geno_prob` argument.
 
 The ``-calling_threshold`` arguments controls which genotypes (and phased haplotypes) are called as part of the algorithm. A calling threshold of 0.9 indicates that genotypes are only called if greater than 90% of the final probability mass is on that genotype. Using a higher-value will increase the accuracy of called genotypes, but will result in fewer genotypes being called. Since there are three genotypes states,  "best-guess" genotypes are produced with a calling threshold less than ``0.33``. ``-calling_threshThe ``-binary_call_files`` option can be used to change the output to a plink binary format. 
 
@@ -224,7 +224,7 @@ Example:
 Genotype probability file
 =========================
 
-The haplotype file (*.haps*) provides the (phased) allele probabilities for each locus. There are four lines per individual containing the allele probability for the (aa, aA, Aa, AA) alleles where the paternal allele is listed first, and where *a* is the reference (or major) allele and *A* is the alternative (or minor) allele. 
+The haplotype file (*.phased_geno_prob.txt*) provides the (phased) allele probabilities for each locus. There are four lines per individual containing the allele probability for the (aa, aA, Aa, AA) alleles where the paternal allele is listed first, and where *a* is the reference (or major) allele and *A* is the alternative (or minor) allele.
 
 Example:
 
