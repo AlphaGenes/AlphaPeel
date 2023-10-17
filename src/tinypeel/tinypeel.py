@@ -258,10 +258,10 @@ def getArgs():
         help="Flag to suppress the output of the dosage file.",
     )
     output_parser.add_argument(
-        "-no_seg",
+        "-seg_prob",
         action="store_true",
         required=False,
-        help="Flag to suppress the segregation files (e.g. when running for chip imputation and not hybrid peeling).",
+        help="Flag to enable writing out the segregation probabilities.",
     )
     output_parser.add_argument(
         "-no_params",
@@ -414,7 +414,7 @@ def main():
     PeelingIO.writeGenotypes(pedigree, genoProbFunc=peelingInfo.getGenoProbs)
     if not args.no_params:
         PeelingIO.writeOutParamaters(peelingInfo)
-    if not singleLocusMode and not args.no_seg:
+    if not singleLocusMode and args.seg_prob:
         InputOutput.writeIdnIndexedMatrix(
             pedigree, peelingInfo.segregation, args.out + ".seg_prob.txt"
         )
