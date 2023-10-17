@@ -76,7 +76,7 @@ def writeGenotypes(pedigree, genoProbFunc):
     args = InputOutput.args
     if not args.no_dosage:
         writeDosages(pedigree, genoProbFunc, args.out + ".dosage.txt")
-    if args.haps:
+    if args.phased_geno_prob:
         writeGenoProbs(pedigree, genoProbFunc, args.out + ".haps")
 
     if args.calling_threshold is not None:

@@ -271,7 +271,7 @@ def getArgs():
     )
 
     output_parser.add_argument(
-        "-haps",
+        "-phased_geno_prob",
         action="store_true",
         required=False,
         help="Flag to enable writing out the genotype probabilities.",
