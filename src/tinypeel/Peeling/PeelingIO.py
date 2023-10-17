@@ -94,7 +94,7 @@ def writeGenotypes(pedigree, genoProbFunc):
                 writeCalledPhase(
                     pedigree,
                     genoProbFunc,
-                    args.out + ".called_phase." + str(thresh),
+                    args.out + ".hap_" + str(thresh)+".txt",
                     thresh,
                 )
 
