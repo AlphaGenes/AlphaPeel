@@ -416,7 +416,7 @@ def main():
         PeelingIO.writeOutParamaters(peelingInfo)
     if not singleLocusMode and not args.no_seg:
         InputOutput.writeIdnIndexedMatrix(
-            pedigree, peelingInfo.segregation, args.out + ".seg"
+            pedigree, peelingInfo.segregation, args.out + ".seg_prob.txt"
         )
 
 
