@@ -285,6 +285,12 @@ def getArgs():
         help="Genotype calling threshold(s). Multiple space separated values allowed. Use. .3 for best guess genotype.",
     )
     output_parser.add_argument(
+        "-geno",
+        action="store_true",
+        required=False,
+        help="Flag to call and write out the genotypes.",
+    )
+    output_parser.add_argument(
         "-binary_call_files",
         action="store_true",
         required=False,

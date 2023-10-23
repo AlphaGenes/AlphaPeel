@@ -85,9 +85,9 @@ def writeGenotypes(pedigree, genoProbFunc):
                 writeBinaryCalledGenotypes(
                     pedigree, genoProbFunc, args.out + ".called." + str(thresh), thresh
                 )
-            if not args.binary_call_files:
+            if args.geno:
                 writeCalledGenotypes(
-                    pedigree, genoProbFunc, args.out + ".called." + str(thresh), thresh
+                    pedigree, genoProbFunc, args.out + ".geno_" + str(thresh) + ".txt", thresh
                 )
 
             if args.hap:

@@ -60,6 +60,7 @@ Output Arguments
       -seg_prob             Flag to enable writing out the segregation probabilities.
       -phased_geno_prob     Flag to enable writing out the genotype probabilities.
       -hap                  Flag to call and write out the haplotypes.
+      -geno                 Flag to call and write out the genotypes.
       -geno_threshold [GENO_THRESHOLD [GENO_THRESHOLD ...]]
                             Genotype calling threshold(s). Multiple space
                             separated values allowed. Use .3 for best guess

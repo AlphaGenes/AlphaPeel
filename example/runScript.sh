@@ -21,6 +21,7 @@ AlphaPeel -genotypes data/genotypes.txt \
          -runType multi \
          -maxthreads 6 \
          -geno_threshold 0.98 \
+         -geno \
          -hap
 
 # Example 2: Performing single-locus "hybrid" peeling with sequence data and pre-computed segregation estimates (generated from Example 1).
