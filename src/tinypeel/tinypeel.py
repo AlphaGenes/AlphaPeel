@@ -277,7 +277,7 @@ def getArgs():
         help="Flag to enable writing out the genotype probabilities.",
     )
     output_parser.add_argument(
-        "-calling_threshold",
+        "-geno_threshold",
         default=None,
         required=False,
         type=float,
