@@ -21,3 +21,4 @@ tests/accuracy_tests/accu_report.txt
 **/.RData
 **/.Rhistory
 **/*.Rproj
+**/segfile.txt

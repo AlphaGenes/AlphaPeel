@@ -2,6 +2,70 @@ import os
 import shutil
 import numpy as np
 import warnings
+import pytest
+
+
+@pytest.fixture(scope="session")
+def sim_path():
+    return os.path.join("tests", "accuracy_tests", "sim_for_alphapeel_accu_test")
+
+
+def prepare_path(output_path):
+    """
+    Prepare an empty output folder
+    """
+    if os.path.exists(output_path):
+        shutil.rmtree(output_path)
+
+    os.mkdir(output_path)
+
+
+def generate_output_path(name):
+    return os.path.join(
+        "tests",
+        "accuracy_tests",
+        "outputs",
+        name,
+    )
+
+
+def generate_command(sim_path, runType, estmaf, esterrors, seqfile, output_path):
+    command = "AlphaPeel "
+    input_file = ["pedigree"]
+    arguments = {
+        "runType": runType,
+        "nCycles": "5",
+        "maxthreads": "6",
+        "calling_threshold": ".1",
+        "call_phase": None,
+        "haps": None,
+    }
+
+    if estmaf:
+        arguments["estmaf"] = None
+    if esterrors:
+        arguments["esterrors"] = None
+    if seqfile:
+        input_file.append("seqfile")
+    else:
+        input_file.append("genotypes")
+    if runType == "hybrid":
+        input_file.append("map")
+        input_file.append("segmap")
+        input_file.append("segfile")
+
+    for file in input_file:
+        command += f"-{file} {os.path.join(sim_path, f'{file}.txt')} "
+
+    for key, value in arguments.items():
+        if value is not None:
+            command += f"-{key} {value} "
+        else:
+            command += f"-{key} "
+
+    command += f"-out {output_path}{os.sep}"
+
+    return command
 
 
 def make_directory(path):
@@ -14,100 +78,6 @@ def make_directory(path):
     os.mkdir(path)
 
 
-def read_file(file_path):
-    """
-    INPUT:
-    file_path: str, the path of the file to be read
-    OUTPUT:
-    values: 2d list of str, store the values of the records
-    """
-    with open(file_path, "r") as file:
-        values = [line.strip().split() for line in file]
-
-    return np.array(values)
-
-
-def write_file(file_path, list_of_data):
-    """
-    INPUT:
-    file_path: str, the path of the file to write
-    list_of_data: list of str, the data to be written
-    OUTPUT:
-    values: 2d list of str, store the values of the records
-    """
-    with open(file_path, "w") as file:
-        for row in list_of_data:
-            file.write(" ".join(row) + "\n")
-
-
-def generate_file_path(file_name):
-    """
-    returns the corresponding path of the input files
-    """
-    return os.path.join("tests", "accuracy_tests", "baseData", f"{file_name}")
-
-
-def standard_input_command(seq):
-    """
-    generates the general input command
-    seq(Boolean) indicates whether the input file is seqfile or genotypes
-    """
-    if seq:
-        command = "AlphaPeel -seqfile " + generate_file_path("sequence.2")
-    else:
-        command = "AlphaPeel -genotypes " + generate_file_path("genotypes.txt")
-    command += (
-        " -pedigree "
-        + generate_file_path("pedigree.txt")
-        + " -nCycles 5"
-        + " -maxthreads 6"
-    )
-    return command
-
-
-def output_path_command(file_prefix):
-    """
-    returns the output path command
-    """
-    path = os.path.join("tests", "accuracy_tests", "outputs", file_prefix)
-    command = f"-out {path}"
-    return command
-
-
-def assess_peeling(file_prefix):
-    """
-    assess the performance of the peeling
-    """
-
-    output_path = os.path.join("tests", "accuracy_tests", "outputs", file_prefix)
-    true_path = generate_file_path("trueGenotypes.txt")
-
-    new_file = np.loadtxt(output_path)
-    trueGenotypes = np.loadtxt(true_path)
-
-    print(" ")
-    print("Assessing peeling file: " + file_prefix)
-
-    Marker_accu = [str(get_marker_accu(new_file[:, 1:], trueGenotypes[:, 1:]))]
-    for gen in range(5):
-        Marker_accu.append(
-            str(
-                get_marker_accu(
-                    new_file[gen * 200 : (gen + 1) * 200],
-                    trueGenotypes[gen * 200 : (gen + 1) * 200],
-                )
-            )
-        )
-
-    print("Marker_accuracies", " ".join(Marker_accu))
-
-    Ind_accu = [str(get_ind_accu(new_file[:, 1:], trueGenotypes[:, 1:], None))]
-    for gen in range(5):
-        Ind_accu.append(str(get_ind_accu(new_file[:, 1:], trueGenotypes[:, 1:], gen)))
-
-    print("Individual_accuracies", " ".join(Ind_accu))
-
-
 def get_marker_accu(output, real):
     """
     Get marker accuracy between the output and the real data
@@ -117,10 +87,10 @@ def get_marker_accu(output, real):
         accus = np.array(
             [np.corrcoef(real[:, i], output[:, i])[0, 1] for i in range(real.shape[1])]
         )
-    return round(np.nanmean(accus), 3)
+        return round(np.nanmean(accus), 3)
 
 
-def get_ind_accu(output, real, gen=None):
+def get_ind_accu(output, real, nIndPerGen, n_row_per_ind, gen=None):
     """
     Get individual accuracy between the output and the real data
     """
@@ -129,152 +99,143 @@ def get_ind_accu(output, real, gen=None):
         accus = np.array(
             [np.corrcoef(real[i, :], output[i, :])[0, 1] for i in range(real.shape[0])]
         )
-    if type(gen) == int:
-        accus = accus[gen * 200 : (gen + 1) * 200]
-    return round(np.nanmean(accus), 3)
+        if type(gen) == int:
+            accus = accus[
+                gen
+                * (nIndPerGen * n_row_per_ind) : (gen + 1)
+                * (nIndPerGen * n_row_per_ind)
+            ]
+        return round(np.nanmean(accus), 3)
 
 
-def test_single(benchmark):
-    if os.path.exists("tests/accuracy_tests/accu_report.txt"):
-        os.remove("tests/accuracy_tests/accu_report.txt")
-    path = os.path.join("tests", "accuracy_tests", "outputs")
-    make_directory(path)
-    command = (
-        standard_input_command(seq=False)
-        + " -runType single "
-        + output_path_command("peeling.single")
+def assess_peeling(sim_path, get_params, output_path, name, runType):
+    """
+    Assess the performance of the peeling
+    """
+    file_to_check = ["dosages", "called.0.1", "called_phase.0.1", "haps"]
+    if runType == "multi":
+        file_to_check.append("seg")
+
+    nGen = int(get_params["nGen"])
+    nIndPerGen = int(get_params["nInd"] / nGen)
+    nLociAll = int(get_params["nLociAll"])
+
+    print(" ")
+    print(f"Test: {name}")
+
+    for file in file_to_check:
+        if file in ["dosages", "called.0.1"]:
+            n_row_per_ind = 1
+        elif file in ["haps", "seg"]:
+            n_row_per_ind = 4
+        elif file == "called_phase.0.1":
+            n_row_per_ind = 2
+
+        file_path = os.path.join(output_path, "." + file)
+        true_path = os.path.join(sim_path, f"true-{file}.txt")
+
+        new_file = np.loadtxt(file_path, usecols=np.arange(1, nLociAll + 1))
+        true_file = np.loadtxt(true_path, usecols=np.arange(1, nLociAll + 1))
+
+        print(f"File: {file}")
+
+        Marker_accu = [str(get_marker_accu(new_file[:, 1:], true_file[:, 1:]))]
+        for gen in range(nGen):
+            Marker_accu.append(
+                str(
+                    get_marker_accu(
+                        new_file[
+                            gen
+                            * (nIndPerGen * n_row_per_ind) : (gen + 1)
+                            * (nIndPerGen * n_row_per_ind)
+                        ],
+                        true_file[
+                            gen
+                            * (nIndPerGen * n_row_per_ind) : (gen + 1)
+                            * (nIndPerGen * n_row_per_ind)
+                        ],
+                    )
+                )
+            )
+
+        print("Marker_accuracies", " ".join(Marker_accu))
+
+        Ind_accu = [
+            str(get_ind_accu(new_file[:, 1:], true_file[:, 1:], nIndPerGen, None))
+        ]
+        for gen in range(nGen):
+            Ind_accu.append(
+                str(
+                    get_ind_accu(
+                        new_file[:, 1:],
+                        true_file[:, 1:],
+                        nIndPerGen,
+                        n_row_per_ind,
+                        gen,
+                    )
+                )
+            )
+
+        print("Individual_accuracies", " ".join(Ind_accu))
+
+
+@pytest.mark.parametrize(
+    "runType, estmaf, esterrors, seqfile",
+    [
+        ("single", None, None, None),
+        ("single", "estmaf", None, None),
+        ("multi", None, None, None),
+        ("multi", "estmaf", None, None),
+        ("multi", "estmaf", "esterrors", None),
+        ("multi", None, None, "seqfile"),
+        ("multi", "estmaf", None, "seqfile"),
+        ("multi", "estmaf", "esterrors", "seqfile"),
+        ("hybrid", None, None, None),
+        ("hybrid", None, None, "seqfile"),
+    ],
+)
+def test_accu(get_params, runType, estmaf, esterrors, seqfile, sim_path, benchmark):
+    name = "_".join(
+        [
+            param
+            for param in filter(
+                lambda param: True if param else False,
+                [runType, estmaf, esterrors, seqfile],
+            )
+        ]
     )
+    output_path = generate_output_path(name)
+    prepare_path(output_path)
+
+    if runType == "hybrid":
+        # create subset of segregation file
+        # make sure run a multi test with the same arguments in advance
+        multi_name = "_".join(
+            [
+                param
+                for param in filter(
+                    lambda param: True if param else False,
+                    ["multi", estmaf, esterrors, seqfile],
+                )
+            ]
+        )
+        multi_path = generate_output_path(multi_name)
+
+        nSegMap = int(get_params["nSegMap"])
+        nLociAll = int(get_params["nLociAll"])
+
+        subset = np.floor(np.linspace(1, nLociAll, num=nSegMap)).astype(dtype=int)
+        subset = np.concatenate(([0], subset))
+        seg_path = os.path.join(multi_path, ".seg")
+        segfile_path = os.path.join(sim_path, "segfile.txt")
+
+        seg = np.loadtxt(seg_path)
+        np.savetxt(segfile_path, seg[:, subset])
+
+    command = generate_command(
+        sim_path, runType, estmaf, esterrors, seqfile, output_path
+    )
+
     benchmark(os.system, command)
 
-    assess_peeling("peeling.single.dosages")
-
-
-def test_single_estmaf(benchmark):
-    command = (
-        standard_input_command(seq=False)
-        + " -runType single"
-        + " -estmaf "
-        + output_path_command("peeling.single.estmaf")
-    )
-    benchmark(os.system, command)
-
-    assess_peeling("peeling.single.estmaf.dosages")
-
-
-def test_multi(benchmark):
-    command = (
-        standard_input_command(seq=False)
-        + " -runType multi "
-        + output_path_command("peeling.multi")
-    )
-    benchmark(os.system, command)
-
-    assess_peeling("peeling.multi.dosages")
-
-
-def test_multi_estmaf(benchmark):
-    command = (
-        standard_input_command(seq=False)
-        + " -runType multi"
-        + " -estmaf "
-        + output_path_command("peeling.multi.estmaf")
-    )
-    benchmark(os.system, command)
-
-    assess_peeling("peeling.multi.estmaf.dosages")
-
-
-def test_multi_estmaf_esterrors(benchmark):
-    command = (
-        standard_input_command(seq=False)
-        + " -runType multi"
-        + " -esterrors"
-        + " -estmaf "
-        + output_path_command("peeling.estErrorsAndMaf")
-    )
-    benchmark(os.system, command)
-
-    assess_peeling("peeling.estErrorsAndMaf.dosages")
-
-
-def test_multi_seq(benchmark):
-    command = (
-        standard_input_command(seq=True)
-        + " -runType multi "
-        + output_path_command("peeling.multi.seq")
-    )
-    benchmark(os.system, command)
-
-    assess_peeling("peeling.multi.seq.dosages")
-
-
-def test_multi_estmaf_seq(benchmark):
-    command = (
-        standard_input_command(seq=True)
-        + " -runType multi"
-        + " -estmaf "
-        + output_path_command("peeling.multi.estmaf.seq")
-    )
-    benchmark(os.system, command)
-
-    assess_peeling("peeling.multi.estmaf.seq.dosages")
-
-
-def test_multi_estmaf_esterrors_seq(benchmark):
-    command = (
-        standard_input_command(seq=True)
-        + " -runType multi"
-        + " -estmaf"
-        + " -esterrors "
-        + output_path_command("peeling.estErrorsAndMaf.seq")
-    )
-    benchmark(os.system, command)
-
-    assess_peeling("peeling.estErrorsAndMaf.seq.dosages")
-
-
-def test_hybrid_single(benchmark):
-    # generate seg file for first hybrid test
-    path = os.path.join("tests", "accuracy_tests", "outputs")
-
-    subset = np.floor(np.linspace(1, 1000, num=200)).astype(dtype=int)
-    subset = np.concatenate(([0], subset))
-
-    file_r = os.path.join(path, "peeling.multi.seg")
-    seg = read_file(file_r)
-    file_w = generate_file_path("seg.subset.txt")
-    write_file(file_w, seg[:, subset])
-
-    command = (
-        standard_input_command(seq=False)
-        + " -runType single"
-        + " -mapfile "
-        + generate_file_path("map.txt")
-        + " -segmapfile "
-        + generate_file_path("segmap.txt")
-        + " -segfile "
-        + generate_file_path("seg.subset.txt")
-        + " "
-        + output_path_command("peeling.hybrid")
-    )
-    benchmark(os.system, command)
-
-    assess_peeling("peeling.hybrid.dosages")
-
-
-def test_hybrid_single_seq(benchmark):
-    command = (
-        standard_input_command(seq=True)
-        + " -runType single"
-        + " -mapfile "
-        + generate_file_path("map.txt")
-        + " -segmapfile "
-        + generate_file_path("segmap.txt")
-        + " -segfile "
-        + generate_file_path("seg.subset.txt")
-        + " "
-        + output_path_command("peeling.hybrid.seq")
-    )
-    benchmark(os.system, command)
-
-    assess_peeling("peeling.hybrid.seq.dosages")
+    assess_peeling(sim_path, get_params, output_path, name, runType)
