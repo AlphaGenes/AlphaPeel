@@ -62,15 +62,17 @@ Output Arguments
       -hap                  Flag to call and write out the haplotypes.
       -geno                 Flag to call and write out the genotypes.
       -geno_threshold [GENO_THRESHOLD [GENO_THRESHOLD ...]]
-                            Genotype calling threshold(s). Multiple space
-                            separated values allowed. Use .3 for best guess
-                            genotype.
+                            Genotype calling threshold(s). Multiple space separated values allowed.
+                            Any value less than 1 / 3 would be replaced by 1 / 3.
+      -hap_threshold [HAPS_CALL_THRESHOLD [HAPS_CALL_THRESHOLD]...]
+                            Haplotype calling threshold(s). Multiple space separated values allowed.
+                            Any value less than 0.5 would be replaced by 0.5.
       -binary_call_files    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
 By default |Software| produces a dosage file, a segregation files and two model parameter files (genotyping error and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, and ``-no_params`` options. |Software| can also write out the genotype probability file (.phased_geno_prob.txt) with the `-phased_geno_prob` argument and the segregation probability file (.seg_prob.txt) with the `-seg_prob` argument.
 
-The ``-geno_threshold`` arguments controls which genotypes (and phased haplotypes) are called as part of the algorithm. A calling threshold of 0.9 indicates that genotypes are only called if greater than 90% of the final probability mass is on that genotype. Using a higher-value will increase the accuracy of called genotypes, but will result in fewer genotypes being called. Since there are three genotypes states,  "best-guess" genotypes are produced with a calling threshold less than ``0.33``. ``-binary_call_files`` option can be used to change the output to a plink binary format.
+The ``-geno_threshold`` and ``-hap_threshold`` arguments controls which genotypes and phased haplotypes are called as part of the algorithm respectively. A calling threshold of 0.9 indicates that genotypes are only called if greater than 90% of the final probability mass is on that genotype. Using a higher-value will increase the accuracy of called genotypes, but will result in fewer genotypes being called. Since there are three genotypes states,  "best-guess" genotypes are produced with a calling threshold less than ``0.33``. ``-binary_call_files`` option can be used to change the output to a plink binary format.
 
 The order in which individuals are output can be changed by using the ``writekey`` option. This option changes the order in which individuals are written out to the order in which they were observed in the corresponding file. The ```-onlykeyed`` option suppresses the output of dummy individuals (not recommended for hybrid peeling). 
 

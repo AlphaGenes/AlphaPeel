@@ -282,7 +282,17 @@ def getArgs():
         required=False,
         type=float,
         nargs="*",
-        help="Genotype calling threshold(s). Multiple space separated values allowed. Use. .3 for best guess genotype.",
+        help="Genotype calling threshold(s). Multiple space separated values allowed. \
+         Any value less than 1 / 3 would be replaced by 1 / 3.",
+    )
+    output_parser.add_argument(
+        "-hap_threshold",
+        default=None,
+        required=False,
+        type=float,
+        nargs="*",
+        help="Haplotype calling threshold(s). Multiple space separated values allowed. \
+          Any value less than 0.5 would be replaced by 0.5.",
     )
     output_parser.add_argument(
         "-geno",

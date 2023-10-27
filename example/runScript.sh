@@ -21,6 +21,7 @@ AlphaPeel -genotypes data/genotypes.txt \
          -runType multi \
          -maxthreads 6 \
          -geno_threshold 0.98 \
+         -hap_threshold 0.98 \
          -geno \
          -hap
 
