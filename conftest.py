@@ -71,7 +71,7 @@ def pytest_terminal_summary(terminalreporter):
         "Gen4 Accu",
         "Gen5 Accu",
     )
-    dt = {"names": columns, "formats": ("S53", "f4", "f4", "f4", "f4", "f4", "f4")}
+    dt = {"names": columns, "formats": ("S69", "f4", "f4", "f4", "f4", "f4", "f4")}
     accu = np.loadtxt("tests/accuracy_tests/accu_report.txt", dtype=dt)
 
     mkr_accu = list(
