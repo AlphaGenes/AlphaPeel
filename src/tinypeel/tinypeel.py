@@ -269,12 +269,17 @@ def getArgs():
         required=False,
         help="Flag to suppress writing the model parameter files.",
     )
-
+    output_parser.add_argument(
+        "-geno_prob",
+        action="store_true",
+        required=False,
+        help="Flag to enable writing out the genotype probabilities.",
+    )
     output_parser.add_argument(
         "-phased_geno_prob",
         action="store_true",
         required=False,
-        help="Flag to enable writing out the genotype probabilities.",
+        help="Flag to enable writing out the phased genotype probabilities.",
     )
     output_parser.add_argument(
         "-geno_threshold",

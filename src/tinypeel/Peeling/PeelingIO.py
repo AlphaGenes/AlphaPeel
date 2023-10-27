@@ -77,8 +77,9 @@ def writeGenotypes(pedigree, genoProbFunc):
     if not args.no_dosage:
         writeDosages(pedigree, genoProbFunc, args.out + ".dosage.txt")
     if args.phased_geno_prob:
-        writeGenoProbs(pedigree, genoProbFunc, args.out + ".phased_geno_prob.txt")
-
+        writePhasedGenoProbs(pedigree, genoProbFunc, args.out + ".phased_geno_prob.txt")
+    if args.geno_prob:
+        writeGenoProbs(pedigree, genoProbFunc, args.out + ".geno_prob.txt")
     if args.geno_threshold is not None:
         for thresh in args.geno_threshold:
             if thresh < 1 / 3:
@@ -107,7 +108,7 @@ def writeGenotypes(pedigree, genoProbFunc):
                     )
 
 
-def writeGenoProbs(pedigree, genoProbFunc, outputFile):
+def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
@@ -116,6 +117,30 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
                 f.write(
                     ind.idx + " " + " ".join(map("{:.4f}".format, matrix[i, :])) + "\n"
                 )
+
+
+def writeGenoProbs(pedigree, genoProbFunc, outputFile):
+    with open(outputFile, "w+") as f:
+        for idx, ind in pedigree.writeOrder():
+            matrix = genoProbFunc(ind.idn)
+            f.write("\n")
+            for i in range(matrix.shape[0]):
+                if i == 1:
+                    f.write(
+                        ind.idx
+                        + " "
+                        + " ".join(
+                            map("{:.4f}".format, matrix[i, :] + matrix[i + 1, :])
+                        )
+                        + "\n"
+                    )
+                elif i != 2:
+                    f.write(
+                        ind.idx
+                        + " "
+                        + " ".join(map("{:.4f}".format, matrix[i, :]))
+                        + "\n"
+                    )
 
 
 def writeDosages(pedigree, genoProbFunc, outputFile):

@@ -58,7 +58,8 @@ Output Arguments
       -no_dosage            Flag to suppress the dosage files.
       -no_params            Flag to suppress writing the model parameter files.
       -seg_prob             Flag to enable writing out the segregation probabilities.
-      -phased_geno_prob     Flag to enable writing out the genotype probabilities.
+      -phased_geno_prob     Flag to enable writing out the phased genotype probabilities.
+      -geno_prob            Flag to enable writing out the genotype probabilities.
       -hap                  Flag to call and write out the haplotypes.
       -geno                 Flag to call and write out the genotypes.
       -geno_threshold [GENO_THRESHOLD [GENO_THRESHOLD ...]]
@@ -70,7 +71,7 @@ Output Arguments
       -binary_call_files    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
-By default |Software| produces a dosage file, a segregation files and two model parameter files (genotyping error and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, and ``-no_params`` options. |Software| can also write out the genotype probability file (.phased_geno_prob.txt) with the `-phased_geno_prob` argument and the segregation probability file (.seg_prob.txt) with the `-seg_prob` argument.
+By default |Software| produces a dosage file, a segregation files and two model parameter files (genotyping error and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, and ``-no_params`` options. |Software| can also write out the phased genotype probability file (.phased_geno_prob.txt) with the `-phased_geno_prob` argument and the segregation probability file (.seg_prob.txt) with the `-seg_prob` argument.
 
 The ``-geno_threshold`` and ``-hap_threshold`` arguments controls which genotypes and phased haplotypes are called as part of the algorithm respectively. A calling threshold of 0.9 indicates that genotypes are only called if greater than 90% of the final probability mass is on that genotype. Using a higher-value will increase the accuracy of called genotypes, but will result in fewer genotypes being called. Since there are three genotypes states,  "best-guess" genotypes are produced with a calling threshold less than ``0.33``. ``-binary_call_files`` option can be used to change the output to a plink binary format.
 
