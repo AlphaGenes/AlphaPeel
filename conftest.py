@@ -1,6 +1,7 @@
 import pytest
 import operator
 import os
+import shutil
 import numpy as np
 
 
@@ -19,8 +20,13 @@ def get_params():
 
 def pytest_configure(config):
     """
-    Remove previous accuracy test outputs and reports
+    Prepare path and report file for accuracy tests
     """
+    accu_output_path = os.path.join("tests", "accuracy_tests", "outputs")
+    if os.path.exists(accu_output_path):
+        shutil.rmtree(accu_output_path)
+    os.mkdir(accu_output_path)
+
     report_path = os.path.join("tests", "accuracy_tests", "accu_report.txt")
     f = open(report_path, "w")
     f.close()
