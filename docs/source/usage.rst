@@ -71,9 +71,11 @@ Output Arguments
       -binary_call_files    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
-By default |Software| produces a dosage file, a segregation files and two model parameter files (genotyping error and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, and ``-no_params`` options. |Software| can also write out the phased genotype probability file (.phased_geno_prob.txt) with the `-phased_geno_prob` argument and the segregation probability file (.seg_prob.txt) with the `-seg_prob` argument.
+By default |Software| produces a dosage file and two model parameter files (genotype error rate and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, and ``-no_params`` options. |Software| can also write out the phased genotype probability file (.phased_geno_prob.txt) with the `-phased_geno_prob` argument and the segregation probability file (.seg_prob.txt) with the `-seg_prob` argument.
 
-The ``-geno_threshold`` and ``-hap_threshold`` arguments controls which genotypes and phased haplotypes are called as part of the algorithm respectively. A calling threshold of 0.9 indicates that genotypes are only called if greater than 90% of the final probability mass is on that genotype. Using a higher-value will increase the accuracy of called genotypes, but will result in fewer genotypes being called. Since there are three genotypes states,  "best-guess" genotypes are produced with a calling threshold less than ``0.33``. ``-binary_call_files`` option can be used to change the output to a plink binary format.
+The ``-geno_threshold`` and ``-hap_threshold`` arguments respectively control control which genotypes and haplotypes are called. A threshold of 0.9 will give calls only if the probability mass for one genotype (or haplotype) is higher than 0.9. Using a higher-value will increase the accuracy of called genotypes (or haplotypes), but will result in fewer called genotypes (or haplotypes). Since there are three genotypes states and two haplotype states, "best-guess" genotypes and haplotypes are respectively called with a threshold less than ``1/3`` and ``1/2``.
+
+``-binary_call_files`` option can be used to change the output to a plink binary format.
 
 The order in which individuals are output can be changed by using the ``writekey`` option. This option changes the order in which individuals are written out to the order in which they were observed in the corresponding file. The ```-onlykeyed`` option suppresses the output of dummy individuals (not recommended for hybrid peeling). 
 

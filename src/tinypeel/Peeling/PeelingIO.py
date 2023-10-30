@@ -125,7 +125,7 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
             matrix = genoProbFunc(ind.idn)
             f.write("\n")
             for i in range(matrix.shape[0]):
-                if i == 1:
+                if i == 1:  # Add up probabilities for aA and Aa
                     f.write(
                         ind.idx
                         + " "
@@ -134,7 +134,7 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
                         )
                         + "\n"
                     )
-                elif i != 2:
+                elif i != 2:  # Print probabilities for aa and AA
                     f.write(
                         ind.idx
                         + " "
