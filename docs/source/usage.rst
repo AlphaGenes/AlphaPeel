@@ -64,10 +64,10 @@ Output Arguments
       -geno                 Flag to call and write out the genotypes.
       -geno_threshold [GENO_THRESHOLD [GENO_THRESHOLD ...]]
                             Genotype calling threshold(s). Multiple space separated values allowed.
-                            Any value less than 1 / 3 would be replaced by 1 / 3.
+                            Value less than 1 / 3 will be replaced by 1 / 3.
       -hap_threshold [HAPS_CALL_THRESHOLD [HAPS_CALL_THRESHOLD]...]
                             Haplotype calling threshold(s). Multiple space separated values allowed.
-                            Any value less than 0.5 would be replaced by 0.5.
+                            Value less than 1 / 2 will be replaced by 1 / 2.
       -binary_call_files    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
