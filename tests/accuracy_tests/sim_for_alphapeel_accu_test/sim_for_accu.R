@@ -95,7 +95,7 @@ for (ind in 1:nInd) {
   haplotypes[ind * 2, ] <- maternal
 }
 
-# ----- Phased genotypes ------
+# ----- Phased genotypes probability------
 
 phasedGenotypes <- matrix(data = 0, nrow = nInd * 4, ncol = nLociAll + 1)
 for (ind in (1:nInd)) {
@@ -110,9 +110,29 @@ for (ind in (1:nInd)) {
     } else {
       currentPhasedGeno <- c(0, 0, 0, 1)
     }
-    phasedGenotypes[((ind - 1) * 4 + 1):(ind * 4), 1] <- ind
     phasedGenotypes[((ind - 1) * 4 + 1):(ind * 4), locus + 1] <- currentPhasedGeno
   }
+  phasedGenotypes[((ind - 1) * 4 + 1):(ind * 4), 1] <- ind
+}
+
+# ----- (Unphased) genotype probability -----
+
+UnphasedGenotypes <- matrix(data = 0, nrow = nInd * 3, ncol = nLociAll + 1)
+for (ind in (1:nInd)) {
+  for (locus in (1:nLociAll)) {
+    currentGeno <- haplotypes[((ind - 1) * 2 + 1):(ind * 2), locus]
+    if (all(currentGeno == c(0, 0)) == TRUE) {
+      currentUnphasedGeno <- c(1, 0, 0)
+    } else if (all(currentGeno == c(0, 1)) == TRUE) {
+      currentUnphasedGeno<- c(0, 1, 0)
+    } else if (all(currentGeno == c(1, 0)) == TRUE) {
+      currentUnphasedGeno <- c(0, 1, 0)
+    } else {
+      currentUnphasedGeno <- c(0, 0, 1)
+    }
+    UnphasedGenotypes[((ind - 1) * 3 + 1):(ind * 3), locus + 1] <- currentUnphasedGeno
+  }
+  UnphasedGenotypes[((ind - 1) * 3 + 1):(ind * 3), 1] <- ind
 }
 
 # ----- Genotypes -----
@@ -266,13 +286,15 @@ write.table(x = genotypesObs_w_error, file = "genotypes.txt",
 write.table(x = sequenceReads, file = "seqfile.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
-write.table(x = haplotypes, file = "true-called_phase.0.1.txt", 
+write.table(x = haplotypes, file = "true-hap_0.5.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
-write.table(x = phasedGenotypes, file = "true-haps.txt", 
+write.table(x = phasedGenotypes, file = "true-phased_geno_prob.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = genotypes, file = "true-called.0.1.txt", 
+write.table(x = UnphasedGenotypes, file = "true-geno_prob.txt",
+            row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(x = genotypes, file = "true-geno_0.3333333333333333.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
-write.table(x = genotypes, file = "true-dosages.txt", 
+write.table(x = genotypes, file = "true-dosage.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
 
 write.table(x = geno_error, file = "true-genoError.txt", 
@@ -281,7 +303,7 @@ write.table(x = seq_error, file = "true-seqError.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 write.table(x = maf, file = "true-maf.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = segregation, "true-seg.txt", 
+write.table(x = segregation, "true-seg_prob.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
 # ----- Map file -----
