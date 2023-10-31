@@ -131,18 +131,16 @@ class TestClass:
 
         def check(file_type):
             return os.path.exists(
-                os.path.join(
-                    self.output_path, f"{self.output_file_prefix}.{file_type}.txt"
-                )
+                os.path.join(self.output_path, f"{self.output_file_prefix}.{file_type}")
             )
 
         files = [
-            "dosage",
-            "seg_prob",
+            "dosage.txt",
+            "seg_prob.txt",
             "maf",
             "genoError",
             "seqError",
-            "phased_geno_prob",
+            "phased_geno_prob.txt",
         ]
         return [check(file) for file in files]
 

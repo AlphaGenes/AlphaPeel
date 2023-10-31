@@ -42,11 +42,10 @@ def pytest_runtest_makereport():
     ):
         stdout = report.sections
         if "multi" in report.nodeid:
-            accu = stdout[-1][-1].split("\n")[-17:]
             num_file = 6
         else:
-            accu = stdout[-1][-1].split("\n")[-14:]
             num_file = 5
+        accu = stdout[-1][-1].split("\n")[-(2 + 3 * num_file) :]
         name = accu[0].split()[-1]
         with open("tests/accuracy_tests/accu_report.txt", "a") as file:
             for i in range(num_file):
@@ -84,7 +83,7 @@ def pytest_terminal_summary(terminalreporter):
         "Gen4 Accu",
         "Gen5 Accu",
     )
-    dt = {"names": columns, "formats": ("S69", "f4", "f4", "f4", "f4", "f4", "f4")}
+    dt = {"names": columns, "formats": ("S76", "f4", "f4", "f4", "f4", "f4", "f4")}
     accu = np.loadtxt("tests/accuracy_tests/accu_report.txt", dtype=dt)
 
     mkr_accu = list(
