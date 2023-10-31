@@ -36,9 +36,13 @@ def generate_command(sim_path, runType, estmaf, esterrors, seqfile, output_path)
         "runType": runType,
         "nCycles": "5",
         "maxthreads": "6",
-        "calling_threshold": ".1",
-        "call_phase": None,
-        "haps": None,
+        "geno_threshold": ".1",
+        "hap_threshold": ".1",
+        "geno": None,
+        "hap": None,
+        "seg_prob": None,
+        "geno_prob": None,
+        "phased_geno_prob": None,
     }
 
     if estmaf:
@@ -112,9 +116,15 @@ def assess_peeling(sim_path, get_params, output_path, name, runType):
     """
     Assess the performance of the peeling
     """
-    file_to_check = ["dosages", "called.0.1", "called_phase.0.1", "haps"]
+    file_to_check = [
+        "dosage",
+        "geno_0.3333333333333333",
+        "hap_0.5",
+        "geno_prob",
+        "phased_geno_prob",
+    ]
     if runType == "multi":
-        file_to_check.append("seg")
+        file_to_check.append("seg_prob")
 
     nGen = int(get_params["nGen"])
     nIndPerGen = int(get_params["nInd"] / nGen)
@@ -124,14 +134,16 @@ def assess_peeling(sim_path, get_params, output_path, name, runType):
     print(f"Test: {name}")
 
     for file in file_to_check:
-        if file in ["dosages", "called.0.1"]:
+        if file in ["dosage", "geno_0.3333333333333333"]:
             n_row_per_ind = 1
-        elif file in ["haps", "seg"]:
+        elif file in ["phased_geno_prob", "seg_prob"]:
             n_row_per_ind = 4
-        elif file == "called_phase.0.1":
+        elif file == "geno_prob":
+            n_row_per_ind = 3
+        elif file == "hap_0.5":
             n_row_per_ind = 2
 
-        file_path = os.path.join(output_path, "." + file)
+        file_path = os.path.join(output_path, f".{file}.txt")
         true_path = os.path.join(sim_path, f"true-{file}.txt")
 
         new_file = np.loadtxt(file_path, usecols=np.arange(1, nLociAll + 1))
@@ -226,7 +238,7 @@ def test_accu(get_params, runType, estmaf, esterrors, seqfile, sim_path, benchma
 
         subset = np.floor(np.linspace(1, nLociAll, num=nSegMap)).astype(dtype=int)
         subset = np.concatenate(([0], subset))
-        seg_path = os.path.join(multi_path, ".seg")
+        seg_path = os.path.join(multi_path, ".seg_prob.txt")
         segfile_path = os.path.join(sim_path, "segfile.txt")
 
         seg = np.loadtxt(seg_path)

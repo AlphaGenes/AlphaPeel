@@ -43,10 +43,10 @@ def pytest_runtest_makereport():
         stdout = report.sections
         if "multi" in report.nodeid:
             accu = stdout[-1][-1].split("\n")[-17:]
-            num_file = 5
+            num_file = 6
         else:
             accu = stdout[-1][-1].split("\n")[-14:]
-            num_file = 4
+            num_file = 5
         name = accu[0].split()[-1]
         with open("tests/accuracy_tests/accu_report.txt", "a") as file:
             for i in range(num_file):
@@ -67,7 +67,14 @@ def pytest_terminal_summary(terminalreporter):
 
     nGen = int(params["nGen"])
 
-    file_types = ["dosages", "called.0.1", "called_phase.0.1", "haps", "seg"]
+    file_types = [
+        "dosage",
+        "geno_0.3333333333333333",
+        "hap_0.5",
+        "geno_prob",
+        "phased_geno_prob",
+        "seg_prob",
+    ]
     columns = (
         "Type",
         "Population Accu",
