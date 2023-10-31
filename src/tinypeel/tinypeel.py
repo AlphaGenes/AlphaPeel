@@ -288,7 +288,7 @@ def getArgs():
         type=float,
         nargs="*",
         help="Genotype calling threshold(s). Multiple space separated values allowed.\
-        Value less than 1 / 3 will be replaced by 1 / 3.",
+        Value less than 1/3 will be replaced by 1/3.",
     )
     output_parser.add_argument(
         "-hap_threshold",
@@ -297,7 +297,7 @@ def getArgs():
         type=float,
         nargs="*",
         help="Haplotype calling threshold(s). Multiple space separated values allowed.\
-        Value less than 1 / 2 will be replaced by 1 / 2.",
+        Value less than 1/2 will be replaced by 1/2.",
     )
     output_parser.add_argument(
         "-geno",
