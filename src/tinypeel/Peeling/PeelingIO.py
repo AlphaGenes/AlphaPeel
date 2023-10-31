@@ -96,16 +96,19 @@ def writeGenotypes(pedigree, genoProbFunc):
                     thresh,
                 )
 
-            if args.hap_threshold and args.hap:
-                for thresh in args.hap_threshold:
-                    if thresh < 0.5:
-                        thresh = 0.5
-                    writeCalledPhase(
-                        pedigree,
-                        genoProbFunc,
-                        args.out + ".hap_" + str(thresh) + ".txt",
-                        thresh,
-                    )
+    if args.hap_threshold and args.hap:
+        for thresh in args.hap_threshold:
+            if thresh < 1 / 2:
+                thresh = 1 / 2
+            if args.binary_call_files:
+                pass  # this function is not applied
+            else:
+                writeCalledPhase(
+                    pedigree,
+                    genoProbFunc,
+                    args.out + ".hap_" + str(thresh) + ".txt",
+                    thresh,
+                )
 
 
 def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
