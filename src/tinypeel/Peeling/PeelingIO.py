@@ -80,7 +80,7 @@ def writeGenotypes(pedigree, genoProbFunc):
         writePhasedGenoProbs(pedigree, genoProbFunc, args.out + ".phased_geno_prob.txt")
     if args.geno_prob:
         writeGenoProbs(pedigree, genoProbFunc, args.out + ".geno_prob.txt")
-    if args.geno_threshold is not None:
+    if args.geno_threshold and args.geno:
         for thresh in args.geno_threshold:
             if thresh < 1 / 3:
                 thresh = 1 / 3
@@ -88,7 +88,7 @@ def writeGenotypes(pedigree, genoProbFunc):
                 writeBinaryCalledGenotypes(
                     pedigree, genoProbFunc, args.out + ".called." + str(thresh), thresh
                 )
-            if not args.binary_call_files and args.geno:
+            else:
                 writeCalledGenotypes(
                     pedigree,
                     genoProbFunc,
@@ -96,7 +96,7 @@ def writeGenotypes(pedigree, genoProbFunc):
                     thresh,
                 )
 
-            if args.hap_threshold is not None and args.hap:
+            if args.hap_threshold and args.hap:
                 for thresh in args.hap_threshold:
                     if thresh < 0.5:
                         thresh = 0.5
