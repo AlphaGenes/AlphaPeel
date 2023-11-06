@@ -76,26 +76,49 @@ def writeGenotypes(pedigree, genoProbFunc):
     args = InputOutput.args
     if not args.no_dosage:
         writeDosages(pedigree, genoProbFunc, args.out + ".dosage.txt")
-    if args.haps:
-        writeGenoProbs(pedigree, genoProbFunc, args.out + ".haps")
-
-    if args.calling_threshold is not None:
-        for thresh in args.calling_threshold:
+    if args.phased_geno_prob:
+        writePhasedGenoProbs(pedigree, genoProbFunc, args.out + ".phased_geno_prob.txt")
+    if args.geno_prob:
+        writeGenoProbs(pedigree, genoProbFunc, args.out + ".geno_prob.txt")
+    if args.geno_threshold and args.geno:
+        for thresh in args.geno_threshold:
+            if thresh < 1 / 3:
+                thresh = 1 / 3
             if args.binary_call_files:
                 writeBinaryCalledGenotypes(
                     pedigree, genoProbFunc, args.out + ".called." + str(thresh), thresh
                 )
-            if not args.binary_call_files:
+            else:
                 writeCalledGenotypes(
-                    pedigree, genoProbFunc, args.out + ".called." + str(thresh), thresh
+                    pedigree,
+                    genoProbFunc,
+                    args.out + ".geno_" + str(thresh) + ".txt",
+                    thresh,
                 )
 
-            if args.hap:
+    if args.hap_threshold and args.hap:
+        for thresh in args.hap_threshold:
+            if thresh < 1 / 2:
+                thresh = 1 / 2
+            if args.binary_call_files:
+                pass  # this function is not applied
+            else:
                 writeCalledPhase(
                     pedigree,
                     genoProbFunc,
-                    args.out + ".called_phase." + str(thresh),
+                    args.out + ".hap_" + str(thresh) + ".txt",
                     thresh,
+                )
+
+
+def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
+    with open(outputFile, "w+") as f:
+        for idx, ind in pedigree.writeOrder():
+            matrix = genoProbFunc(ind.idn)
+            f.write("\n")
+            for i in range(matrix.shape[0]):
+                f.write(
+                    ind.idx + " " + " ".join(map("{:.4f}".format, matrix[i, :])) + "\n"
                 )
 
 
@@ -105,9 +128,22 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
             matrix = genoProbFunc(ind.idn)
             f.write("\n")
             for i in range(matrix.shape[0]):
-                f.write(
-                    ind.idx + " " + " ".join(map("{:.4f}".format, matrix[i, :])) + "\n"
-                )
+                if i == 1:  # Add up probabilities for aA and Aa
+                    f.write(
+                        ind.idx
+                        + " "
+                        + " ".join(
+                            map("{:.4f}".format, matrix[i, :] + matrix[i + 1, :])
+                        )
+                        + "\n"
+                    )
+                elif i != 2:  # Print probabilities for aa and AA
+                    f.write(
+                        ind.idx
+                        + " "
+                        + " ".join(map("{:.4f}".format, matrix[i, :]))
+                        + "\n"
+                    )
 
 
 def writeDosages(pedigree, genoProbFunc, outputFile):
@@ -189,7 +225,7 @@ def doubleIfNotMissing(calledGenotypes):
 def setMissing(calledGenotypes, matrix, thresh):
     nLoci = len(calledGenotypes)
     for i in range(nLoci):
-        if matrix[calledGenotypes[i], i] < thresh:
+        if matrix[calledGenotypes[i], i] <= thresh:
             calledGenotypes[i] = 9
 
 
