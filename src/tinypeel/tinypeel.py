@@ -258,31 +258,52 @@ def getArgs():
         help="Flag to suppress the output of the dosage file.",
     )
     output_parser.add_argument(
-        "-no_seg",
+        "-seg_prob",
         action="store_true",
         required=False,
-        help="Flag to suppress the segregation files (e.g. when running for chip imputation and not hybrid peeling).",
+        help="Flag to enable writing out the segregation probabilities.",
     )
     output_parser.add_argument(
         "-no_params",
         action="store_true",
         required=False,
-        help="Flag to suppress writing the parameter files.",
+        help="Flag to suppress writing the model parameter files.",
     )
-
     output_parser.add_argument(
-        "-haps",
+        "-geno_prob",
         action="store_true",
         required=False,
         help="Flag to enable writing out the genotype probabilities.",
     )
     output_parser.add_argument(
-        "-calling_threshold",
+        "-phased_geno_prob",
+        action="store_true",
+        required=False,
+        help="Flag to enable writing out the phased genotype probabilities.",
+    )
+    output_parser.add_argument(
+        "-geno_threshold",
         default=None,
         required=False,
         type=float,
         nargs="*",
-        help="Genotype calling threshold(s). Multiple space separated values allowed. Use. .3 for best guess genotype.",
+        help="Genotype calling threshold(s). Multiple space separated values allowed.\
+        Value less than 1/3 will be replaced by 1/3.",
+    )
+    output_parser.add_argument(
+        "-hap_threshold",
+        default=None,
+        required=False,
+        type=float,
+        nargs="*",
+        help="Haplotype calling threshold(s). Multiple space separated values allowed.\
+        Value less than 1/2 will be replaced by 1/2.",
+    )
+    output_parser.add_argument(
+        "-geno",
+        action="store_true",
+        required=False,
+        help="Flag to call and write out the genotypes.",
     )
     output_parser.add_argument(
         "-binary_call_files",
@@ -291,10 +312,10 @@ def getArgs():
         help="Flag to write out the called genotype files as a binary plink output [Not yet implemented].",
     )
     output_parser.add_argument(
-        "-call_phase",
+        "-hap",
         action="store_true",
         required=False,
-        help="Flag to call the phase as well as the genotypes.",
+        help="Flag to call and write out the haplotypes.",
     )
 
     InputOutput.add_arguments_from_dictionary(
@@ -414,9 +435,9 @@ def main():
     PeelingIO.writeGenotypes(pedigree, genoProbFunc=peelingInfo.getGenoProbs)
     if not args.no_params:
         PeelingIO.writeOutParamaters(peelingInfo)
-    if not singleLocusMode and not args.no_seg:
+    if not singleLocusMode and args.seg_prob:
         InputOutput.writeIdnIndexedMatrix(
-            pedigree, peelingInfo.segregation, args.out + ".seg"
+            pedigree, peelingInfo.segregation, args.out + ".seg_prob.txt"
         )
 
 

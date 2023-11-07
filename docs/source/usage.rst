@@ -8,7 +8,7 @@ Program options
 
 |Software| takes in several command line arguments to control the program's behaviour. To view a list of arguments, run |Software| without any command line arguments, i.e. ``AlphaPeel`` or ``AlphaPeel -h``. 
 
-Input Arguments 
+Input Arguments
 ---------------
 
 ::
@@ -40,7 +40,7 @@ Output Arguments
 
     Output options:
       -out PREFIX           The output file prefix. All file outputs will be stored
-                            as "PREFIX.dosage" and so on.
+                            as "PREFIX.dosage.txt" and so on.
       -writekey WRITEKEY    Determines the order in which individuals are ordered
                             in the output file based on their order in the
                             corresponding input file. Individuals not in the input
@@ -56,20 +56,26 @@ Output Arguments
 
     Peeling output options:
       -no_dosage            Flag to suppress the dosage files.
-      -no_seg               Flag to suppress the segregation files (e.g. when
-                            running for chip imputation and not hybrid peeling).
-      -no_params            Flag to suppress writing the parameter files.
-      -haps                 Flag to enable writing out the genotype probabilities.
-      -calling_threshold [CALLING_THRESHOLD [CALLING_THRESHOLD ...]]
-                            Genotype calling threshold(s). Multiple space
-                            separated values allowed. Use .3 for best guess
-                            genotype.
+      -no_params            Flag to suppress writing the model parameter files.
+      -seg_prob             Flag to enable writing out the segregation probabilities.
+      -phased_geno_prob     Flag to enable writing out the phased genotype probabilities.
+      -geno_prob            Flag to enable writing out the genotype probabilities.
+      -hap                  Flag to call and write out the haplotypes.
+      -geno                 Flag to call and write out the genotypes.
+      -geno_threshold [GENO_THRESHOLD [GENO_THRESHOLD ...]]
+                            Genotype calling threshold(s). Multiple space separated values allowed.
+                            Value less than 1/3 will be replaced by 1/3.
+      -hap_threshold [HAPS_CALL_THRESHOLD [HAPS_CALL_THRESHOLD]...]
+                            Haplotype calling threshold(s). Multiple space separated values allowed.
+                            Value less than 1/2 will be replaced by 1/2.
       -binary_call_files    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
-By default |Software| produces a dosage file, a segregation files and two parameter files (genotyping error and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, ``-no_seg``, and ``-no_params`` options. |Software| can also write out the genotype probability file (.haps) with the `-haps` argument.
+By default |Software| produces a dosage file and two model parameter files (genotype error rate and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, and ``-no_params`` options. |Software| can also write out the phased genotype probability file (.phased_geno_prob.txt) with the `-phased_geno_prob` argument and the segregation probability file (.seg_prob.txt) with the `-seg_prob` argument.
 
-The ``-calling_threshold`` arguments controls which genotypes (and phased haplotypes) are called as part of the algorithm. A calling threshold of 0.9 indicates that genotypes are only called if greater than 90% of the final probability mass is on that genotype. Using a higher-value will increase the accuracy of called genotypes, but will result in fewer genotypes being called. Since there are three genotypes states,  "best-guess" genotypes are produced with a calling threshold less than ``0.33``. ``-calling_threshThe ``-binary_call_files`` option can be used to change the output to a plink binary format. 
+The ``-geno_threshold`` and ``-hap_threshold`` arguments respectively control control which genotypes and haplotypes are called. A threshold of 0.9 will give calls only if the probability mass for one genotype (or haplotype) is higher than 0.9. Using a higher-value will increase the accuracy of called genotypes (or haplotypes), but will result in fewer called genotypes (or haplotypes). Since there are three genotypes states and two haplotype states, "best-guess" genotypes and haplotypes are respectively called with a threshold less than ``1/3`` and ``1/2``.
+
+``-binary_call_files`` option can be used to change the output to a plink binary format.
 
 The order in which individuals are output can be changed by using the ``writekey`` option. This option changes the order in which individuals are written out to the order in which they were observed in the corresponding file. The ```-onlykeyed`` option suppresses the output of dummy individuals (not recommended for hybrid peeling). 
 
@@ -109,7 +115,7 @@ Peeling arguments
 
 For hybrid peeling, where a large amount (millions of segregating sites) of sequence allele read counts needs to be imputed, first run the program in multi-locus mode to generate a segregation file, and then run the program in single-locus mode with a known segregation file.
 
-The ``-error``, ``-seqerror`` and ``-length`` arguments control some of the parameters used in the model. ``-seqerror`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
+The ``-error``, ``-seqerror`` and ``-length`` arguments control some of the model parameters used in the model. ``-seqerror`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
 
 The ``-esterrors`` option estimated the genotyping error rate based on observed information, this option is generally not necessary and can increase runtime. ``-estmaf`` estimates the minor allele frequency after each peeling cycle. This option can be useful if there are a large number of non-genotyped founders. 
 
@@ -223,7 +229,7 @@ Example:
 Genotype probability file
 =========================
 
-The haplotype file (*.haps*) provides the (phased) allele probabilities for each locus. There are four lines per individual containing the allele probability for the (aa, aA, Aa, AA) alleles where the paternal allele is listed first, and where *a* is the reference (or major) allele and *A* is the alternative (or minor) allele. 
+The haplotype file (*.phased_geno_prob.txt*) provides the (phased) allele probabilities for each locus. There are four lines per individual containing the allele probability for the (aa, aA, Aa, AA) alleles where the paternal allele is listed first, and where *a* is the reference (or major) allele and *A* is the alternative (or minor) allele.
 
 Example:
 
@@ -292,9 +298,9 @@ Example:
   id4    0.8794    0.8821    0.8927    0.9122
 
 Model parameter files
-===============
+=====================
 
-|Software| outputs three parameter files, ``.maf``, ``.seqError``, ``.genoError``. These give the minor allele frequency, sequencing error rates, and genotyping error rates used. All three files contain a single column with an entry for each marker. 
+|Software| outputs three model parameter files, ``.maf``, ``.seqError``, ``.genoError``. These give the minor allele frequency, sequencing error rates, and genotyping error rates used. All three files contain a single column with an entry for each marker.
 
 Example ``.maf`` file for four loci: 
 
