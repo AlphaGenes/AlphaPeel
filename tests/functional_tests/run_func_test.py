@@ -15,7 +15,7 @@ def read_file(file_path, **kwargs):
         values = [line.strip().split() for line in file]
 
     if "decimal_place" in kwargs.keys():
-        # round the data if data exists
+        # round the data if data and rounding decimal place exist
         values = [
             [line[0]]
             + [round(float(data), kwargs["decimal_place"]) for data in line[1:]]
@@ -75,7 +75,13 @@ class TestClass:
     # all the input file options for non-hybrid peeling except the binary file
     files_to_input = ["genotypes", "pedigree", "penetrance", "phasefile", "seqfile"]
     # all the output files except the binary file and the parameter files
-    files_to_check = ["called_phase.0.1", "called.0.1", "dosages", "haps", "seg"]
+    files_to_check = [
+        "hap_0.5",
+        "geno_0.3333333333333333",
+        "dosage",
+        "phased_geno_prob",
+        "seg_prob",
+    ]
 
     def mk_output_dir(self):
         """
@@ -128,7 +134,14 @@ class TestClass:
                 os.path.join(self.output_path, f"{self.output_file_prefix}.{file_type}")
             )
 
-        files = ["dosages", "seg", "maf", "genoError", "seqError", "haps"]
+        files = [
+            "dosage.txt",
+            "seg_prob.txt",
+            "maf",
+            "genoError",
+            "seqError",
+            "phased_geno_prob.txt",
+        ]
         return [check(file) for file in files]
 
     def test_files(self):
@@ -142,17 +155,20 @@ class TestClass:
         self.input_files = self.files_to_input
         self.arguments = {
             "runType": "multi",
-            "calling_threshold": ".1",
+            "geno_threshold": ".1",
+            "geno": None,
             "esterrors": None,
+            "seg_prob": None,
         }
         self.output_file_prefix = "files"
-        self.output_file_to_check = "called.0.1"
+        self.output_file_to_check = "geno_0.3333333333333333"
 
         self.generate_command()
         os.system(self.command)
 
         self.output_file_path = os.path.join(
-            self.output_path, f"{self.output_file_prefix}.{self.output_file_to_check}"
+            self.output_path,
+            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
         )
         self.expected_file_path = os.path.join(
             self.path, f"true-{self.output_file_to_check}.txt"
@@ -174,18 +190,21 @@ class TestClass:
         self.input_files = self.files_to_input
         self.arguments = {
             "runType": "multi",
-            "calling_threshold": ".1",
+            "geno_threshold": ".1",
             "startsnp": "2",
             "stopsnp": "4",
+            "geno": None,
+            "seg_prob": None,
         }
         self.output_file_prefix = "subset"
-        self.output_file_to_check = "called.0.1"
+        self.output_file_to_check = "geno_0.3333333333333333"
 
         self.generate_command()
         os.system(self.command)
 
         self.output_file_path = os.path.join(
-            self.output_path, f"{self.output_file_prefix}.{self.output_file_to_check}"
+            self.output_path,
+            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
         )
         self.expected_file_path = os.path.join(
             self.path, f"true-{self.output_file_to_check}.txt"
@@ -209,8 +228,10 @@ class TestClass:
         self.input_files = self.files_to_input
         self.arguments = {
             "runType": "multi",
-            "calling_threshold": ".1",
+            "geno_threshold": ".1",
+            "geno": None,
             "writekey": None,
+            "seg_prob": None,
         }
 
         methods = ["id", "pedigree", "genotypes", "sequence"]
@@ -221,7 +242,7 @@ class TestClass:
             "sequence": "seq",
         }
 
-        self.output_file_to_check = "called.0.1"
+        self.output_file_to_check = "geno_0.3333333333333333"
 
         for self.test_cases in methods:
             self.arguments["writekey"] = self.test_cases
@@ -232,7 +253,7 @@ class TestClass:
 
             self.output_file_path = os.path.join(
                 self.output_path,
-                f"{self.output_file_prefix}.{self.output_file_to_check}",
+                f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
             )
 
             self.output = read_file(self.output_file_path)
@@ -247,11 +268,11 @@ class TestClass:
         self.output_file_prefix = f"writekey.{self.test_cases}"
 
         self.generate_command()
-        print(self.command)
         os.system(self.command)
 
         self.output_file_path = os.path.join(
-            self.output_path, f"{self.output_file_prefix}.{self.output_file_to_check}"
+            self.output_path,
+            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
         )
 
         self.output = read_file(self.output_file_path)
@@ -268,8 +289,8 @@ class TestClass:
 
         self.input_files = self.files_to_input
         self.input_file_depend_on_test_cases = self.files_to_input
-        self.arguments = {"runType": "multi", "calling_threshold": ".1"}
-        self.output_file_to_check = "called.0.1"
+        self.arguments = {"runType": "multi", "geno_threshold": ".1", "geno": None}
+        self.output_file_to_check = "geno_0.3333333333333333"
 
         for self.test_cases in ["esterror", "estmaf", "length"]:
             # TODO estrecombrate instead of just adding length
@@ -286,7 +307,7 @@ class TestClass:
 
             self.output_file_path = os.path.join(
                 self.output_path,
-                f"{self.output_file_prefix}.{self.output_file_to_check}",
+                f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
             )
             self.expected_file_path = os.path.join(
                 self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
@@ -302,8 +323,8 @@ class TestClass:
 
     def test_no(self):
         """
-        Check to make sure the no_dosage, no_seg, no_params
-        flags work, and the haps file works.
+        Check to make sure the no_dosage, seg_prob, no_params, phased_geno_prob
+        flags work.
         """
         self.test_name = "test_no"
         self.prepare_path()
@@ -314,13 +335,18 @@ class TestClass:
         # 0: not exist
         # 1: exist
         expect = {
-            "no_dosage": [0, 1, 1, 1, 1, 0],
-            "no_seg": [1, 0, 1, 1, 1, 0],
-            "no_params": [1, 1, 0, 0, 0, 0],
-            "haps": [1, 1, 1, 1, 1, 1],
+            "no_dosage": [0, 0, 1, 1, 1, 0],
+            "seg_prob": [1, 1, 1, 1, 1, 0],
+            "no_params": [1, 0, 0, 0, 0, 0],
+            "phased_geno_prob": [1, 0, 1, 1, 1, 1],
         }
 
-        for self.test_cases in ["no_dosage", "no_seg", "no_params", "haps"]:
+        for self.test_cases in [
+            "no_dosage",
+            "seg_prob",
+            "no_params",
+            "phased_geno_prob",
+        ]:
             self.arguments[self.test_cases] = None
             self.output_file_prefix = f"no.{self.test_cases}"
 
@@ -342,9 +368,12 @@ class TestClass:
         self.input_files = ["pedigree"]
         self.arguments = {
             "runType": "multi",
-            "haps": None,
-            "calling_threshold": ".1",
-            "call_phase": None,
+            "phased_geno_prob": None,
+            "geno": None,
+            "geno_threshold": ".1",
+            "hap": None,
+            "hap_threshold": ".1",
+            "seg_prob": None,
         }
 
         # test for genotype input and sequence input separately
@@ -368,7 +397,7 @@ class TestClass:
             for self.output_file_to_check in self.files_to_check:
                 self.output_file_path = os.path.join(
                     self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}",
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
                 )
                 self.expected_file_path = os.path.join(
                     self.path, f"true-{self.output_file_to_check}.txt"
@@ -400,7 +429,7 @@ class TestClass:
         self.test_name = "test_sex"
         self.prepare_path()
 
-        self.arguments = {"runType": "multi", "sexchrom": None}
+        self.arguments = {"runType": "multi", "sexchrom": None, "seg_prob": None}
         self.input_files = ["genotypes", "seqfile", "pedigree"]
         self.input_file_depend_on_test_cases = ["genotypes", "seqfile"]
 
@@ -411,15 +440,14 @@ class TestClass:
             #           d: missing values in generation 2
 
             self.output_file_prefix = f"sex.{self.test_cases}"
-            self.output_file_to_check = "seg"
+            self.output_file_to_check = "seg_prob"
 
             self.generate_command()
-            print(self.command)
             os.system(self.command)
 
             self.output_file_path = os.path.join(
                 self.output_path,
-                f"{self.output_file_prefix}.{self.output_file_to_check}",
+                f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
             )
             self.expected_file_path = os.path.join(
                 self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
@@ -441,7 +469,7 @@ class TestClass:
 
         # using default error rates: genotype error rate: 0.01
         #                            sequence error rate: 0.001
-        self.arguments = {"runType": "multi"}
+        self.arguments = {"runType": "multi", "seg_prob": None}
         self.input_files = ["genotypes", "seqfile", "pedigree"]
         self.input_file_depend_on_test_cases = ["genotypes", "seqfile"]
 
@@ -462,7 +490,7 @@ class TestClass:
 
             # self.output_file_path = os.path.join(
             #     self.output_path,
-            #     f"{self.output_file_prefix}.{self.output_file_to_check}"
+            #     f"{self.output_file_prefix}.{self.output_file_to_check}.txt"
             #     )
             # self.expected_file_path = os.path.join(
             #     self.path,
@@ -483,15 +511,16 @@ class TestClass:
         self.prepare_path()
 
         self.input_files = ["genotypes", "pedigree"]
-        self.arguments = {"runType": "multi", "onlykeyed": None}
+        self.arguments = {"runType": "multi", "onlykeyed": None, "seg_prob": None}
         self.output_file_prefix = "onlykeyed"
-        self.output_file_to_check = "dosages"
+        self.output_file_to_check = "dosage"
 
         self.generate_command()
         os.system(self.command)
 
         self.output_file_path = os.path.join(
-            self.output_path, f"{self.output_file_prefix}.{self.output_file_to_check}"
+            self.output_path,
+            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
         )
 
         self.output = read_file(self.output_file_path)
