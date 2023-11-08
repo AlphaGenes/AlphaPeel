@@ -15,7 +15,7 @@ import argparse
 
 def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     # Right now maf _only_ uses the penetrance so can be estimated once.
-    if args.estmaf:
+    if args.est_alt_allele_prob:
         PeelingUpdates.updateMaf(pedigree, peelingInfo)
 
     for i in range(args.ncycles):
@@ -369,10 +369,10 @@ def getArgs():
         help="Flag to re-estimate the genotyping error rates after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
-        "-estmaf",
+        "-est_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Flag to re-estimate the minor allele frequency after each peeling cycle.",
+        help="Flag to re-estimate the alternative allele probability after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
         "-nophasefounders",

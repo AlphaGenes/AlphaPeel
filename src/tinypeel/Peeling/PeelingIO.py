@@ -69,7 +69,7 @@ def writeOutParamaters(peelingInfo):
     np.savetxt(args.out + ".genoError", peelingInfo.genoError, fmt="%f")
     np.savetxt(args.out + ".seqError", peelingInfo.seqError, fmt="%f")
     # np.savetxt(args.out + ".trans", peelingInfo.transmissionRate, fmt = "%f")
-    np.savetxt(args.out + ".maf", peelingInfo.maf, fmt="%f")
+    np.savetxt(args.out + ".alt_allele_prob.txt", peelingInfo.maf, fmt="%f")
 
 
 def writeGenotypes(pedigree, genoProbFunc):
