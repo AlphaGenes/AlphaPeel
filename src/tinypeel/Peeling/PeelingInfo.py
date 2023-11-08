@@ -34,8 +34,8 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
     peelingInfo.segregationTensorXY = ProbMath.generateSegregationXYChrom(e=1e-06)
     peelingInfo.segregationTensorXX = ProbMath.generateSegregationXXChrom(e=1e-06)
 
-    peelingInfo.genoError[:] = args.error
-    peelingInfo.seqError[:] = args.seqerror
+    peelingInfo.genoError[:] = args.geno_error_prob
+    peelingInfo.seqError[:] = args.geno_seqerror_prob
     setupTransmission(
         args.length, peelingInfo
     )  # Sets up the transmission rates using a custom position list and a total chromosome length.
