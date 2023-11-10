@@ -108,14 +108,16 @@ Peeling arguments
                             experimental option.
 
     Genotype probability arguments:
-      -error ERROR          Genotyping error rate. [Default 0.01]
-      -seqerror SEQERROR    Assumed sequencing error rate. [Default 0.001]
+      -geno_error_prob GENO_ERROR_PROB
+                            Genotyping error rate. [Default 0.001]
+      -seq_error_prob SEQ_ERROR_PROB
+                            Sequencing error rate. [Default 0.01]
 
 ``-runtype`` controls whether the program is run in "single-locus" or "multi-locus" model. Single locus mode does not use linkage information to perform imputation. It is fast, but not very accurate. Multi-locus mode runs multi-locus iterative peeling which uses linkage information to increase accuracy and calculate segregation values.
 
 For hybrid peeling, where a large amount (millions of segregating sites) of sequence allele read counts needs to be imputed, first run the program in multi-locus mode to generate a segregation file, and then run the program in single-locus mode with a known segregation file.
 
-The ``-error``, ``-seqerror`` and ``-length`` arguments control some of the model parameters used in the model. ``-seqerror`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
+The ``-geno_error_prob``, ``-seq_error_prob`` and ``-length`` arguments control some of the model parameters used in the model. ``-seq_error_prob`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
 
 The ``-esterrors`` option estimated the genotyping error rate based on observed information, this option is generally not necessary and can increase runtime. ``-estmaf`` estimates the minor allele frequency after each peeling cycle. This option can be useful if there are a large number of non-genotyped founders. 
 
