@@ -15,7 +15,7 @@ import argparse
 
 def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     # Right now maf _only_ uses the penetrance so can be estimated once.
-    if args.estmaf:
+    if args.est_alt_allele_prob:
         PeelingUpdates.updateMaf(pedigree, peelingInfo)
 
     for i in range(args.ncycles):
@@ -213,6 +213,32 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
         peelingInfo.segregation[:, :, :] = 0.25
 
 
+def get_probability_options():
+    parse_dictionary = dict()
+    parse_dictionary["error"] = lambda parser: parser.add_argument(
+        "-geno_error_prob",
+        default=0.001,
+        required=False,
+        type=float,
+        help="Genotyping error rate. Default: 0.001.",
+    )
+    parse_dictionary["seqerror"] = lambda parser: parser.add_argument(
+        "-seq_error_prob",
+        default=0.01,
+        required=False,
+        type=float,
+        help="Sequencing error rate. Default: 0.01.",
+    )
+    parse_dictionary["recombination"] = lambda parser: parser.add_argument(
+        "-recomb",
+        default=1,
+        required=False,
+        type=float,
+        help="Recombination rate per chromosome (in Morgan). Default: 1.",
+    )
+    return parse_dictionary
+
+
 # ACTUAL PROGRAM BELOW
 
 
@@ -357,8 +383,8 @@ def getArgs():
     )  # help='An optional external penetrance file. This will overwrite the default penetrance values.')
     InputOutput.add_arguments_from_dictionary(
         peeling_parser,
-        InputOutput.get_probability_options(),
-        options=["error", "seqerror"],
+        get_probability_options(),
+        options=["geno_error_prob", "seq_error_prob"],
     )
 
     peeling_control_parser = parser.add_argument_group("Peeling control arguments")
@@ -369,10 +395,10 @@ def getArgs():
         help="Flag to re-estimate the genotyping error rates after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
-        "-estmaf",
+        "-est_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Flag to re-estimate the minor allele frequency after each peeling cycle.",
+        help="Flag to re-estimate the alternative allele probability after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
         "-nophasefounders",
