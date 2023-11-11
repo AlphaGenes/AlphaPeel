@@ -69,7 +69,7 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
         if ind.isGenotypedFounder() and phaseFounder and ind.genotypes is not None:
             loci = getHetMidpoint(ind.genotypes)
             if loci is not None:
-                e = args.error
+                e = args.geno_error_prob
                 peelingInfo.penetrance[ind.idn, :, loci] = np.array(
                     [e / 3, e / 3, 1 - e, e / 3], dtype=np.float32
                 )

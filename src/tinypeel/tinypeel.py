@@ -215,14 +215,14 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
 
 def get_probability_options():
     parse_dictionary = dict()
-    parse_dictionary["error"] = lambda parser: parser.add_argument(
+    parse_dictionary["geno_error_prob"] = lambda parser: parser.add_argument(
         "-geno_error_prob",
         default=0.001,
         required=False,
         type=float,
         help="Genotyping error rate. Default: 0.001.",
     )
-    parse_dictionary["seqerror"] = lambda parser: parser.add_argument(
+    parse_dictionary["seq_error_prob"] = lambda parser: parser.add_argument(
         "-seq_error_prob",
         default=0.01,
         required=False,
