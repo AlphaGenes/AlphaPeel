@@ -217,17 +217,17 @@ def get_probability_options():
     parse_dictionary = dict()
     parse_dictionary["geno_error_prob"] = lambda parser: parser.add_argument(
         "-geno_error_prob",
-        default=0.001,
+        default=0.0001,
         required=False,
         type=float,
-        help="Genotyping error rate. Default: 0.001.",
+        help="Genotyping error rate. Default: 0.0001.",
     )
     parse_dictionary["seq_error_prob"] = lambda parser: parser.add_argument(
         "-seq_error_prob",
-        default=0.01,
+        default=0.001,
         required=False,
         type=float,
-        help="Sequencing error rate. Default: 0.01.",
+        help="Sequencing error rate. Default: 0.001.",
     )
     parse_dictionary["recombination"] = lambda parser: parser.add_argument(
         "-recomb",

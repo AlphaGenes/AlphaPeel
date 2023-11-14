@@ -109,9 +109,9 @@ Peeling arguments
 
     Genotype probability arguments:
       -geno_error_prob GENO_ERROR_PROB
-                            Genotyping error rate. [Default 0.001]
+                            Genotyping error rate. [Default 0.0001]
       -seq_error_prob SEQ_ERROR_PROB
-                            Sequencing error rate. [Default 0.01]
+                            Sequencing error rate. [Default 0.001]
 
 ``-runtype`` controls whether the program is run in "single-locus" or "multi-locus" model. Single locus mode does not use linkage information to perform imputation. It is fast, but not very accurate. Multi-locus mode runs multi-locus iterative peeling which uses linkage information to increase accuracy and calculate segregation values.
 
