@@ -80,11 +80,18 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
                 "Using an external penetrance file and the sexchrom option is highly discouraged. Please do not use."
             )
 
-        if args.esterrors:
+        if args.est_geno_error_prob:
             print(
-                "External penetrance file included, but esterrors flag used. The two options are incompatible. esterrors set to false."
+                "External penetrance file included, but est_geno_error_prob flag used. The two options are incompatible. est_geno_error_prob set to false."
             )
-            args.esterrors = False
+            args.est_geno_error_prob = False
+
+        if args.est_seq_error_prob:
+            print(
+                "External penetrance file included, but est_seq_error_prob flag used. The two options are incompatible. est_seq_error_prob set to false."
+            )
+            args.est_seq_error_prob = False
+
         for pen in args.penetrance:
             addPenetranceFromExternalFile(pedigree, peelingInfo, pen, args)
     # updateMaf(pedigree, peelingInfo)

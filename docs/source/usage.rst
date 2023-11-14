@@ -97,7 +97,9 @@ Peeling arguments
                             [Default 1.00]
 
     Peeling control arguments:
-      -esterrors            Flag to re-estimate the genotyping error rates after
+      -est_geno_error_prob  Flag to re-estimate the genotyping error rates after
+                            each peeling cycle.
+      -est_seq_error_prob   Flag to re-estimate the sequencing error rates after
                             each peeling cycle.
       -est_alt_allele_prob  Flag to re-estimate the alternative allele probability after
                             each peeling cycle.
@@ -119,7 +121,7 @@ For hybrid peeling, where a large amount (millions of segregating sites) of sequ
 
 The ``-geno_error_prob``, ``-seq_error_prob`` and ``-length`` arguments control some of the model parameters used in the model. ``-seq_error_prob`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
 
-The ``-esterrors`` option estimated the genotyping error rate based on observed information, this option is generally not necessary and can increase runtime. ``-est_alt_allele_prob`` estimates the alternative allele probability after each peeling cycle. This option can be useful if there are a large number of non-genotyped founders.
+The ``-est_geno_error_prob`` and ``-est_seq_error_prob`` option estimated the genotyping error rate and the sequencing error rate separately based on observed information, this option is generally not necessary and can increase runtime. ``-est_alt_allele_prob`` estimates the alternative allele probability after each peeling cycle. This option can be useful if there are a large number of non-genotyped founders.
 
 Hybrid peeling arguments 
 ------------------------

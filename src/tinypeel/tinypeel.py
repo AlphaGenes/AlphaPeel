@@ -28,9 +28,11 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
         #     print("Estimating the transmission rate is currently a disabled option")
         # PeelingUpdates.updateSeg(peelingInfo) #Option currently disabled.
 
-        if args.esterrors:
+        if args.est_geno_error_prob:
             PeelingUpdates.updatePenetrance(pedigree, peelingInfo)
 
+        if args.est_seq_error_prob:
+            PeelingUpdates.updatePenetrance(pedigree, peelingInfo)
 
 def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
     nWorkers = args.maxthreads
@@ -389,10 +391,16 @@ def getArgs():
 
     peeling_control_parser = parser.add_argument_group("Peeling control arguments")
     peeling_control_parser.add_argument(
-        "-esterrors",
+        "-est_geno_errors_prob",
         action="store_true",
         required=False,
         help="Flag to re-estimate the genotyping error rates after each peeling cycle.",
+    )
+    peeling_control_parser.add_argument(
+        "-est_seq_errors_prob",
+        action="store_true",
+        required=False,
+        help="Flag to re-estimate the sequencing error rates after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
         "-est_alt_allele_prob",
