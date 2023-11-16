@@ -21,7 +21,7 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
     peelingInfo = jit_peelingInformation(
         nInd=pedigree.maxIdn, nFam=pedigree.maxFam, nLoci=nLoci, createSeg=createSeg
     )
-    peelingInfo.isSexChrom = args.sexchrom
+    peelingInfo.isSexChrom = args.sex_chrom
     # Information about the peeling positions are handled elsewhere.
     peelingInfo.positions = None
 
@@ -75,9 +75,9 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
                 )
 
     if args.penetrance is not None:
-        if args.sexchrom:
+        if args.sex_chrom:
             print(
-                "Using an external penetrance file and the sexchrom option is highly discouraged. Please do not use."
+                "Using an external penetrance file and the sex_chrom option is highly discouraged. Please do not use."
             )
 
         if args.est_geno_error_prob:

@@ -488,7 +488,7 @@ def getArgs():
         help="A flag phase a heterozygous allele in one of the founders (if such an allele can be found).",
     )
     peeling_control_parser.add_argument(
-        "-sexchrom",
+        "-sex_chrom",
         action="store_true",
         required=False,
         help="A flag to that this is a sex chromosome. Sex needs to be given in the pedigree file. This is currently an experimental option.",
@@ -539,7 +539,11 @@ def main():
         generateSingleLocusSegregation(peelingInfo, pedigree, args)
     runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=singleLocusMode)
 
-    PeelingIO.writeGenotypes(pedigree, genoProbFunc=peelingInfo.getGenoProbs)
+    PeelingIO.writeGenotypes(
+        pedigree,
+        genoProbFunc=peelingInfo.getGenoProbs,
+        isSexChrom=peelingInfo.isSexChrom,
+    )
     if not args.no_params:
         PeelingIO.writeOutParamaters(peelingInfo)
     if not singleLocusMode and args.seg_prob:
