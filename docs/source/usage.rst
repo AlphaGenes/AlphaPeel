@@ -133,12 +133,12 @@ Hybrid peeling arguments
 ::
 
     Single locus arguments:
-      -segfile SEGFILE      A segregation probabilities file for hybrid peeling.
-      -segmapfile SEGMAPFILE
+      -seg_file SEG_FILE    A segregation probabilities file for hybrid peeling.
+      -seg_map_file SEG_MAP_FILE
                             A map file for loci in the segregation probabilities file.
-      -mapfile MAPFILE      A map file for all loci in hybrid peeling.
+      -map_file MAP_FILE    A map file for all loci in hybrid peeling.
 
-In order to run hybrid peeling the user needs to supply a ``-mapfile`` which gives the genetic positions for the SNPs in the sequence allele read counts data supplied, a ``-segmapfile`` which gives the genetic position for the SNPs in the segregation file, and a ``-segfile`` which gives the segregation values generated via multi-locus iterative peeling. These arguments are not required for running in multi-locus mode.
+In order to run hybrid peeling the user needs to supply a ``-map_file`` which gives the genetic positions for the SNPs in the sequence allele read counts data supplied, a ``-seg_map_file`` which gives the genetic position for the SNPs in the segregation file, and a ``-seg_file`` which gives the segregation values generated via multi-locus iterative peeling. These arguments are not required for running in multi-locus mode.
 
 ============
 File formats

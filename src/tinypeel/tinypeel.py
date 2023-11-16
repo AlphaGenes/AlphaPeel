@@ -190,15 +190,15 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
     if args.segfile is not None:
         # This just gets the locations in the map files.
         snpMap = np.array(
-            InputOutput.readMapFile(args.mapfile, args.startsnp, args.stopsnp)[2]
+            InputOutput.readMapFile(args.map_file, args.startsnp, args.stopsnp)[2]
         )
-        segMap = np.array(InputOutput.readMapFile(args.segmapfile)[2])
+        segMap = np.array(InputOutput.readMapFile(args.seg_map_file)[2])
 
         loci, distance = getLociAndDistance(snpMap, segMap)
         start = np.min(loci)
         stop = np.max(loci)
 
-        seg = InputOutput.readInSeg(pedigree, args.segfile, start=start, stop=stop)
+        seg = InputOutput.readInSeg(pedigree, args.seg_file, start=start, stop=stop)
         loci -= start  # Re-align to seg file.
         for i in range(len(distance)):
             segLoc0 = loci[i, 0]
@@ -450,21 +450,21 @@ def getArgs():
 
     singleLocus_parser = parser.add_argument_group("Hybrid peeling arguments")
     singleLocus_parser.add_argument(
-        "-mapfile",
+        "-map_file",
         default=None,
         required=False,
         type=str,
         help="a map file for genotype data.",
     )
     singleLocus_parser.add_argument(
-        "-segmapfile",
+        "-seg_map_file",
         default=None,
         required=False,
         type=str,
         help="a map file for the segregation estimates for hybrid peeling.",
     )
     singleLocus_parser.add_argument(
-        "-segfile",
+        "-seg_file",
         default=None,
         required=False,
         type=str,
