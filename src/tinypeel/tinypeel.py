@@ -442,11 +442,11 @@ def getArgs():
         help="Number of peeling cycles. Default: 5.",
     )
     peeling_parser.add_argument(
-        "-length",
+        "-rec_length",
         default=1.0,
         required=False,
         type=float,
-        help="Estimated length of the chromosome in Morgans. [Default 1.00]",
+        help="Estimated recombination length of the chromosome in Morgans. [Default 1.00]",
     )
     peeling_parser.add_argument(
         "-penetrance",

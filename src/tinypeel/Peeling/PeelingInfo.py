@@ -37,7 +37,7 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
     peelingInfo.genoError[:] = args.geno_error_prob
     peelingInfo.seqError[:] = args.seq_error_prob
     setupTransmission(
-        args.length, peelingInfo
+        args.rec_length, peelingInfo
     )  # Sets up the transmission rates using a custom position list and a total chromosome length.
 
     for ind in pedigree:
