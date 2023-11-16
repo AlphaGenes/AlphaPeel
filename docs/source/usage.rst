@@ -14,20 +14,20 @@ Input Arguments
 ::
 
     Input Options:
-      -pedigree [PEDIGREE [PEDIGREE ...]]
+      -ped_file [PEDIGREE [PEDIGREE ...]]
                           Pedigree file(s) (see format below).
-      -genotypes [GENOTYPES [GENOTYPES ...]]
+      -geno_file [GENOTYPES [GENOTYPES ...]]
                           Genotype File(s) (see format below).
-      -seqfile [SEQFILE [SEQFILE ...]]
+      -seq_file [SEQFILE [SEQFILE ...]]
                           Sequence allele read count file(s) (see format below).
-      -bfile [BFILE [BFILE ...]]
+      -plink_file [BFILE [BFILE ...]]
                           Plink (binary) file(s).
       -startsnp STARTSNP  The first marker to consider. The first marker is "1".
       -stopsnp STOPSNP    The last marker to consider.
 
-|Software| requires a pedigree file (``-pedigree``) and one or more genomic data files to run the analysis.
+|Software| requires a pedigree file (``-ped_file``) and one or more genomic data files to run the analysis.
 
-|Software| supports the following genomic data files: genotype files in the AlphaGenes format (``-genotypes``), sequence allele read in the AlphaGenes format (``-seqfile``), and binary Plink files (``-bfile``). Use of binary Plink files requires the package ``alphaplinkpython``, which  can be installed via ``pip``, but is only stable for Linux. There are known issues with this package, so we do not advocate its use at the moment.
+|Software| supports the following genomic data files: genotype files in the AlphaGenes format (``-geno_file``), sequence allele read in the AlphaGenes format (``-seq_file``), and binary Plink files (``-plink_file``). Use of binary Plink files requires the package ``alphaplinkpython``, which  can be installed via ``pip``, but is only stable for Linux. There are known issues with this package, so we do not advocate its use at the moment.
 
 Use the ``-startsnp`` and ``-stopsnp`` to run the analysis only on a subset of markers.
 

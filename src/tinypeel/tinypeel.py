@@ -238,6 +238,36 @@ def get_probability_options():
     return parse_dictionary
 
 
+def get_input_options():
+    parse_dictionary = dict()
+    parse_dictionary["bfile"] = lambda parser: parser.add_argument('-plink_file', default=None, required=False, type=str,
+                                                                   nargs="*",
+                                                                   help='A file in plink (binary) format. Only stable on Linux).')
+    parse_dictionary["genotypes"] = lambda parser: parser.add_argument('-geno_file', default=None, required=False,
+                                                                       type=str, nargs="*",
+                                                                       help='A file in AlphaGenes format.')
+    parse_dictionary["reference"] = lambda parser: parser.add_argument('-reference', default=None, required=False,
+                                                                       type=str, nargs="*",
+                                                                       help='A haplotype reference panel in AlphaGenes format.')
+    parse_dictionary["seqfile"] = lambda parser: parser.add_argument('-seq_file', default=None, required=False, type=str,
+                                                                     nargs="*", help='A sequence data file.')
+    parse_dictionary["pedigree"] = lambda parser: parser.add_argument('-ped_file', default=None, required=False,
+                                                                      type=str, nargs="*",
+                                                                      help='A pedigree file in AlphaGenes format.')
+    parse_dictionary["phasefile"] = lambda parser: parser.add_argument('-phasefile', default=None, required=False,
+                                                                       type=str, nargs="*",
+                                                                       help='A phase file in AlphaGenes format.')
+    parse_dictionary["startsnp"] = lambda parser: parser.add_argument('-startsnp', default=None, required=False,
+                                                                      type=int,
+                                                                      help="The first marker to consider. The first marker in the file is marker '1'. Default: 1.")
+    parse_dictionary["stopsnp"] = lambda parser: parser.add_argument('-stopsnp', default=None, required=False, type=int,
+                                                                     help='The last marker to consider. Default: all markers considered.')
+    parse_dictionary["seed"] = lambda parser: parser.add_argument('-seed', default=None, required=False, type=int,
+                                                                  help='A random seed to use for debugging.')
+
+    return parse_dictionary
+
+
 # ACTUAL PROGRAM BELOW
 
 
@@ -261,7 +291,7 @@ def getArgs():
     input_parser = parser.add_argument_group("Input Options")
     InputOutput.add_arguments_from_dictionary(
         input_parser,
-        InputOutput.get_input_options(),
+        get_input_options(),
         options=[
             "bfile",
             "genotypes",
