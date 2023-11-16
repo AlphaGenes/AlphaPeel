@@ -28,10 +28,7 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
         #     print("Estimating the transmission rate is currently a disabled option")
         # PeelingUpdates.updateSeg(peelingInfo) #Option currently disabled.
 
-        if args.est_geno_error_prob:
-            PeelingUpdates.updatePenetrance(pedigree, peelingInfo)
-
-        if args.est_seq_error_prob:
+        if args.est_geno_error_prob or args.est_seq_error_prob:
             PeelingUpdates.updatePenetrance(pedigree, peelingInfo)
 
 def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
@@ -406,7 +403,7 @@ def getArgs():
         "-est_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Flag to re-estimate the alternative allele probability after each peeling cycle.",
+        help="Flag to re-estimate the alternative allele probabilities after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
         "-nophasefounders",

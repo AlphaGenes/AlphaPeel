@@ -169,7 +169,7 @@ def updateGenoError(pedigree, peelingInfo):
     # We use a max value of 5% and a min value of .0001 percent to make sure the values are reasonable
 
     counts = np.full(pedigree.nLoci, 1, dtype=np.float32)
-    errors = np.full(pedigree.nLoci, 0.01, dtype=np.float32)
+    errors = np.full(pedigree.nLoci, 0.0001, dtype=np.float32)
 
     for ind in pedigree:
         updateGenoError_ind(

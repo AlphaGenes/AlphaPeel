@@ -66,8 +66,8 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
 def writeOutParamaters(peelingInfo):
     args = InputOutput.args
 
-    np.savetxt(args.out + ".genoError", peelingInfo.genoError, fmt="%f")
-    np.savetxt(args.out + ".seqError", peelingInfo.seqError, fmt="%f")
+    np.savetxt(args.out + ".geno_error_prob.txt", peelingInfo.genoError, fmt="%f")
+    np.savetxt(args.out + ".seq_error_prob.txt", peelingInfo.seqError, fmt="%f")
     # np.savetxt(args.out + ".trans", peelingInfo.transmissionRate, fmt = "%f")
     np.savetxt(args.out + ".alt_allele_prob.txt", peelingInfo.alt_allele_prob, fmt="%f")
 
