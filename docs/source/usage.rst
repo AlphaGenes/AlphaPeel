@@ -101,6 +101,8 @@ Peeling arguments
                             each peeling cycle.
       -est_seq_error_prob   Flag to re-estimate the sequencing error rates after
                             each peeling cycle.
+      -est_rec_prob         Flag to re-estimate the recombination rates after
+                            each peeling cycle.
       -est_alt_allele_prob  Flag to re-estimate the alternative allele probabilities after
                             each peeling cycle.
       -nophasefounders      A flag phase a heterozygous allele in one of the
@@ -114,6 +116,8 @@ Peeling arguments
                             Genotyping error rate. [Default 0.0001]
       -seq_error_prob SEQ_ERROR_PROB
                             Sequencing error rate. [Default 0.001]
+      -rec_prob REC_PROB
+                            recombination rate.
 
 ``-runtype`` controls whether the program is run in "single-locus" or "multi-locus" model. Single locus mode does not use linkage information to perform imputation. It is fast, but not very accurate. Multi-locus mode runs multi-locus iterative peeling which uses linkage information to increase accuracy and calculate segregation values.
 
@@ -304,7 +308,7 @@ Example:
 Model parameter files
 =====================
 
-|Software| outputs three model parameter files, ``.alt_allele_prob.txt``, ``.seq_error_prob.txt``, ``.geno_error_prob.txt``. These give the minor allele frequency, sequencing error rates, and genotyping error rates used. All three files contain a single column with an entry for each marker.
+|Software| outputs three model parameter files, ``.alt_allele_prob.txt``, ``.seq_error_prob.txt``, ``.geno_error_prob.txt``, ``.rec_prob.txt``. These give the minor allele frequency, sequencing error rates, genotyping error rates and recombination rates used. All three files contain a single column with an entry for each marker.
 
 Example ``.alt_allele_prob.txt`` file for four loci:
 

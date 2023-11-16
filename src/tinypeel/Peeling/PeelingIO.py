@@ -68,6 +68,7 @@ def writeOutParamaters(peelingInfo):
 
     np.savetxt(args.out + ".geno_error_prob.txt", peelingInfo.genoError, fmt="%f")
     np.savetxt(args.out + ".seq_error_prob.txt", peelingInfo.seqError, fmt="%f")
+    np.savetxt(args.out + ".rec_prob.txt", np.empty((1,1)), fmt="%f") # not be realized, just as a placeholder
     # np.savetxt(args.out + ".trans", peelingInfo.transmissionRate, fmt = "%f")
     np.savetxt(args.out + ".alt_allele_prob.txt", peelingInfo.alt_allele_prob, fmt="%f")
 
