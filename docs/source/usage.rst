@@ -108,7 +108,7 @@ Peeling arguments
                             each peeling cycle.
       -nophasefounders      A flag phase a heterozygous allele in one of the
                             founders (if such an allele can be found).
-      -sex_chrom            A flag to that this is a sex chromosome. Sex needs to
+      -sex_chrom            A flag to indicate that input data is for a sex chromosome. Sex needs to
                             be given in the pedigree file. This is currently an
                             experimental option.
 

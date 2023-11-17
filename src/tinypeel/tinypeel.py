@@ -464,13 +464,13 @@ def getArgs():
 
     peeling_control_parser = parser.add_argument_group("Peeling control arguments")
     peeling_control_parser.add_argument(
-        "-est_geno_errors_prob",
+        "-est_geno_error_prob",
         action="store_true",
         required=False,
         help="Flag to re-estimate the genotyping error rates after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
-        "-est_seq_errors_prob",
+        "-est_seq_error_prob",
         action="store_true",
         required=False,
         help="Flag to re-estimate the sequencing error rates after each peeling cycle.",
@@ -491,7 +491,7 @@ def getArgs():
         "-sex_chrom",
         action="store_true",
         required=False,
-        help="A flag to that this is a sex chromosome. Sex needs to be given in the pedigree file. This is currently an experimental option.",
+        help="A flag to indicate that input data is for a sex chromosome. Sex needs to be given in the pedigree file. This is currently an experimental option.",
     )
 
     singleLocus_parser = parser.add_argument_group("Hybrid peeling arguments")
