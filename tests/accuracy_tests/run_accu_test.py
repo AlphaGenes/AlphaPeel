@@ -29,9 +29,17 @@ def generate_output_path(name):
     )
 
 
-def generate_command(sim_path, runType, estmaf, esterrors, seqfile, output_path):
+def generate_command(
+    sim_path,
+    runType,
+    est_alt_allele_prob,
+    est_geno_error_prob,
+    est_seq_error_prob,
+    seq_file,
+    output_path,
+):
     command = "AlphaPeel "
-    input_file = ["pedigree"]
+    input_file = ["ped_file"]
     arguments = {
         "runType": runType,
         "nCycles": "5",
@@ -45,18 +53,19 @@ def generate_command(sim_path, runType, estmaf, esterrors, seqfile, output_path)
         "phased_geno_prob": None,
     }
 
-    if estmaf:
-        arguments["estmaf"] = None
-    if esterrors:
-        arguments["esterrors"] = None
-    if seqfile:
-        input_file.append("seqfile")
+    if est_alt_allele_prob:
+        arguments["est_alt_allele_prob"] = None
+    if est_geno_error_prob and est_seq_error_prob:
+        arguments["est_geno_error_prob"] = None
+        arguments["est_seq_error_prob"] = None
+    if seq_file:
+        input_file.append("seq_file")
     else:
-        input_file.append("genotypes")
+        input_file.append("geno_file")
     if runType == "hybrid":
-        input_file.append("map")
-        input_file.append("segmap")
-        input_file.append("segfile")
+        input_file.append("map_file")
+        input_file.append("seg_map_file")
+        input_file.append("seg_file")
 
     for file in input_file:
         command += f"-{file} {os.path.join(sim_path, f'{file}.txt')} "
@@ -192,27 +201,54 @@ def assess_peeling(sim_path, get_params, output_path, name, runType):
 
 
 @pytest.mark.parametrize(
-    "runType, estmaf, esterrors, seqfile",
+    "runType, est_alt_allele_prob, est_geno_error_prob, est_seq_error_prob, seq_file",
     [
-        ("single", None, None, None),
-        ("single", "estmaf", None, None),
-        ("multi", None, None, None),
-        ("multi", "estmaf", None, None),
-        ("multi", "estmaf", "esterrors", None),
-        ("multi", None, None, "seqfile"),
-        ("multi", "estmaf", None, "seqfile"),
-        ("multi", "estmaf", "esterrors", "seqfile"),
-        ("hybrid", None, None, None),
-        ("hybrid", None, None, "seqfile"),
+        ("single", None, None, None, None),
+        ("single", "est_alt_allele_prob", None, None, None),
+        ("multi", None, None, None, None),
+        ("multi", "est_alt_allele_prob", None, None, None),
+        (
+            "multi",
+            "est_alt_allele_prob",
+            "est_geno_error_prob",
+            "est_seq_error_prob",
+            None,
+        ),
+        ("multi", None, None, None, "seq_file"),
+        ("multi", "est_alt_allele_prob", None, None, "seq_file"),
+        (
+            "multi",
+            "est_alt_allele_prob",
+            "est_geno_error_prob",
+            "est_seq_error_prob",
+            "seq_file",
+        ),
+        ("hybrid", None, None, None, None),
+        ("hybrid", None, None, None, "seq_file"),
     ],
 )
-def test_accu(get_params, runType, estmaf, esterrors, seqfile, sim_path, benchmark):
+def test_accu(
+    get_params,
+    runType,
+    est_alt_allele_prob,
+    est_geno_error_prob,
+    est_seq_error_prob,
+    seq_file,
+    sim_path,
+    benchmark,
+):
     name = "_".join(
         [
             param
             for param in filter(
                 lambda param: True if param else False,
-                [runType, estmaf, esterrors, seqfile],
+                [
+                    runType,
+                    est_alt_allele_prob,
+                    est_geno_error_prob,
+                    est_seq_error_prob,
+                    seq_file,
+                ],
             )
         ]
     )
@@ -227,7 +263,13 @@ def test_accu(get_params, runType, estmaf, esterrors, seqfile, sim_path, benchma
                 param
                 for param in filter(
                     lambda param: True if param else False,
-                    ["multi", estmaf, esterrors, seqfile],
+                    [
+                        "multi",
+                        est_alt_allele_prob,
+                        est_geno_error_prob,
+                        est_seq_error_prob,
+                        seq_file,
+                    ],
                 )
             ]
         )
@@ -239,13 +281,19 @@ def test_accu(get_params, runType, estmaf, esterrors, seqfile, sim_path, benchma
         subset = np.floor(np.linspace(1, nLociAll, num=nSegMap)).astype(dtype=int)
         subset = np.concatenate(([0], subset))
         seg_path = os.path.join(multi_path, ".seg_prob.txt")
-        segfile_path = os.path.join(sim_path, "segfile.txt")
+        seg_file_path = os.path.join(sim_path, "seg_file.txt")
 
         seg = np.loadtxt(seg_path)
-        np.savetxt(segfile_path, seg[:, subset])
+        np.savetxt(seg_file_path, seg[:, subset])
 
     command = generate_command(
-        sim_path, runType, estmaf, esterrors, seqfile, output_path
+        sim_path,
+        runType,
+        est_alt_allele_prob,
+        est_geno_error_prob,
+        est_seq_error_prob,
+        seq_file,
+        output_path,
     )
 
     benchmark(os.system, command)

@@ -1,0 +1,2 @@
+genotypes_0 0 0 0 0 0
+genotypes_1 1 1 1 1 1

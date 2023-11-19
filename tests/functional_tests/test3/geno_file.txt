@@ -1,0 +1,2 @@
+genotypes 0 1 1 2 1
+genotypes5 9 9 9 9 9
