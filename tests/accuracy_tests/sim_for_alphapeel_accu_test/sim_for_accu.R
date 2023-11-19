@@ -148,10 +148,9 @@ genotypesObs_w_error <- generateGenoErr(geno = genotypesObs, error = genoError)
 
 # ----- Realised allele frequency in the base population -----
 
-maf <- matrix(data = colMeans(x = genotypes[1:nIndPerGen, ]) / 2,
+alt_allele_prob <- matrix(data = colMeans(x = genotypes[1:nIndPerGen, ]) / 2,
               nrow = nLociAll, ncol = 1)
-summary(maf[, 1])
-hist(maf)
+summary(alt_allele_prob[, 1])
 
 # ----- Realised genotype error rate -----
 
@@ -279,11 +278,11 @@ rec_prob <- rec_count / (nInd * 2)
 
 # ---- Write the files to disk ----
 
-write.table(x = pedigree, file = "pedigree.txt", 
+write.table(x = pedigree, file = "ped_file.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = genotypesObs_w_error, file = "genotypes.txt", 
+write.table(x = genotypesObs_w_error, file = "geno_file.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
-write.table(x = sequenceReads, file = "seqfile.txt", 
+write.table(x = sequenceReads, file = "seq_file.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
 write.table(x = haplotypes, file = "true-hap_0.5.txt", 
@@ -297,13 +296,15 @@ write.table(x = genotypes, file = "true-geno_0.3333333333333333.txt",
 write.table(x = genotypes, file = "true-dosage.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
 
-write.table(x = geno_error, file = "true-genoError.txt", 
+write.table(x = geno_error, file = "true-geno_error_prob.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = seq_error, file = "true-seqError.txt", 
+write.table(x = seq_error, file = "true-seq_error_prob.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = maf, file = "true-maf.txt", 
+write.table(x = alt_allele_prob, file = "true-alt_allele_prob.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 write.table(x = segregation, "true-seg_prob.txt", 
+            row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(x = rec_prob, file = "true-rec_prob.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
 # ----- Map file -----
@@ -324,12 +325,12 @@ for (chr in (2:nChr)) {
   colnames(value) <- c("Chromosome number", "Marker name", "Base pair position")
   values <- rbind(values, value)
 }
-write.table(x = values, file = "map.txt", 
+write.table(x = values, file = "map_file.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
 # ----- Segregation map file -----
 
 subset <- floor(seq(1, nLociAll, length.out = nSegMap))
 subsetValues <- values[subset,]
-write.table(x = subsetValues, file = "segmap.txt",
+write.table(x = subsetValues, file = "seg_map_file.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)

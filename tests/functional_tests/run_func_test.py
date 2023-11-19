@@ -73,7 +73,7 @@ class TestClass:
     input_file_depend_on_test_cases = None
 
     # all the input file options for non-hybrid peeling except the binary file
-    files_to_input = ["genotypes", "pedigree", "penetrance", "phasefile", "seqfile"]
+    files_to_input = ["geno_file", "ped_file", "penetrance", "phasefile", "seq_file"]
     # all the output files except the binary file and the parameter files
     files_to_check = [
         "hap_0.5",
@@ -131,16 +131,18 @@ class TestClass:
 
         def check(file_type):
             return os.path.exists(
-                os.path.join(self.output_path, f"{self.output_file_prefix}.{file_type}")
+                os.path.join(
+                    self.output_path, f"{self.output_file_prefix}.{file_type}.txt"
+                )
             )
 
         files = [
-            "dosage.txt",
-            "seg_prob.txt",
-            "maf",
-            "genoError",
-            "seqError",
-            "phased_geno_prob.txt",
+            "dosage",
+            "seg_prob",
+            "alt_allele_prob",
+            "geno_error_prob",
+            "seq_error_prob",
+            "phased_geno_prob",
         ]
         return [check(file) for file in files]
 
@@ -157,7 +159,8 @@ class TestClass:
             "runType": "multi",
             "geno_threshold": ".1",
             "geno": None,
-            "esterrors": None,
+            "est_geno_error_prob": None,
+            "est_seq_error_prob": None,
             "seg_prob": None,
         }
         self.output_file_prefix = "files"
@@ -282,7 +285,7 @@ class TestClass:
 
     def test_est(self):
         """
-        Check -esterrors, -estmaf, -length just to make sure it runs.
+        Check -est_geno_error_prob, -est_seq_error_prob, -est_alt_allele_prob, -rec_length just to make sure it runs.
         """
         self.test_name = "test_est"
         self.prepare_path()
@@ -292,17 +295,23 @@ class TestClass:
         self.arguments = {"runType": "multi", "geno_threshold": ".1", "geno": None}
         self.output_file_to_check = "geno_0.3333333333333333"
 
-        for self.test_cases in ["esterror", "estmaf", "length"]:
+        for self.test_cases in [
+            "est_geno_error_prob",
+            "est_seq_error_prob",
+            "est_alt_allele_prob",
+            "rec_length",
+        ]:
             # TODO estrecombrate instead of just adding length
-            if self.test_cases != "length":
+            if self.test_cases != "rec_length":
                 self.arguments[self.test_cases] = None
             else:
                 # Do we need to continue use this value for lengh
                 # as it is the same as the default value
-                self.arguments["length"] = "1.0"
+                self.arguments["rec_length"] = "1.0"
             self.output_file_prefix = f"est.{self.test_cases}"
 
             self.generate_command()
+            print(self.command)
             os.system(self.command)
 
             self.output_file_path = os.path.join(
@@ -365,7 +374,7 @@ class TestClass:
         self.test_name = "test_rec"
         self.prepare_path()
 
-        self.input_files = ["pedigree"]
+        self.input_files = ["ped_file"]
         self.arguments = {
             "runType": "multi",
             "phased_geno_prob": None,
@@ -377,15 +386,15 @@ class TestClass:
         }
 
         # test for genotype input and sequence input separately
-        for self.test_cases in ["genotypes", "seqfile"]:
+        for self.test_cases in ["geno_file", "seq_file"]:
             self.input_files.append(self.test_cases)
             self.output_file_prefix = f"rec.{self.test_cases}"
-            if self.test_cases == "genotypes":
-                self.arguments["error"] = "0"
+            if self.test_cases == "geno_file":
+                self.arguments["geno_error_prob"] = "0"
             else:
                 # set a small value for sequence error
                 # as sequence error cannot be 0
-                self.arguments["seqerror"] = "0.00000001"
+                self.arguments["seq_error_prob"] = "0.00000001"
 
             self.generate_command()
             os.system(self.command)
@@ -403,7 +412,7 @@ class TestClass:
                     self.path, f"true-{self.output_file_to_check}.txt"
                 )
 
-                if self.test_cases == "seqfile":
+                if self.test_cases == "seq_file":
                     # since sequence error is not 0, we need to round the output up
                     self.output = read_and_sort_file(
                         self.output_file_path, decimal_place=2
@@ -416,22 +425,22 @@ class TestClass:
 
             self.input_files.pop(-1)
             self.command = "AlphaPeel "
-            if self.test_cases == "genotypes":
-                self.arguments.pop("error")
+            if self.test_cases == "geno_file":
+                self.arguments.pop("geno_error_prob")
 
     # the true values to check against are wrong for test_sex
     # needs to rewrite
     def test_sex(self):
         """
         Run the test of the sex chromosome functionality of AlphaPeel
-        -sexchrom still under development...
+        -sex_chrom still under development...
         """
         self.test_name = "test_sex"
         self.prepare_path()
 
-        self.arguments = {"runType": "multi", "sexchrom": None, "seg_prob": None}
-        self.input_files = ["genotypes", "seqfile", "pedigree"]
-        self.input_file_depend_on_test_cases = ["genotypes", "seqfile"]
+        self.arguments = {"runType": "multi", "sex_chrom": None, "seg_prob": None}
+        self.input_files = ["geno_file", "seq_file", "ped_file"]
+        self.input_file_depend_on_test_cases = ["geno_file", "seq_file"]
 
         for self.test_cases in ["a", "b", "c", "d"]:
             # test case a: homozygous generation 2
@@ -467,25 +476,24 @@ class TestClass:
         self.test_name = "test_error"
         self.prepare_path()
 
-        # using default error rates: genotype error rate: 0.01
-        #                            sequence error rate: 0.001
+        # using default error rates: genotype error rate: 0.001
+        #                            sequence error rate: 0.0001
         self.arguments = {"runType": "multi", "seg_prob": None}
-        self.input_files = ["genotypes", "seqfile", "pedigree"]
-        self.input_file_depend_on_test_cases = ["genotypes", "seqfile"]
+        self.input_files = ["geno_file", "seq_file", "ped_file"]
+        self.input_file_depend_on_test_cases = ["geno_file", "seq_file"]
 
         for self.test_cases in ["a", "b", "c", "d"]:
-            # test case a: somatic mutation at locus 5 of M1 in genotype and seqfile
-            #           b: germline mutation at locus 5 of M1 in genotype and seqfile
-            #           c: somatic mutation at locus 5 of M1 in seqfile only,
+            # test case a: somatic mutation at locus 5 of M1 in geno_file and seq_file
+            #           b: germline mutation at locus 5 of M1 in geno_file and seq_file
+            #           c: somatic mutation at locus 5 of M1 in seq_file only,
             #              with genotype value missing
-            #           d: germline mutation at locus 5 of M1 in seqfile only,
+            #           d: germline mutation at locus 5 of M1 in seq_file only,
             #              with genotype value missing
 
             self.output_file_prefix = f"error.{self.test_cases}"
-            self.output_file_to_check = "genotypes"
+            # self.output_file_to_check = "genotypes"
 
             self.generate_command()
-            print(self.command)
             os.system(self.command)
 
             # self.output_file_path = os.path.join(
@@ -510,7 +518,7 @@ class TestClass:
         self.test_name = "test_onlykeyed"
         self.prepare_path()
 
-        self.input_files = ["genotypes", "pedigree"]
+        self.input_files = ["geno_file", "ped_file"]
         self.arguments = {"runType": "multi", "onlykeyed": None, "seg_prob": None}
         self.output_file_prefix = "onlykeyed"
         self.output_file_to_check = "dosage"
@@ -534,4 +542,4 @@ class TestClass:
     # TODO test_plink for PLINK
     #      a. binary PLINK output
     #      b. binary output + input
-    #      c. pedigree
+    #      c. ped_file
