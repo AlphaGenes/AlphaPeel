@@ -229,13 +229,7 @@ def get_probability_options():
         type=float,
         help="Sequencing error rate. Default: 0.001.",
     )
-    parse_dictionary["recombination"] = lambda parser: parser.add_argument(
-        "-recomb",
-        default=1,
-        required=False,
-        type=float,
-        help="Recombination rate per chromosome (in Morgan). Default: 1.",
-    )
+
     return parse_dictionary
 
 
@@ -247,7 +241,7 @@ def get_input_options():
         required=False,
         type=str,
         nargs="*",
-        help="A file in plink (binary) format. Only stable on Linux.",
+        help="plink (binary) file(s).",
     )
     parse_dictionary["genotypes"] = lambda parser: parser.add_argument(
         "-geno_file",
@@ -255,7 +249,7 @@ def get_input_options():
         required=False,
         type=str,
         nargs="*",
-        help="A file in AlphaGenes format.",
+        help="Genotype File(s) in AlphaGenes format.",
     )
     parse_dictionary["reference"] = lambda parser: parser.add_argument(
         "-reference",
@@ -271,7 +265,7 @@ def get_input_options():
         required=False,
         type=str,
         nargs="*",
-        help="A sequence data file.",
+        help="Sequence allele read count file(s).",
     )
     parse_dictionary["pedigree"] = lambda parser: parser.add_argument(
         "-ped_file",
@@ -279,7 +273,7 @@ def get_input_options():
         required=False,
         type=str,
         nargs="*",
-        help="A pedigree file in AlphaGenes format.",
+        help="Pedigree file(s) in AlphaGenes format.",
     )
     parse_dictionary["phasefile"] = lambda parser: parser.add_argument(
         "-hap_file",
@@ -322,13 +316,13 @@ def get_output_options():
         default="id",
         required=False,
         type=str,
-        help='Determines the order in which individuals are ordered in the output file based on their order in the corresponding input file. Animals not in the input file are placed at the end of the file and sorted in alphanumeric order. These animals can be surpressed with the "-onlykeyed" option. Options: id, pedigree, genotypes, sequence, segregation. Defualt: id.',
+        help='Determines the order in which individuals are ordered in the output file based on their order in the corresponding input file. Individuals not in the input file are placed at the end of the file and sorted in alphanumeric order. These inividuals can be surpressed with the "-out_id_only" option. Options: id, pedigree, genotypes, sequence, segregation. Defualt: id.',
     )
     parse_dictionary["onlykeyed"] = lambda parser: parser.add_argument(
         "-out_id_only",
         action="store_true",
         required=False,
-        help='Flag to surpress the animals who are not present in the file used with -outputkey. Also surpresses "dummy" animals.',
+        help='Flag to surpress the individuals who are not present in the file used with -out_id_order. Also surpresses "dummy" individuals.',
     )
     parse_dictionary["iothreads"] = lambda parser: parser.add_argument(
         "-n_io_threads",
@@ -546,14 +540,14 @@ def getArgs():
         default=None,
         required=False,
         type=str,
-        help="a map file for genotype data.",
+        help="a map file for all loci in hybrid peeling.",
     )
     singleLocus_parser.add_argument(
         "-seg_map_file",
         default=None,
         required=False,
         type=str,
-        help="a map file for the segregation estimates for hybrid peeling.",
+        help="a map file for loci in the segregation probabilities file.",
     )
     singleLocus_parser.add_argument(
         "-seg_file",

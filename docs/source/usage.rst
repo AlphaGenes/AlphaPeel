@@ -14,17 +14,17 @@ Input Arguments
 ::
 
     Input Options:
-      -ped_file [PEDIGREE [PEDIGREE ...]]
+      -ped_file [PEDIGREE ...]
                           Pedigree file(s) (see format below).
-      -geno_file [GENOTYPES [GENOTYPES ...]]
+      -geno_file [GENOTYPES ...]
                           Genotype File(s) (see format below).
-      -seq_file [SEQFILE [SEQFILE ...]]
+      -seq_file [SEQFILE ...]
                           Sequence allele read count file(s) (see format below).
-      -plink_file [BFILE [BFILE ...]]
+      -plink_file [BFILE ...]
                           Plink (binary) file(s).
       -start_snp START_SNP
-                          The first marker to consider. The first marker is "1".
-      -stop_snp STOP_SNP  The last marker to consider.
+                          The first marker to consider. The first marker is "1". Default: 1.
+      -stop_snp STOP_SNP  The last marker to consider. Default: all markers considered.
 
 |Software| requires a pedigree file (``-ped_file``) and one or more genomic data files to run the analysis.
 
@@ -32,7 +32,7 @@ Input Arguments
 
 Use the ``-start_snp`` and ``-stop_snp`` to run the analysis only on a subset of markers.
 
-The input options in the form of ``[xxx [xxx ...]]`` can take in more than one input file seperated by space.
+The input options in the form of ``[xxx ...]`` can take in more than one input file seperated by space.
 
 Output Arguments 
 ----------------
@@ -65,10 +65,10 @@ Output Arguments
       -geno_prob            Flag to enable writing out the genotype probabilities.
       -hap                  Flag to call and write out the haplotypes.
       -geno                 Flag to call and write out the genotypes.
-      -geno_threshold [GENO_THRESHOLD [GENO_THRESHOLD ...]]
+      -geno_threshold [GENO_THRESHOLD ...]
                             Genotype calling threshold(s). Multiple space separated values allowed.
                             Value less than 1/3 will be replaced by 1/3.
-      -hap_threshold [HAPS_CALL_THRESHOLD [HAPS_CALL_THRESHOLD]...]
+      -hap_threshold [HAP_THRESHOLD ...]
                             Haplotype calling threshold(s). Multiple space separated values allowed.
                             Value less than 1/2 will be replaced by 1/2.
       -binary_call_file    Flag to write out the called genotype files as a
@@ -120,8 +120,6 @@ Peeling arguments
                             Genotyping error rate. [Default 0.0001]
       -seq_error_prob SEQ_ERROR_PROB
                             Sequencing error rate. [Default 0.001]
-      -rec_prob REC_PROB
-                            Estimated/realised recombination rate between two loci.
 
 ``-method`` controls whether the program is run in "single-locus" or "multi-locus" model. Single locus mode does not use linkage information to perform imputation. It is fast, but not very accurate. Multi-locus mode runs multi-locus iterative peeling which uses linkage information to increase accuracy and calculate segregation values.
 
