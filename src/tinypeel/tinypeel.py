@@ -321,7 +321,7 @@ def getArgs():
     parser = argparse.ArgumentParser(description="")
     core_parser = parser.add_argument_group("Core arguments")
     core_parser.add_argument(
-        "-out", required=True, type=str, help="The output file prefix."
+        "-out_file", required=True, type=str, help="The output file prefix."
     )
 
     core_peeling_parser = parser.add_argument_group("Mandatory peeling arguments")
@@ -548,7 +548,7 @@ def main():
         PeelingIO.writeOutParamaters(peelingInfo)
     if not singleLocusMode and args.seg_prob:
         InputOutput.writeIdnIndexedMatrix(
-            pedigree, peelingInfo.segregation, args.out + ".seg_prob.txt"
+            pedigree, peelingInfo.segregation, args.out_file + ".seg_prob.txt"
         )
 
 

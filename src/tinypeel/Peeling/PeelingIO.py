@@ -66,23 +66,27 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
 def writeOutParamaters(peelingInfo):
     args = InputOutput.args
 
-    np.savetxt(args.out + ".geno_error_prob.txt", peelingInfo.genoError, fmt="%f")
-    np.savetxt(args.out + ".seq_error_prob.txt", peelingInfo.seqError, fmt="%f")
+    np.savetxt(args.out_file + ".geno_error_prob.txt", peelingInfo.genoError, fmt="%f")
+    np.savetxt(args.out_file + ".seq_error_prob.txt", peelingInfo.seqError, fmt="%f")
     np.savetxt(
-        args.out + ".rec_prob.txt", np.empty((1, 1)), fmt="%f"
+        args.out_file + ".rec_prob.txt", np.empty((1, 1)), fmt="%f"
     )  # not be realized, just as a placeholder
-    # np.savetxt(args.out + ".trans", peelingInfo.transmissionRate, fmt = "%f")
-    np.savetxt(args.out + ".alt_allele_prob.txt", peelingInfo.alt_allele_prob, fmt="%f")
+    # np.savetxt(args.out_file + ".trans", peelingInfo.transmissionRate, fmt = "%f")
+    np.savetxt(
+        args.out_file + ".alt_allele_prob.txt", peelingInfo.alt_allele_prob, fmt="%f"
+    )
 
 
 def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
     args = InputOutput.args
     if not args.no_dosage:
-        writeDosages(pedigree, genoProbFunc, isSexChrom, args.out + ".dosage.txt")
+        writeDosages(pedigree, genoProbFunc, isSexChrom, args.out_file + ".dosage.txt")
     if args.phased_geno_prob:
-        writePhasedGenoProbs(pedigree, genoProbFunc, args.out + ".phased_geno_prob.txt")
+        writePhasedGenoProbs(
+            pedigree, genoProbFunc, args.out_file + ".phased_geno_prob.txt"
+        )
     if args.geno_prob:
-        writeGenoProbs(pedigree, genoProbFunc, args.out + ".geno_prob.txt")
+        writeGenoProbs(pedigree, genoProbFunc, args.out_file + ".geno_prob.txt")
     if args.geno_threshold and args.geno:
         for thresh in args.geno_threshold:
             if thresh < 1 / 3:
@@ -92,7 +96,7 @@ def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
                     pedigree,
                     genoProbFunc,
                     isSexChrom,
-                    args.out + ".called." + str(thresh),
+                    args.out_file + ".called" + str(thresh),
                     thresh,
                 )
             else:
@@ -100,7 +104,7 @@ def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
                     pedigree,
                     genoProbFunc,
                     isSexChrom,
-                    args.out + ".geno_" + str(thresh) + ".txt",
+                    args.out_file + ".geno_" + str(thresh) + ".txt",
                     thresh,
                 )
 
@@ -114,7 +118,7 @@ def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
                 writeCalledPhase(
                     pedigree,
                     genoProbFunc,
-                    args.out + ".hap_" + str(thresh) + ".txt",
+                    args.out_file + ".hap_" + str(thresh) + ".txt",
                     thresh,
                 )
 
@@ -239,27 +243,29 @@ def setMissing(calledGenotypes, matrix, thresh):
 
 def fullOutput(pedigree, peelingInfo, args):
     InputOutput.writeIdnIndexedMatrix(
-        pedigree, peelingInfo.penetrance, args.out + ".penetrance"
+        pedigree, peelingInfo.penetrance, args.out_file + ".penetrance"
     )
     InputOutput.writeIdnIndexedMatrix(
-        pedigree, peelingInfo.anterior, args.out + ".anterior"
+        pedigree, peelingInfo.anterior, args.out_file + ".anterior"
     )
     InputOutput.writeIdnIndexedMatrix(
-        pedigree, peelingInfo.posterior, args.out + ".posterior"
+        pedigree, peelingInfo.posterior, args.out_file + ".posterior"
     )
 
     InputOutput.writeFamIndexedMatrix(
         pedigree,
         peelingInfo.posteriorSire_minusFam,
-        args.out + ".posteriorSire_minusFam",
+        args.out_file + ".posteriorSire_minusFam",
     )
     InputOutput.writeFamIndexedMatrix(
-        pedigree, peelingInfo.posteriorDam_minusFam, args.out + ".posteriorDam_minusFam"
+        pedigree,
+        peelingInfo.posteriorDam_minusFam,
+        args.out_file + ".posteriorDam_minusFam",
     )
 
     InputOutput.writeFamIndexedMatrix(
-        pedigree, peelingInfo.posteriorSire_new, args.out + ".posteriorSire_new"
+        pedigree, peelingInfo.posteriorSire_new, args.out_file + ".posteriorSire_new"
     )
     InputOutput.writeFamIndexedMatrix(
-        pedigree, peelingInfo.posteriorDam_new, args.out + ".posteriorDam_new"
+        pedigree, peelingInfo.posteriorDam_new, args.out_file + ".posteriorDam_new"
     )
