@@ -96,7 +96,7 @@ def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
                     pedigree,
                     genoProbFunc,
                     isSexChrom,
-                    args.out_file + ".called" + str(thresh),
+                    args.out_file + ".called." + str(thresh),
                     thresh,
                 )
             else:
