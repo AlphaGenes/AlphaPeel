@@ -18,7 +18,7 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     if args.est_alt_allele_prob:
         PeelingUpdates.updateMaf(pedigree, peelingInfo)
 
-    for i in range(args.ncycles):
+    for i in range(args.n_cycles):
         print("Cycle ", i)
         peelingCycle(pedigree, peelingInfo, args=args, singleLocusMode=singleLocusMode)
         peelingInfo.iteration += 1
@@ -372,7 +372,7 @@ def getArgs():
 
     core_peeling_parser = parser.add_argument_group("Mandatory peeling arguments")
     core_peeling_parser.add_argument(
-        "-runtype",
+        "-method",
         default=None,
         required=False,
         type=str,
@@ -481,7 +481,7 @@ def getArgs():
 
     peeling_parser = parser.add_argument_group("Optional peeling arguments")
     peeling_parser.add_argument(
-        "-ncycles",
+        "-n_cycles",
         default=5,
         required=False,
         type=int,
@@ -572,8 +572,8 @@ def main():
     pedigree = Pedigree.Pedigree()
     InputOutput.readInPedigreeFromInputs(pedigree, args)
 
-    singleLocusMode = args.runtype == "single"
-    if args.runtype == "multi" and args.segfile:
+    singleLocusMode = args.method == "single"
+    if args.method == "multi" and args.segfile:
         print("Running in multi-locus mode, external segfile ignored")
 
     peelingInfo = PeelingInfo.createPeelingInfo(

@@ -90,10 +90,10 @@ Peeling arguments
 ::
 
     Mandatory peeling arguments:
-      -runtype RUNTYPE      Program run type. Either "single" or "multi".
+      -method METHOD        Program run type. Either "single" or "multi".
     
     Optional peeling arguments:
-      -ncycles NCYCLES      Number of peeling cycles. Default: 5.
+      -n_cycles N_CYCLES    Number of peeling cycles. Default: 5.
       -n_threads N_THREADS
                             Number of threads to use. Default: 1.
       -rec_length REC_LENGTH
@@ -123,7 +123,7 @@ Peeling arguments
       -rec_prob REC_PROB
                             Estimated/realised recombination rate between two loci.
 
-``-runtype`` controls whether the program is run in "single-locus" or "multi-locus" model. Single locus mode does not use linkage information to perform imputation. It is fast, but not very accurate. Multi-locus mode runs multi-locus iterative peeling which uses linkage information to increase accuracy and calculate segregation values.
+``-method`` controls whether the program is run in "single-locus" or "multi-locus" model. Single locus mode does not use linkage information to perform imputation. It is fast, but not very accurate. Multi-locus mode runs multi-locus iterative peeling which uses linkage information to increase accuracy and calculate segregation values.
 
 For hybrid peeling, where a large amount (millions of segregating sites) of sequence allele read counts needs to be imputed, first run the program in multi-locus mode to generate a segregation file, and then run the program in single-locus mode with a known segregation file.
 
