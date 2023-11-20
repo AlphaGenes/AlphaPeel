@@ -314,6 +314,52 @@ def get_input_options():
     return parse_dictionary
 
 
+def get_output_options():
+    parse_dictionary = dict()
+
+    parse_dictionary["writekey"] = lambda parser: parser.add_argument(
+        "-out_id_order",
+        default="id",
+        required=False,
+        type=str,
+        help='Determines the order in which individuals are ordered in the output file based on their order in the corresponding input file. Animals not in the input file are placed at the end of the file and sorted in alphanumeric order. These animals can be surpressed with the "-onlykeyed" option. Options: id, pedigree, genotypes, sequence, segregation. Defualt: id.',
+    )
+    parse_dictionary["onlykeyed"] = lambda parser: parser.add_argument(
+        "-out_id_only",
+        action="store_true",
+        required=False,
+        help='Flag to surpress the animals who are not present in the file used with -outputkey. Also surpresses "dummy" animals.',
+    )
+    parse_dictionary["iothreads"] = lambda parser: parser.add_argument(
+        "-n_io_threads",
+        default=1,
+        required=False,
+        type=int,
+        help="Number of threads to use for io. Default: 1.",
+    )
+
+    return parse_dictionary
+
+
+def get_multithread_options():
+    parse_dictionary = dict()
+    parse_dictionary["iothreads"] = lambda parser: parser.add_argument(
+        "-n_io_threads",
+        default=1,
+        required=False,
+        type=int,
+        help="Number of threads to use for input and output. Default: 1.",
+    )
+    parse_dictionary["maxthreads"] = lambda parser: parser.add_argument(
+        "-n_threads",
+        default=1,
+        required=False,
+        type=int,
+        help="Maximum number of threads to use for analysis. Default: 1.",
+    )
+    return parse_dictionary
+
+
 # ACTUAL PROGRAM BELOW
 
 
@@ -421,7 +467,7 @@ def getArgs():
 
     InputOutput.add_arguments_from_dictionary(
         output_parser,
-        InputOutput.get_output_options(),
+        get_output_options(),
         options=["writekey", "onlykeyed"],
     )
 
@@ -429,7 +475,7 @@ def getArgs():
     multithread_parser = parser.add_argument_group("Multithreading Options")
     InputOutput.add_arguments_from_dictionary(
         multithread_parser,
-        InputOutput.get_multithread_options(),
+        get_multithread_options(),
         options=["iothreads", "maxthreads"],
     )
 

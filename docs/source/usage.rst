@@ -42,17 +42,19 @@ Output Arguments
     Output options:
       -out_file PREFIX      The output file prefix. All file outputs will be stored
                             as "PREFIX.dosage.txt" and so on.
-      -writekey WRITEKEY    Determines the order in which individuals are ordered
+      -out_id_order OUT_ID_ORDER
+                            Determines the order in which individuals are ordered
                             in the output file based on their order in the
                             corresponding input file. Individuals not in the input
                             file are placed at the end of the file and sorted in
                             alphanumeric order. These individuals can be suppressed
-                            with the "-onlykeyed" option. Options: id, pedigree,
+                            with the "-out_id_only" option. Options: id, pedigree,
                             genotypes, sequence, segregation. Default: id.
-      -onlykeyed            Flag to suppress the individuals not present in
-                            the file used with "-writekey". It also suppresses "dummy"
+      -out_id_only          Flag to suppress the individuals not present in
+                            the file used with "-out_id_order". It also suppresses "dummy"
                             individuals.
-      -iothreads IOTHREADS  Number of threads to use for input/output. Default: 1.
+      -n_io_threads N_IO_THREADS
+                            Number of threads to use for input/output. Default: 1.
 
 
     Peeling output options:
@@ -78,9 +80,9 @@ The ``-geno_threshold`` and ``-hap_threshold`` arguments respectively control co
 
 ``-binary_call_files`` option can be used to change the output to a plink binary format.
 
-The order in which individuals are output can be changed by using the ``writekey`` option. This option changes the order in which individuals are written out to the order in which they were observed in the corresponding file. The ```-onlykeyed`` option suppresses the output of dummy individuals (not recommended for hybrid peeling). 
+The order in which individuals are output can be changed by using the ``out_id_order`` option. This option changes the order in which individuals are written out to the order in which they were observed in the corresponding file. The ```-out_id_only`` option suppresses the output of dummy individuals (not recommended for hybrid peeling).
 
-The argument ``-iothreads`` controls the number of threads/processes used by |Software|. |Software| uses additional threads to parse and format input and output files. Setting this option to a value greater than 1 is only recommended for very large files (i.e. >10,000 individuals).
+The argument ``-n_io_threads`` controls the number of threads/processes used by |Software|. |Software| uses additional threads to parse and format input and output files. Setting this option to a value greater than 1 is only recommended for very large files (i.e. >10,000 individuals).
 
 Peeling arguments 
 ------------------
@@ -92,7 +94,7 @@ Peeling arguments
     
     Optional peeling arguments:
       -ncycles NCYCLES      Number of peeling cycles. Default: 5.
-      -maxthreads MAXTHREADS
+      -n_threads N_THREADS
                             Number of threads to use. Default: 1.
       -rec_length REC_LENGTH
                             Estimated recombination length of the chromosome in Morgans.
