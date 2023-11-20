@@ -152,7 +152,7 @@ def updatePenetrance(pedigree, peelingInfo):
 
         if (
             ind.isGenotypedFounder()
-            and (not InputOutput.args.nophasefounders)
+            and (not InputOutput.args.no_phase_founder)
             and ind.genotypes is not None
         ):
             loci = PeelingInfo.getHetMidpoint(ind.genotypes)

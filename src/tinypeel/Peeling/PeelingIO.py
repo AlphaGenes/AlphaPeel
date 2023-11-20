@@ -91,7 +91,7 @@ def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
         for thresh in args.geno_threshold:
             if thresh < 1 / 3:
                 thresh = 1 / 3
-            if args.binary_call_files:
+            if args.binary_call_file:
                 writeBinaryCalledGenotypes(
                     pedigree,
                     genoProbFunc,
@@ -112,7 +112,7 @@ def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
         for thresh in args.hap_threshold:
             if thresh < 1 / 2:
                 thresh = 1 / 2
-            if args.binary_call_files:
+            if args.binary_call_file:
                 pass  # this function is not applied
             else:
                 writeCalledPhase(

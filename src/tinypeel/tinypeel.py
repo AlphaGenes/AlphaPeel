@@ -411,7 +411,7 @@ def getArgs():
         help="Flag to enable writing out the segregation probabilities.",
     )
     output_parser.add_argument(
-        "-no_params",
+        "-no_param",
         action="store_true",
         required=False,
         help="Flag to suppress writing the model parameter files.",
@@ -453,7 +453,7 @@ def getArgs():
         help="Flag to call and write out the genotypes.",
     )
     output_parser.add_argument(
-        "-binary_call_files",
+        "-binary_call_file",
         action="store_true",
         required=False,
         help="Flag to write out the called genotype files as a binary plink output [Not yet implemented].",
@@ -528,7 +528,7 @@ def getArgs():
         help="Flag to re-estimate the alternative allele probabilities after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
-        "-nophasefounders",
+        "-no_phase_founder",
         action="store_true",
         required=False,
         help="A flag phase a heterozygous allele in one of the founders (if such an allele can be found).",
@@ -577,7 +577,7 @@ def main():
         print("Running in multi-locus mode, external segfile ignored")
 
     peelingInfo = PeelingInfo.createPeelingInfo(
-        pedigree, args, phaseFounder=(not args.nophasefounders)
+        pedigree, args, phaseFounder=(not args.no_phase_founder)
     )
 
     if singleLocusMode:
@@ -590,7 +590,7 @@ def main():
         genoProbFunc=peelingInfo.getGenoProbs,
         isSexChrom=peelingInfo.isSexChrom,
     )
-    if not args.no_params:
+    if not args.no_param:
         PeelingIO.writeOutParamaters(peelingInfo)
     if not singleLocusMode and args.seg_prob:
         InputOutput.writeIdnIndexedMatrix(

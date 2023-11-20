@@ -59,7 +59,7 @@ Output Arguments
 
     Peeling output options:
       -no_dosage            Flag to suppress the dosage files.
-      -no_params            Flag to suppress writing the model parameter files.
+      -no_param             Flag to suppress writing the model parameter files.
       -seg_prob             Flag to enable writing out the segregation probabilities.
       -phased_geno_prob     Flag to enable writing out the phased genotype probabilities.
       -geno_prob            Flag to enable writing out the genotype probabilities.
@@ -71,14 +71,14 @@ Output Arguments
       -hap_threshold [HAPS_CALL_THRESHOLD [HAPS_CALL_THRESHOLD]...]
                             Haplotype calling threshold(s). Multiple space separated values allowed.
                             Value less than 1/2 will be replaced by 1/2.
-      -binary_call_files    Flag to write out the called genotype files as a
+      -binary_call_file    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
-By default |Software| produces a dosage file and two model parameter files (genotype error rate and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, and ``-no_params`` options. |Software| can also write out the phased genotype probability file (.phased_geno_prob.txt) with the `-phased_geno_prob` argument and the segregation probability file (.seg_prob.txt) with the `-seg_prob` argument.
+By default |Software| produces a dosage file and two model parameter files (genotype error rate and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, and ``-no_param`` options. |Software| can also write out the phased genotype probability file (.phased_geno_prob.txt) with the `-phased_geno_prob` argument and the segregation probability file (.seg_prob.txt) with the `-seg_prob` argument.
 
 The ``-geno_threshold`` and ``-hap_threshold`` arguments respectively control control which genotypes and haplotypes are called. A threshold of 0.9 will give calls only if the probability mass for one genotype (or haplotype) is higher than 0.9. Using a higher-value will increase the accuracy of called genotypes (or haplotypes), but will result in fewer called genotypes (or haplotypes). Since there are three genotypes states and two haplotype states, "best-guess" genotypes and haplotypes are respectively called with a threshold less than ``1/3`` and ``1/2``.
 
-``-binary_call_files`` option can be used to change the output to a plink binary format.
+``-binary_call_file`` option can be used to change the output to a plink binary format.
 
 The order in which individuals are output can be changed by using the ``out_id_order`` option. This option changes the order in which individuals are written out to the order in which they were observed in the corresponding file. The ```-out_id_only`` option suppresses the output of dummy individuals (not recommended for hybrid peeling).
 
@@ -109,7 +109,7 @@ Peeling arguments
                             each peeling cycle.
       -est_alt_allele_prob  Flag to re-estimate the alternative allele probabilities after
                             each peeling cycle.
-      -nophasefounders      A flag phase a heterozygous allele in one of the
+      -no_phase_founder    A flag phase a heterozygous allele in one of the
                             founders (if such an allele can be found).
       -sex_chrom            A flag to indicate that input data is for a sex chromosome. Sex needs to
                             be given in the pedigree file. This is currently an
