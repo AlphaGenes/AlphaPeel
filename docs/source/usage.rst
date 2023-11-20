@@ -22,14 +22,15 @@ Input Arguments
                           Sequence allele read count file(s) (see format below).
       -plink_file [BFILE [BFILE ...]]
                           Plink (binary) file(s).
-      -startsnp STARTSNP  The first marker to consider. The first marker is "1".
-      -stopsnp STOPSNP    The last marker to consider.
+      -start_snp START_SNP
+                          The first marker to consider. The first marker is "1".
+      -stop_snp STOP_SNP  The last marker to consider.
 
 |Software| requires a pedigree file (``-ped_file``) and one or more genomic data files to run the analysis.
 
 |Software| supports the following genomic data files: genotype files in the AlphaGenes format (``-geno_file``), sequence allele read in the AlphaGenes format (``-seq_file``), and binary Plink files (``-plink_file``). Use of binary Plink files requires the package ``alphaplinkpython``, which  can be installed via ``pip``, but is only stable for Linux. There are known issues with this package, so we do not advocate its use at the moment.
 
-Use the ``-startsnp`` and ``-stopsnp`` to run the analysis only on a subset of markers.
+Use the ``-start_snp`` and ``-stop_snp`` to run the analysis only on a subset of markers.
 
 The input options in the form of ``[xxx [xxx ...]]`` can take in more than one input file seperated by space.
 

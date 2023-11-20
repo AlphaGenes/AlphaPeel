@@ -247,7 +247,7 @@ def get_input_options():
         required=False,
         type=str,
         nargs="*",
-        help="A file in plink (binary) format. Only stable on Linux).",
+        help="A file in plink (binary) format. Only stable on Linux.",
     )
     parse_dictionary["genotypes"] = lambda parser: parser.add_argument(
         "-geno_file",
@@ -282,22 +282,22 @@ def get_input_options():
         help="A pedigree file in AlphaGenes format.",
     )
     parse_dictionary["phasefile"] = lambda parser: parser.add_argument(
-        "-phasefile",
+        "-hap_file",
         default=None,
         required=False,
         type=str,
         nargs="*",
-        help="A phase file in AlphaGenes format.",
+        help="A haplotype file in AlphaGenes format.",
     )
     parse_dictionary["startsnp"] = lambda parser: parser.add_argument(
-        "-startsnp",
+        "-start_snp",
         default=None,
         required=False,
         type=int,
         help="The first marker to consider. The first marker in the file is marker '1'. Default: 1.",
     )
     parse_dictionary["stopsnp"] = lambda parser: parser.add_argument(
-        "-stopsnp",
+        "-stop_snp",
         default=None,
         required=False,
         type=int,
