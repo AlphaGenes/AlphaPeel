@@ -249,7 +249,7 @@ def get_input_options():
         required=False,
         type=str,
         nargs="*",
-        help="Genotype File(s) in AlphaGenes format.",
+        help="Genotype file(s) in AlphaGenes format.",
     )
     parse_dictionary["reference"] = lambda parser: parser.add_argument(
         "-reference",

@@ -17,7 +17,7 @@ Input Arguments
       -ped_file [PEDIGREE ...]
                           Pedigree file(s) (see format below).
       -geno_file [GENOTYPES ...]
-                          Genotype File(s) (see format below).
+                          Genotype file(s) (see format below).
       -seq_file [SEQFILE ...]
                           Sequence allele read count file(s) (see format below).
       -plink_file [BFILE ...]
