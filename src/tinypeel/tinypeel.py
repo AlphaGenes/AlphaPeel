@@ -18,7 +18,7 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     if args.est_alt_allele_prob:
         PeelingUpdates.updateMaf(pedigree, peelingInfo)
 
-    for i in range(args.n_cycles):
+    for i in range(args.n_cycle):
         print("Cycle ", i)
         peelingCycle(pedigree, peelingInfo, args=args, singleLocusMode=singleLocusMode)
         peelingInfo.iteration += 1
@@ -28,7 +28,10 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
         #     print("Estimating the transmission rate is currently a disabled option")
         # PeelingUpdates.updateSeg(peelingInfo) #Option currently disabled.
 
-        if args.est_geno_error_prob or args.est_seq_error_prob:
+        if args.est_geno_error_prob:
+            PeelingUpdates.updatePenetrance(pedigree, peelingInfo)
+
+        if args.est_seq_error_prob:
             PeelingUpdates.updatePenetrance(pedigree, peelingInfo)
 
 
@@ -325,7 +328,7 @@ def get_output_options():
         help='Flag to surpress the individuals who are not present in the file used with -out_id_order. Also surpresses "dummy" individuals.',
     )
     parse_dictionary["iothreads"] = lambda parser: parser.add_argument(
-        "-n_io_threads",
+        "-n_io_thread",
         default=1,
         required=False,
         type=int,
@@ -338,14 +341,14 @@ def get_output_options():
 def get_multithread_options():
     parse_dictionary = dict()
     parse_dictionary["iothreads"] = lambda parser: parser.add_argument(
-        "-n_io_threads",
+        "-n_io_thread",
         default=1,
         required=False,
         type=int,
         help="Number of threads to use for input and output. Default: 1.",
     )
     parse_dictionary["maxthreads"] = lambda parser: parser.add_argument(
-        "-n_threads",
+        "-n_thread",
         default=1,
         required=False,
         type=int,
@@ -475,7 +478,7 @@ def getArgs():
 
     peeling_parser = parser.add_argument_group("Optional peeling arguments")
     peeling_parser.add_argument(
-        "-n_cycles",
+        "-n_cycle",
         default=5,
         required=False,
         type=int,

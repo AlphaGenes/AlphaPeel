@@ -53,7 +53,7 @@ Output Arguments
       -out_id_only          Flag to suppress the individuals not present in
                             the file used with "-out_id_order". It also suppresses "dummy"
                             individuals.
-      -n_io_threads N_IO_THREADS
+      -n_io_thread N_IO_THREAD
                             Number of threads to use for input/output. Default: 1.
 
 
@@ -82,7 +82,7 @@ The ``-geno_threshold`` and ``-hap_threshold`` arguments respectively control co
 
 The order in which individuals are output can be changed by using the ``out_id_order`` option. This option changes the order in which individuals are written out to the order in which they were observed in the corresponding file. The ```-out_id_only`` option suppresses the output of dummy individuals (not recommended for hybrid peeling).
 
-The argument ``-n_io_threads`` controls the number of threads/processes used by |Software|. |Software| uses additional threads to parse and format input and output files. Setting this option to a value greater than 1 is only recommended for very large files (i.e. >10,000 individuals).
+The argument ``-n_io_thread`` controls the number of threads/processes used by |Software|. |Software| uses additional threads to parse and format input and output files. Setting this option to a value greater than 1 is only recommended for very large files (i.e. >10,000 individuals).
 
 Peeling arguments 
 ------------------
@@ -93,8 +93,8 @@ Peeling arguments
       -method METHOD        Program run type. Either "single" or "multi".
     
     Optional peeling arguments:
-      -n_cycles N_CYCLES    Number of peeling cycles. Default: 5.
-      -n_threads N_THREADS
+      -n_cycle N_CYCLE    Number of peeling cycles. Default: 5.
+      -n_thread N_THREAD
                             Number of threads to use. Default: 1.
       -rec_length REC_LENGTH
                             Estimated recombination length of the chromosome in Morgans.
