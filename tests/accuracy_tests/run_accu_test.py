@@ -31,7 +31,7 @@ def generate_output_path(name):
 
 def generate_command(
     sim_path,
-    runType,
+    method,
     est_alt_allele_prob,
     est_geno_error_prob,
     est_seq_error_prob,
@@ -41,9 +41,9 @@ def generate_command(
     command = "AlphaPeel "
     input_file = ["ped_file"]
     arguments = {
-        "runType": runType,
-        "nCycles": "5",
-        "maxthreads": "6",
+        "method": method,
+        "n_cycle": "5",
+        "n_thread": "6",
         "geno_threshold": ".1",
         "hap_threshold": ".1",
         "geno": None,
@@ -62,7 +62,7 @@ def generate_command(
         input_file.append("seq_file")
     else:
         input_file.append("geno_file")
-    if runType == "hybrid":
+    if method == "hybrid":
         input_file.append("map_file")
         input_file.append("seg_map_file")
         input_file.append("seg_file")
@@ -76,7 +76,7 @@ def generate_command(
         else:
             command += f"-{key} "
 
-    command += f"-out {output_path}{os.sep}"
+    command += f"-out_file {output_path}{os.sep}"
 
     return command
 
@@ -121,7 +121,7 @@ def get_ind_accu(output, real, nIndPerGen, n_row_per_ind, gen=None):
         return round(np.nanmean(accus), 3)
 
 
-def assess_peeling(sim_path, get_params, output_path, name, runType):
+def assess_peeling(sim_path, get_params, output_path, name, method):
     """
     Assess the performance of the peeling
     """
@@ -132,7 +132,7 @@ def assess_peeling(sim_path, get_params, output_path, name, runType):
         "geno_prob",
         "phased_geno_prob",
     ]
-    if runType == "multi":
+    if method == "multi":
         file_to_check.append("seg_prob")
 
     nGen = int(get_params["nGen"])
@@ -201,7 +201,7 @@ def assess_peeling(sim_path, get_params, output_path, name, runType):
 
 
 @pytest.mark.parametrize(
-    "runType, est_alt_allele_prob, est_geno_error_prob, est_seq_error_prob, seq_file",
+    "method, est_alt_allele_prob, est_geno_error_prob, est_seq_error_prob, seq_file",
     [
         ("single", None, None, None, None),
         ("single", "est_alt_allele_prob", None, None, None),
@@ -229,7 +229,7 @@ def assess_peeling(sim_path, get_params, output_path, name, runType):
 )
 def test_accu(
     get_params,
-    runType,
+    method,
     est_alt_allele_prob,
     est_geno_error_prob,
     est_seq_error_prob,
@@ -243,7 +243,7 @@ def test_accu(
             for param in filter(
                 lambda param: True if param else False,
                 [
-                    runType,
+                    method,
                     est_alt_allele_prob,
                     est_geno_error_prob,
                     est_seq_error_prob,
@@ -255,7 +255,7 @@ def test_accu(
     output_path = generate_output_path(name)
     prepare_path(output_path)
 
-    if runType == "hybrid":
+    if method == "hybrid":
         # create subset of segregation file
         # make sure run a multi test with the same arguments in advance
         multi_name = "_".join(
@@ -288,7 +288,7 @@ def test_accu(
 
     command = generate_command(
         sim_path,
-        runType,
+        method,
         est_alt_allele_prob,
         est_geno_error_prob,
         est_seq_error_prob,
@@ -298,4 +298,4 @@ def test_accu(
 
     benchmark(os.system, command)
 
-    assess_peeling(sim_path, get_params, output_path, name, runType)
+    assess_peeling(sim_path, get_params, output_path, name, method)
