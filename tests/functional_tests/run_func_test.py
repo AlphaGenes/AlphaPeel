@@ -113,7 +113,7 @@ class TestClass:
                 self.command += f"-{key} "
 
         self.command += (
-            f"-out {os.path.join(self.output_path, self.output_file_prefix)}"
+            f"-out_file {os.path.join(self.output_path, self.output_file_prefix)}"
         )
 
     def prepare_path(self):
@@ -156,7 +156,7 @@ class TestClass:
 
         self.input_files = self.files_to_input
         self.arguments = {
-            "runType": "multi",
+            "method": "multi",
             "geno_threshold": ".1",
             "geno": None,
             "est_geno_error_prob": None,
@@ -185,17 +185,17 @@ class TestClass:
     def test_subset(self):
         """
         Can we read in a subset of values as in Test 1 output them and
-        make sure it's the same chunk? (=testing startsnp and stopsnp)
+        make sure it's the same chunk? (=testing start_snp and stop_snp)
         """
         self.test_name = "test_subset"
         self.prepare_path()
 
         self.input_files = self.files_to_input
         self.arguments = {
-            "runType": "multi",
+            "method": "multi",
             "geno_threshold": ".1",
-            "startsnp": "2",
-            "stopsnp": "4",
+            "start_snp": "2",
+            "stop_snp": "4",
             "geno": None,
             "seg_prob": None,
         }
@@ -220,20 +220,20 @@ class TestClass:
 
         assert self.output == self.expected
 
-    def test_writekey(self):
+    def test_out_id_order(self):
         """
         Can we read in values and return them in the correct order.
-        Check id, pedigree, genotypes, sequence, segregation. Also check onlykeyed.
+        Check id, pedigree, genotypes, sequence, segregation. Also check out_id_only.
         """
-        self.test_name = "test_writekey"
+        self.test_name = "test_out_id_order"
         self.prepare_path()
 
         self.input_files = self.files_to_input
         self.arguments = {
-            "runType": "multi",
+            "method": "multi",
             "geno_threshold": ".1",
             "geno": None,
-            "writekey": None,
+            "out_id_order": None,
             "seg_prob": None,
         }
 
@@ -248,8 +248,8 @@ class TestClass:
         self.output_file_to_check = "geno_0.3333333333333333"
 
         for self.test_cases in methods:
-            self.arguments["writekey"] = self.test_cases
-            self.output_file_prefix = f"writekey.{self.test_cases}"
+            self.arguments["out_id_order"] = self.test_cases
+            self.output_file_prefix = f"out_id_order.{self.test_cases}"
 
             self.generate_command()
             os.system(self.command)
@@ -266,9 +266,9 @@ class TestClass:
 
             self.command = "AlphaPeel "
 
-        self.test_cases = "onlykeyed"
-        self.arguments["onlykeyed"] = None
-        self.output_file_prefix = f"writekey.{self.test_cases}"
+        self.test_cases = "out_id_only"
+        self.arguments["out_id_only"] = None
+        self.output_file_prefix = f"out_id_order.{self.test_cases}"
 
         self.generate_command()
         os.system(self.command)
@@ -292,7 +292,7 @@ class TestClass:
 
         self.input_files = self.files_to_input
         self.input_file_depend_on_test_cases = self.files_to_input
-        self.arguments = {"runType": "multi", "geno_threshold": ".1", "geno": None}
+        self.arguments = {"method": "multi", "geno_threshold": ".1", "geno": None}
         self.output_file_to_check = "geno_0.3333333333333333"
 
         for self.test_cases in [
@@ -332,28 +332,28 @@ class TestClass:
 
     def test_no(self):
         """
-        Check to make sure the no_dosage, seg_prob, no_params, phased_geno_prob
+        Check to make sure the no_dosage, seg_prob, no_param, phased_geno_prob
         flags work.
         """
         self.test_name = "test_no"
         self.prepare_path()
 
         self.input_files = self.files_to_input
-        self.arguments = {"runType": "multi"}
+        self.arguments = {"method": "multi"}
         # whether the output files exist
         # 0: not exist
         # 1: exist
         expect = {
             "no_dosage": [0, 0, 1, 1, 1, 0],
             "seg_prob": [1, 1, 1, 1, 1, 0],
-            "no_params": [1, 0, 0, 0, 0, 0],
+            "no_param": [1, 0, 0, 0, 0, 0],
             "phased_geno_prob": [1, 0, 1, 1, 1, 1],
         }
 
         for self.test_cases in [
             "no_dosage",
             "seg_prob",
-            "no_params",
+            "no_param",
             "phased_geno_prob",
         ]:
             self.arguments[self.test_cases] = None
@@ -376,7 +376,7 @@ class TestClass:
 
         self.input_files = ["ped_file"]
         self.arguments = {
-            "runType": "multi",
+            "method": "multi",
             "phased_geno_prob": None,
             "geno": None,
             "geno_threshold": ".1",
@@ -438,7 +438,7 @@ class TestClass:
         self.test_name = "test_sex"
         self.prepare_path()
 
-        self.arguments = {"runType": "multi", "sex_chrom": None, "seg_prob": None}
+        self.arguments = {"method": "multi", "sex_chrom": None, "seg_prob": None}
         self.input_files = ["geno_file", "seq_file", "ped_file"]
         self.input_file_depend_on_test_cases = ["geno_file", "seq_file"]
 
@@ -478,7 +478,7 @@ class TestClass:
 
         # using default error rates: genotype error rate: 0.001
         #                            sequence error rate: 0.0001
-        self.arguments = {"runType": "multi", "seg_prob": None}
+        self.arguments = {"method": "multi", "seg_prob": None}
         self.input_files = ["geno_file", "seq_file", "ped_file"]
         self.input_file_depend_on_test_cases = ["geno_file", "seq_file"]
 
@@ -511,16 +511,16 @@ class TestClass:
             # assert self.output == self.expected
             self.command = "AlphaPeel "
 
-    def test_onlykeyed(self):
+    def test_out_id_only(self):
         """
-        Run the test for the half-founders with onlykeyed option
+        Run the test for the half-founders with out_id_only option
         """
-        self.test_name = "test_onlykeyed"
+        self.test_name = "test_out_id_only"
         self.prepare_path()
 
         self.input_files = ["geno_file", "ped_file"]
-        self.arguments = {"runType": "multi", "onlykeyed": None, "seg_prob": None}
-        self.output_file_prefix = "onlykeyed"
+        self.arguments = {"method": "multi", "out_id_only": None, "seg_prob": None}
+        self.output_file_prefix = "out_id_only"
         self.output_file_to_check = "dosage"
 
         self.generate_command()
