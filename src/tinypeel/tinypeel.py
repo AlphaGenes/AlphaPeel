@@ -566,6 +566,19 @@ def getArgs():
 
 def main():
     args = getArgs()
+
+    args.bfile = args.plink_file
+    args.genotypes = args.geno_file
+    args.phasefile = args.file
+    args.seqfile = args.seq_file
+    args.pedigree = args.ped_file
+    args.startsnp = args.start_snp
+    args.stopsnp = args.stop_snp
+    args.writekey = args.out_id_order
+    args.onlykeyed = args.out_id_only
+    args.iothreads = args.n_io_thread
+    args.maxthreads = args.n_thread
+
     pedigree = Pedigree.Pedigree()
     InputOutput.readInPedigreeFromInputs(pedigree, args)
 
