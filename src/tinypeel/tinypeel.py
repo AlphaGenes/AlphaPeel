@@ -565,7 +565,7 @@ def main():
 
     args.bfile = args.plink_file
     args.genotypes = args.geno_file
-    args.phasefile = args.file
+    args.phasefile = args.hap_file
     args.seqfile = args.seq_file
     args.pedigree = args.ped_file
     args.startsnp = args.start_snp
