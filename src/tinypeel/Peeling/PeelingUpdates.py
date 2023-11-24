@@ -129,9 +129,11 @@ def addIndividualToUpdate(d, p, LLp, LLpp):
 #
 
 
-def updatePenetrance(pedigree, peelingInfo):
-    peelingInfo.genoError = updateGenoError(pedigree, peelingInfo)
-    peelingInfo.seqError = updateSeqError(pedigree, peelingInfo)
+def updatePenetrance(pedigree, peelingInfo, args):
+    if args.est_geno_error_prob:
+        peelingInfo.genoError = updateGenoError(pedigree, peelingInfo)
+    if args.est_seq_error_prob:
+        peelingInfo.seqError = updateSeqError(pedigree, peelingInfo)
 
     if peelingInfo.isSexChrom:
         print(

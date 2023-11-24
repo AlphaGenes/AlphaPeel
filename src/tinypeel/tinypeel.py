@@ -28,11 +28,7 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
         #     print("Estimating the transmission rate is currently a disabled option")
         # PeelingUpdates.updateSeg(peelingInfo) #Option currently disabled.
 
-        if args.est_geno_error_prob:
-            PeelingUpdates.updatePenetrance(pedigree, peelingInfo)
-
-        if args.est_seq_error_prob:
-            PeelingUpdates.updatePenetrance(pedigree, peelingInfo)
+        PeelingUpdates.updatePenetrance(pedigree, peelingInfo, args)
 
 
 def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
