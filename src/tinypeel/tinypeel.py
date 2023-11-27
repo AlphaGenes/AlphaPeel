@@ -574,6 +574,7 @@ def main():
     args.onlykeyed = args.out_id_only
     args.iothreads = args.n_io_thread
     args.maxthreads = args.n_thread
+    args.segfile = args.seg_file
 
     pedigree = Pedigree.Pedigree()
     InputOutput.readInPedigreeFromInputs(pedigree, args)
