@@ -1,0 +1,4 @@
+penetrance_aa 0 0
+penetrance_aA 0 0
+penetrance_Aa 0 0
+penetrance_AA 0 0
