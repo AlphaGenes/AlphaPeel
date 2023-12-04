@@ -22,3 +22,4 @@ tests/accuracy_tests/accu_report.txt
 **/.Rhistory
 **/*.Rproj
 **/segfile.txt
+tests/accuracy_tests/sim_for_alphapeel_accu_test/seg_file.txt

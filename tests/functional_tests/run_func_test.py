@@ -73,7 +73,7 @@ class TestClass:
     input_file_depend_on_test_cases = None
 
     # all the input file options for non-hybrid peeling except the binary file
-    files_to_input = ["geno_file", "ped_file", "penetrance", "phasefile", "seq_file"]
+    files_to_input = ["geno_file", "ped_file", "penetrance", "hap_file", "seq_file"]
     # all the output files except the binary file and the parameter files
     files_to_check = [
         "hap_0.5",
