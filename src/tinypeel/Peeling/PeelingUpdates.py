@@ -129,9 +129,11 @@ def addIndividualToUpdate(d, p, LLp, LLpp):
 #
 
 
-def updatePenetrance(pedigree, peelingInfo):
-    peelingInfo.genoError = updateGenoError(pedigree, peelingInfo)
-    peelingInfo.seqError = updateSeqError(pedigree, peelingInfo)
+def updatePenetrance(pedigree, peelingInfo, args):
+    if args.est_geno_error_prob:
+        peelingInfo.genoError = updateGenoError(pedigree, peelingInfo)
+    if args.est_seq_error_prob:
+        peelingInfo.seqError = updateSeqError(pedigree, peelingInfo)
 
     if peelingInfo.isSexChrom:
         print(
@@ -152,7 +154,7 @@ def updatePenetrance(pedigree, peelingInfo):
 
         if (
             ind.isGenotypedFounder()
-            and (not InputOutput.args.nophasefounders)
+            and (not InputOutput.args.no_phase_founder)
             and ind.genotypes is not None
         ):
             loci = PeelingInfo.getHetMidpoint(ind.genotypes)
@@ -169,7 +171,7 @@ def updateGenoError(pedigree, peelingInfo):
     # We use a max value of 5% and a min value of .0001 percent to make sure the values are reasonable
 
     counts = np.full(pedigree.nLoci, 1, dtype=np.float32)
-    errors = np.full(pedigree.nLoci, 0.01, dtype=np.float32)
+    errors = np.full(pedigree.nLoci, 0.0001, dtype=np.float32)
 
     for ind in pedigree:
         updateGenoError_ind(

@@ -66,33 +66,43 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
 def writeOutParamaters(peelingInfo):
     args = InputOutput.args
 
-    np.savetxt(args.out + ".genoError", peelingInfo.genoError, fmt="%f")
-    np.savetxt(args.out + ".seqError", peelingInfo.seqError, fmt="%f")
-    # np.savetxt(args.out + ".trans", peelingInfo.transmissionRate, fmt = "%f")
-    np.savetxt(args.out + ".maf", peelingInfo.maf, fmt="%f")
+    np.savetxt(args.out_file + ".geno_error_prob.txt", peelingInfo.genoError, fmt="%f")
+    np.savetxt(args.out_file + ".seq_error_prob.txt", peelingInfo.seqError, fmt="%f")
+    np.savetxt(
+        args.out_file + ".rec_prob.txt", np.empty((1, 1)), fmt="%f"
+    )  # not be realized, just as a placeholder
+    # np.savetxt(args.out_file + ".trans", peelingInfo.transmissionRate, fmt = "%f")
+    np.savetxt(args.out_file + ".alt_allele_prob.txt", peelingInfo.maf, fmt="%f")
 
 
-def writeGenotypes(pedigree, genoProbFunc):
+def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
     args = InputOutput.args
     if not args.no_dosage:
-        writeDosages(pedigree, genoProbFunc, args.out + ".dosage.txt")
+        writeDosages(pedigree, genoProbFunc, isSexChrom, args.out_file + ".dosage.txt")
     if args.phased_geno_prob:
-        writePhasedGenoProbs(pedigree, genoProbFunc, args.out + ".phased_geno_prob.txt")
+        writePhasedGenoProbs(
+            pedigree, genoProbFunc, args.out_file + ".phased_geno_prob.txt"
+        )
     if args.geno_prob:
-        writeGenoProbs(pedigree, genoProbFunc, args.out + ".geno_prob.txt")
+        writeGenoProbs(pedigree, genoProbFunc, args.out_file + ".geno_prob.txt")
     if args.geno_threshold and args.geno:
         for thresh in args.geno_threshold:
             if thresh < 1 / 3:
                 thresh = 1 / 3
-            if args.binary_call_files:
+            if args.binary_call_file:
                 writeBinaryCalledGenotypes(
-                    pedigree, genoProbFunc, args.out + ".called." + str(thresh), thresh
+                    pedigree,
+                    genoProbFunc,
+                    isSexChrom,
+                    args.out_file + ".called." + str(thresh),
+                    thresh,
                 )
             else:
                 writeCalledGenotypes(
                     pedigree,
                     genoProbFunc,
-                    args.out + ".geno_" + str(thresh) + ".txt",
+                    isSexChrom,
+                    args.out_file + ".geno_" + str(thresh) + ".txt",
                     thresh,
                 )
 
@@ -100,13 +110,13 @@ def writeGenotypes(pedigree, genoProbFunc):
         for thresh in args.hap_threshold:
             if thresh < 1 / 2:
                 thresh = 1 / 2
-            if args.binary_call_files:
+            if args.binary_call_file:
                 pass  # this function is not applied
             else:
                 writeCalledPhase(
                     pedigree,
                     genoProbFunc,
-                    args.out + ".hap_" + str(thresh) + ".txt",
+                    args.out_file + ".hap_" + str(thresh) + ".txt",
                     thresh,
                 )
 
@@ -146,18 +156,18 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
                     )
 
 
-def writeDosages(pedigree, genoProbFunc, outputFile):
+def writeDosages(pedigree, genoProbFunc, isSexChrom, outputFile):
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = np.dot(np.array([0, 1, 1, 2]), genoProbFunc(ind.idn))
 
-            if InputOutput.args.sexchrom and ind.sex == 0:
+            if isSexChrom and ind.sex == 0:
                 matrix *= 2
 
             f.write(ind.idx + " " + " ".join(map("{:.4f}".format, matrix)) + "\n")
 
 
-def writeCalledGenotypes(pedigree, genoProbFunc, outputFile, thresh):
+def writeCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, thresh):
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
@@ -168,7 +178,7 @@ def writeCalledGenotypes(pedigree, genoProbFunc, outputFile, thresh):
             )
             calledGenotypes = np.argmax(matrixCollapsedHets, axis=0)
             setMissing(calledGenotypes, matrixCollapsedHets, thresh)
-            if InputOutput.args.sexchrom and ind.sex == 0:
+            if isSexChrom and ind.sex == 0:
                 doubleIfNotMissing(calledGenotypes)
 
             f.write(ind.idx + " " + " ".join(map(str, calledGenotypes)) + "\n")
@@ -198,7 +208,7 @@ def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
             f.write(ind.idx + " " + " ".join(map(str, maternal_haplotype)) + "\n")
 
 
-def writeBinaryCalledGenotypes(pedigree, genoProbFunc, outputFile, thresh):
+def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, thresh):
     for idx, ind in pedigree.writeOrder():
         matrix = genoProbFunc(ind.idn)
         matrixCollapsedHets = np.array(
@@ -206,7 +216,7 @@ def writeBinaryCalledGenotypes(pedigree, genoProbFunc, outputFile, thresh):
         )
         calledGenotypes = np.argmax(matrixCollapsedHets, axis=0)
         setMissing(calledGenotypes, matrixCollapsedHets, thresh)
-        if InputOutput.args.sexchrom and ind.sex == 0:
+        if isSexChrom and ind.sex == 0:
             doubleIfNotMissing(calledGenotypes)
         ind.genotypes = calledGenotypes.astype(np.int8)
 
@@ -231,27 +241,29 @@ def setMissing(calledGenotypes, matrix, thresh):
 
 def fullOutput(pedigree, peelingInfo, args):
     InputOutput.writeIdnIndexedMatrix(
-        pedigree, peelingInfo.penetrance, args.out + ".penetrance"
+        pedigree, peelingInfo.penetrance, args.out_file + ".penetrance"
     )
     InputOutput.writeIdnIndexedMatrix(
-        pedigree, peelingInfo.anterior, args.out + ".anterior"
+        pedigree, peelingInfo.anterior, args.out_file + ".anterior"
     )
     InputOutput.writeIdnIndexedMatrix(
-        pedigree, peelingInfo.posterior, args.out + ".posterior"
+        pedigree, peelingInfo.posterior, args.out_file + ".posterior"
     )
 
     InputOutput.writeFamIndexedMatrix(
         pedigree,
         peelingInfo.posteriorSire_minusFam,
-        args.out + ".posteriorSire_minusFam",
+        args.out_file + ".posteriorSire_minusFam",
     )
     InputOutput.writeFamIndexedMatrix(
-        pedigree, peelingInfo.posteriorDam_minusFam, args.out + ".posteriorDam_minusFam"
+        pedigree,
+        peelingInfo.posteriorDam_minusFam,
+        args.out_file + ".posteriorDam_minusFam",
     )
 
     InputOutput.writeFamIndexedMatrix(
-        pedigree, peelingInfo.posteriorSire_new, args.out + ".posteriorSire_new"
+        pedigree, peelingInfo.posteriorSire_new, args.out_file + ".posteriorSire_new"
     )
     InputOutput.writeFamIndexedMatrix(
-        pedigree, peelingInfo.posteriorDam_new, args.out + ".posteriorDam_new"
+        pedigree, peelingInfo.posteriorDam_new, args.out_file + ".posteriorDam_new"
     )
