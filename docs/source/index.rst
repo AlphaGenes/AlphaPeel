@@ -17,6 +17,7 @@ AlphaPeel
    get_started
    usage
    contribute
+   release
    
 .. highlight:: none
 

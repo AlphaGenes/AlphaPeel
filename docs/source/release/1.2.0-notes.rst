@@ -1,0 +1,64 @@
+=============================
+AlphaPeel 1.2.0 Release Notes
+=============================
+
+
+Highlights
+==========
+- Updated option names.
+- Support for new IO options.
+- Updated output file format.
+- Fix bug of output of half-founders with ``-out_id_only``.
+- Fix bug of incorrect status of some genotyped founder.
+
+
+Improvements
+============
+
+Support for separated genotype and haplotype thresholds inputs and corresponding output options
+------------------------------------------------------------------------------------------------
+
+Previously, the user could only input one threshold for both genotype and haplotype outputs. Now, ``-geno_threshold``, ``-hap_threshold`` enable seperated thresholds input and ``-geno``, ``-hap`` enable the seperated control over corresponding output files.
+
+(`gh-115 <https://github.com/AlphaGenes/AlphaPeel/pull/115>`_, `gh-119 <https://github.com/AlphaGenes/AlphaPeel/pull/119>`_)
+
+
+Support for the option to enable segregation output file
+--------------------------------------------------------
+
+Previously, the segregation file would be outputted by default. Now, the segregation file would not be outputted by default and user can use option ``-seg_prob`` to enable segregation output file.
+
+(`gh-119 <https://github.com/AlphaGenes/AlphaPeel/pull/119>`_)
+
+
+Support for separated estimations of genotype error and sequence error
+----------------------------------------------------------------------
+
+Previously, the estimations for both genotype error and sequence error could only be activated at same time. Now, seperated activations of the estimations are enabled by options ``-est_geno_error_prob`` and ``-est_seq_error_prob``.
+
+(`gh-122 <https://github.com/AlphaGenes/AlphaPeel/pull/122>`_)
+
+
+Deprecations
+============
+
+``-no_seg`` option is deprecated
+-------------------------------
+See above, ``-seg_prob`` is used instead.
+
+(`gh-119 <https://github.com/AlphaGenes/AlphaPeel/pull/119>`_)
+
+
+Compatibility Notes
+===================
+
+Changes to option names
+-----------------------
+Most of the option names of AlphaPeel are now updated to improve the readability and consistency, a summary of the updates can be seen at the `table <https://github.com/AlphaGenes/AlphaPeel/issues/113#issue-1935197000>`_.
+
+
+Changes
+=======
+
+* Bug of output of half-founders with ``-out_id_only`` is now fixed.
+* Bug of incorrect status of some genotyped founder is now fixed.

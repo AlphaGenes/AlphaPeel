@@ -1,0 +1,41 @@
+=========
+Changelog
+=========
+
+Contributors
+============
+
+* Audrey Martin
+* augustusgrant (GitHub user)
+* Gregor Gorjanc
+* Ros Craddock
+* Xinger Tang
+* Yu Zhang
+
+Pull requests merged
+====================
+
+* `#27 <https://github.com/AlphaGenes/AlphaPeel/pull/27>`_: Add instructions to contribute to the documentation
+* `#28 <https://github.com/AlphaGenes/AlphaPeel/pull/28>`_: Correct the hyperlinks in the contributing guide
+* `#31 <https://github.com/AlphaGenes/AlphaPeel/pull/31>`_: Update the contributing guide
+* `#34 <https://github.com/AlphaGenes/AlphaPeel/pull/34>`_: Remove redundant script and modify README.md
+* `#35 <https://github.com/AlphaGenes/AlphaPeel/pull/35>`_: Add .gitattribute to override language
+* `#38 <https://github.com/AlphaGenes/AlphaPeel/pull/38>`_: Change theme of HTML documentation
+* `#40 <https://github.com/AlphaGenes/AlphaPeel/pull/40>`_: Introduce Black and Flake8
+* `#46 <https://github.com/AlphaGenes/AlphaPeel/pull/46>`_: Updated submodule reference to 65456ea AlphaGenes/AlphaImpute2#16
+* `#48 <https://github.com/AlphaGenes/AlphaPeel/pull/48>`_: Copy / move & link README install and build to docs
+* `#53 <https://github.com/AlphaGenes/AlphaPeel/pull/53>`_: Implement functional tests with pytest
+* `#59 <https://github.com/AlphaGenes/AlphaPeel/pull/59>`_: Add accuracy tests & cross-platform tests workflow
+* `#63 <https://github.com/AlphaGenes/AlphaPeel/pull/63>`_: Polish code with flake8 output & add functional test 5 and 6
+* `#81 <https://github.com/AlphaGenes/AlphaPeel/pull/81>`_: Improve functional tests
+* `#83 <https://github.com/AlphaGenes/AlphaPeel/pull/83>`_: Add test_onlykeyed for half-founders
+* `#86 <https://github.com/AlphaGenes/AlphaPeel/pull/86>`_: Add new test files for the accuracy tests and Update tests for the new option names
+* `#88 <https://github.com/AlphaGenes/AlphaPeel/pull/88>`_: update description of -seqerror
+* `#105 <https://github.com/AlphaGenes/AlphaPeel/pull/105>`_: changed no_dosages to no_dosage #90
+* `#114 <https://github.com/AlphaGenes/AlphaPeel/pull/114>`_: changing parameters to model parameters #91
+* `#115 <https://github.com/AlphaGenes/AlphaPeel/pull/115>`_: Rename -call_phase to -hap #89 and dosages to dosage #90
+* `#119 <https://github.com/AlphaGenes/AlphaPeel/pull/119>`_: Changing more argument names
+* `#122 <https://github.com/AlphaGenes/AlphaPeel/pull/122>`_: Stage_2
+* `#126 <https://github.com/AlphaGenes/AlphaPeel/pull/126>`_: Update tests for the changes of the option names in #122
+* `#130 <https://github.com/AlphaGenes/AlphaPeel/pull/130>`_: Update tests for the changes of the option names in #122 Part 2
+* `#131 <https://github.com/AlphaGenes/AlphaPeel/pull/131>`_: Update test for option phasefile & allow longer test name in test report

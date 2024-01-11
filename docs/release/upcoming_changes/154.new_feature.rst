@@ -1,0 +1,3 @@
+Map file input option for non-hybrid mode
+-----------------------------------------
+The support for map file input when ``-runType`` is not ``hybrid`` has been added.
