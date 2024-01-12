@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 from ..tinyhouse import ProbMath
 from ..tinyhouse import HaplotypeOperations
+from ..tinyhouse import InputOutput
 
 
 #####################################################################
@@ -22,8 +23,11 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
         nInd=pedigree.maxIdn, nFam=pedigree.maxFam, nLoci=nLoci, createSeg=createSeg
     )
     peelingInfo.isSexChrom = args.sex_chrom
-    # Information about the peeling positions are handled elsewhere.
-    peelingInfo.positions = None
+    if args.map_file:
+        peelingInfo.positions = np.array(
+            InputOutput.readMapFile(args.map_file, args.startsnp, args.stopsnp)[2],
+            dtype=np.int64,
+        )
 
     # Generate the segregation tensors.
     peelingInfo.segregationTensor = ProbMath.generateSegregation(e=1e-06)
@@ -102,9 +106,9 @@ def setupTransmission(length, peelingInfo):
     if peelingInfo.positions is None:
         localMap = np.linspace(0, 1, num=peelingInfo.nLoci, dtype=np.float32)
     else:
-        localMap = (
-            peelingInfo.positions / peelingInfo.positions[-1]
-        )  # This should be sorted. Need to add in code to check.
+        localMap = (peelingInfo.positions - peelingInfo.positions[0]) / (
+            peelingInfo.positions[-1] - peelingInfo.positions[0]
+        )
     for i in range(peelingInfo.nLoci - 1):
         distance = localMap[i + 1] - localMap[i]
         distance = distance * length
@@ -213,7 +217,7 @@ spec["seqError"] = optional(float32[:])
 spec["transmissionRate"] = optional(float32[:])
 spec["maf"] = optional(float32[:])
 
-spec["positions"] = optional(float32[:])  # Not sure we use this.
+spec["positions"] = optional(int64[:])
 spec["iteration"] = int64
 
 

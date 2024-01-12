@@ -25,6 +25,7 @@ Input Arguments
       -start_snp START_SNP
                           The first marker to consider. The first marker is "1". Default: 1.
       -stop_snp STOP_SNP  The last marker to consider. Default: all markers considered.
+      -map_file MAP_FILE  A map file for all loci.
 
 |Software| requires a pedigree file (``-ped_file``) and one or more genomic data files to run the analysis.
 
@@ -137,8 +138,7 @@ Hybrid peeling arguments
     Single locus arguments:
       -seg_file SEG_FILE    A segregation probabilities file for hybrid peeling.
       -seg_map_file SEG_MAP_FILE
-                            A map file for loci in the segregation probabilities file.
-      -map_file MAP_FILE    A map file for all loci in hybrid peeling.
+                            A map file for loci in the segregation probabilities file in hybrid peeling.
 
 In order to run hybrid peeling the user needs to supply a ``-map_file`` which gives the genetic positions for the SNPs in the sequence allele read counts data supplied, a ``-seg_map_file`` which gives the genetic position for the SNPs in the segregation file, and a ``-seg_file`` which gives the segregation values generated via multi-locus iterative peeling. These arguments are not required for running in multi-locus mode.
 
