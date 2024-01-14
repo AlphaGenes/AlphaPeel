@@ -25,6 +25,10 @@ Input Arguments
       -start_snp START_SNP
                           The first marker to consider. The first marker is "1". Default: 1.
       -stop_snp STOP_SNP  The last marker to consider. Default: all markers considered.
+      -alt_allele_prob_file ALT_ALLELE_PROB_FILE
+                          The alternative allele probabilities per metafounder(s). Default: 0.5 per locus
+      -main_metafounder
+                          The metafounder to use where parents are unknown with input "0". Default: MF_1.
 
 |Software| requires a pedigree file (``-ped_file``) and one or more genomic data files to run the analysis.
 
@@ -32,7 +36,7 @@ Input Arguments
 
 Use the ``-start_snp`` and ``-stop_snp`` to run the analysis only on a subset of markers.
 
-The input options in the form of ``[xxx ...]`` can take in more than one input file seperated by space.
+The input options in the form of ``[xxx ...]`` can take in more than one input file separated by space.
 
 Output Arguments 
 ----------------
@@ -127,7 +131,7 @@ For hybrid peeling, where a large amount (millions of segregating sites) of sequ
 
 The ``-geno_error_prob``, ``-seq_error_prob`` and ``-rec_length`` arguments control some of the model parameters used in the model. ``-seq_error_prob`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
 
-The ``-est_geno_error_prob`` and ``-est_seq_error_prob`` options estimate the genotyping error rate and the sequencing error rate based on miss-match between observed and inferred states. This option is generally not necessary and can increase runtime. ``-est_alt_allele_prob`` estimates the alternative allele probabilities after each peeling cycle. This option can be useful if there are a large number of non-genotyped founders.
+The ``-est_geno_error_prob`` and ``-est_seq_error_prob`` options estimate the genotyping error rate and the sequencing error rate based on miss-match between observed and inferred states. This option is generally not necessary and can increase runtime. ``-est_alt_allele_prob`` estimates the alternative allele probabilities after each peeling cycle. This option can be useful if there are a large number of non-genotyped founders. If both ``-alt_allele_prob_file`` and ``-est_alt_allele_prob`` are used, the inputted alternative allele probabilities are used as a starting point for alternative allele probabilities estimation.
 
 Hybrid peeling arguments 
 ------------------------
@@ -152,7 +156,7 @@ Input file formats
 Pedigree file
 =============
 
-Each line of a pedigree file has three values, the individual's id, their father's id, and their mother's id. "0" represents an unknown id.
+Each line of a pedigree file has three values, the individual's id, their father's id, and their mother's id. "0" represents an unknown id. Individuals with one unknown parent get internally assigned a dummy/unknown parent. Hence all individuals have both or none parents known. Individuals with two unknown parents are considered as founders and are internally allocated to a metafounder (unknown parent group) "MF_1" (or defined by the user through ``-main_metafounder``). Users can provide additional metafounders as shown below - these must start with "MF_".
 
 Example:
 
@@ -160,6 +164,15 @@ Example:
 
   id1 0 0
   id2 0 0
+  id3 id1 id2
+  id4 id1 id2
+
+or
+
+::
+
+  id1 MF_1 MF_1
+  id2 MF_2 MF_2
   id3 id1 id2
   id4 id1 id2
 
@@ -214,6 +227,23 @@ Example:
   1 snp_c 65429279
   1 snp_d 107421759
 
+Alternative Allele Probability File
+===================================
+
+The alternative allele probability file allows for user-defined population alternative allele probabilities. This file contains the metafounder group denoted MF_x, where x is by default "1" but see ``-main_metafounder``, followed by alternative allele probabilities for all the markers. In case of multiple metafounders, provide multiple rows in the file. The default starting alternative allele probabilities are 0.5 for each marker. If you don't have information for some markers, provide 0.5 for these in the file.
+
+Example:
+
+::
+
+  MF_1 0.30 0.21 0.44 0.24
+
+Or
+
+::
+
+  MF_1 0.30 0.21 0.44 0.24
+  MF_2 0.40 0.34 0.25 0.40
 
 Output file formats
 -------------------
