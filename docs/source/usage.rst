@@ -25,7 +25,7 @@ Input Arguments
       -start_snp START_SNP
                           The first marker to consider. The first marker is "1". Default: 1.
       -stop_snp STOP_SNP  The last marker to consider. Default: all markers considered.
-      -alt_allele_prob_file [ALT_ALLELE_PROB_FILE ...]
+      -alt_allele_prob_file ALT_ALLELE_PROB_FILE
                           The alternative allele probabilities per metafounder(s). Default: 0.5 per locus
       -main_metafounder
                           The metafounder to use where parents are unknown with input "0". Default: MF_1.
@@ -233,11 +233,15 @@ Alternative Allele Probability File
 The alternative allele probability file allows for user-defined population alternative allele probabilities. This file contains the metafounder group denoted MF_x, where x is by default "1" but see ``-main_metafounder``, followed by alternative allele probabilities for all the markers. In case of multiple metafounders, provide multiple rows in the file. The default starting alternative allele probabilities are 0.5 for each marker. If you don't have information for some markers, provide 0.5 for these in the file.
 
 Example:
+
 ::
+
   MF_1 0.30 0.21 0.44 0.24
 
 Or
+
 ::
+
   MF_1 0.30 0.21 0.44 0.24
   MF_2 0.40 0.34 0.25 0.40
 
