@@ -21,7 +21,7 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
     peelingInfo = jit_peelingInformation(
         nInd=pedigree.maxIdn, nFam=pedigree.maxFam, nLoci=nLoci, createSeg=createSeg
     )
-    peelingInfo.isSexChrom = args.sexchrom
+    peelingInfo.isSexChrom = args.sex_chrom
     # Information about the peeling positions are handled elsewhere.
     peelingInfo.positions = None
 
@@ -34,10 +34,10 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
     peelingInfo.segregationTensorXY = ProbMath.generateSegregationXYChrom(e=1e-06)
     peelingInfo.segregationTensorXX = ProbMath.generateSegregationXXChrom(e=1e-06)
 
-    peelingInfo.genoError[:] = args.error
-    peelingInfo.seqError[:] = args.seqerror
+    peelingInfo.genoError[:] = args.geno_error_prob
+    peelingInfo.seqError[:] = args.seq_error_prob
     setupTransmission(
-        args.length, peelingInfo
+        args.rec_length, peelingInfo
     )  # Sets up the transmission rates using a custom position list and a total chromosome length.
 
     for ind in pedigree:
@@ -69,22 +69,29 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
         if ind.isGenotypedFounder() and phaseFounder and ind.genotypes is not None:
             loci = getHetMidpoint(ind.genotypes)
             if loci is not None:
-                e = args.error
+                e = args.geno_error_prob
                 peelingInfo.penetrance[ind.idn, :, loci] = np.array(
                     [e / 3, e / 3, 1 - e, e / 3], dtype=np.float32
                 )
 
     if args.penetrance is not None:
-        if args.sexchrom:
+        if args.sex_chrom:
             print(
-                "Using an external penetrance file and the sexchrom option is highly discouraged. Please do not use."
+                "Using an external penetrance file and the sex_chrom option is highly discouraged. Please do not use."
             )
 
-        if args.esterrors:
+        if args.est_geno_error_prob:
             print(
-                "External penetrance file included, but esterrors flag used. The two options are incompatible. esterrors set to false."
+                "External penetrance file included, but est_geno_error_prob flag used. The two options are incompatible. est_geno_error_prob set to false."
             )
-            args.esterrors = False
+            args.est_geno_error_prob = False
+
+        if args.est_seq_error_prob:
+            print(
+                "External penetrance file included, but est_seq_error_prob flag used. The two options are incompatible. est_seq_error_prob set to false."
+            )
+            args.est_seq_error_prob = False
+
         for pen in args.penetrance:
             addPenetranceFromExternalFile(pedigree, peelingInfo, pen, args)
     # updateMaf(pedigree, peelingInfo)
