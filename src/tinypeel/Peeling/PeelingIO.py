@@ -85,39 +85,55 @@ def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
         )
     if args.geno_prob:
         writeGenoProbs(pedigree, genoProbFunc, args.out_file + ".geno_prob.txt")
-    if args.geno_threshold and args.geno:
-        for thresh in args.geno_threshold:
-            if thresh < 1 / 3:
-                thresh = 1 / 3
+    if args.geno:
+        geno_threshold_list = []
+        if args.geno_threshold:
+            for thresh in args.geno_threshold:
+                if thresh < 1 / 3:
+                    geno_threshold_list.append(1 / 3)
+                else:
+                    geno_threshold_list.append(thresh)
+        else:
+            geno_threshold_list.append(1 / 3)
+
+        for threshold in geno_threshold_list:
             if args.binary_call_file:
                 writeBinaryCalledGenotypes(
                     pedigree,
                     genoProbFunc,
                     isSexChrom,
-                    args.out_file + ".called." + str(thresh),
-                    thresh,
+                    args.out_file + ".called." + str(threshold),
+                    threshold,
                 )
             else:
                 writeCalledGenotypes(
                     pedigree,
                     genoProbFunc,
                     isSexChrom,
-                    args.out_file + ".geno_" + str(thresh) + ".txt",
-                    thresh,
+                    args.out_file + ".geno_" + str(threshold) + ".txt",
+                    threshold,
                 )
 
-    if args.hap_threshold and args.hap:
-        for thresh in args.hap_threshold:
-            if thresh < 1 / 2:
-                thresh = 1 / 2
+    if args.hap:
+        hap_threshold_list = []
+        if args.hap_threshold:
+            for thresh in args.hap_threshold:
+                if thresh < 1 / 2:
+                    hap_threshold_list.append(1 / 2)
+                else:
+                    hap_threshold_list.append(thresh)
+        else:
+            hap_threshold_list.append(1 / 2)
+
+        for threshold in hap_threshold_list:
             if args.binary_call_file:
                 pass  # this function is not applied
             else:
                 writeCalledPhase(
                     pedigree,
                     genoProbFunc,
-                    args.out_file + ".hap_" + str(thresh) + ".txt",
-                    thresh,
+                    args.out_file + ".hap_" + str(threshold) + ".txt",
+                    threshold,
                 )
 
 
