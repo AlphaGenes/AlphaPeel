@@ -1,7 +1,7 @@
 Changelog
 =========
 
-This directory contains "news fragments" which are short files that contain a
+This is a guide for "news fragments" which are short files that contain a
 small **ReST**-formatted text.
 
 Make sure to use full sentences with correct case and punctuation, and please
