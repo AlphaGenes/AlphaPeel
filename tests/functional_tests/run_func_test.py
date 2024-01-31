@@ -181,6 +181,8 @@ class TestClass:
         self.output = read_and_sort_file(self.output_file_path)
         self.expected = read_and_sort_file(self.expected_file_path)
 
+        # Produced dosage file correctly where multiple different files are inputted of unrelated individuals:
+            # Geno_file, hap_file, ped_file, penetrance, and seq_file
         assert self.output == self.expected
 
     def test_subset(self):
@@ -216,9 +218,10 @@ class TestClass:
 
         self.output = read_and_sort_file(self.output_file_path)
         self.expected = read_and_sort_file(self.expected_file_path)
-
+        # Remove the first and last column inline with start_snp (2) and stop_snp (4) command
         delete_columns(self.expected, [2, 6])
-
+        # Test start_snp and stop_snp commands across different input files
+        # Compares the outputted genotype dosage file with the expected genotype dosage.
         assert self.output == self.expected
 
     def test_out_id_order(self):
@@ -261,8 +264,9 @@ class TestClass:
             )
 
             self.output = read_file(self.output_file_path)
-
+            # Total four individuals across the five inputted files
             assert len(self.output) == 4
+            # Check the outputted order under different commands: id, pedigree, genotypes, sequence.
             assert self.output[0][0] == answer[self.test_cases]
 
             self.command = "AlphaPeel "
@@ -280,8 +284,9 @@ class TestClass:
         )
 
         self.output = read_file(self.output_file_path)
-
+        # one observation as one individual in seq file
         assert len(self.output) == 1
+        # First ID equal to "seq" (id used in sequence file)
         assert self.output[0][0] == "seq"
 
     def test_est(self):
@@ -325,7 +330,7 @@ class TestClass:
 
             self.output = read_and_sort_file(self.output_file_path)
             self.expected = read_and_sort_file(self.expected_file_path)
-
+            # Checking AlphaPeel runs so compares outputted genotypes, haplotypes, seq, and penetrance with expected.
             assert self.output == self.expected
 
             self.arguments.pop(self.test_cases)
@@ -362,7 +367,11 @@ class TestClass:
 
             self.generate_command()
             os.system(self.command)
-
+            # When requested through commands, test the presents of file outputs:
+                # no_dosage, output files: alt_allele_prob, geno_error_prob, seg_error_prob
+                # seg_prob, output files: dosage, seg_prob, alt_allele_prob, geno_error_prob, seg_error_prob
+                # no_param, output file: dosage
+                # phased_geno_prob, output files: dosage, alt_allele_prob, geno_error_prob, seg_error_prob, phased_geno_prob
             assert self.check_files() == expect[self.test_cases]
 
             self.arguments.pop(self.test_cases)
@@ -421,7 +430,7 @@ class TestClass:
                 else:
                     self.output = read_and_sort_file(self.output_file_path)
                 self.expected = read_and_sort_file(self.expected_file_path)
-
+                # Check outputted dosage, phased, and seg to expected files
                 assert self.output == self.expected
 
             self.input_files.pop(-1)
@@ -465,7 +474,7 @@ class TestClass:
 
             self.output = read_and_sort_file(self.output_file_path)
             self.expected = read_and_sort_file(self.expected_file_path)
-
+            #Compares outputted seg_prob files to expected.
             assert self.output == self.expected
             self.command = "AlphaPeel "
 
@@ -534,7 +543,7 @@ class TestClass:
 
         self.output = read_file(self.output_file_path)
 
-        # no dummy individuals output
+        # Number of observations in dosage file is 6 as no dummy individuals in output.
         assert len(self.output) == 6
 
         for ind in self.output:
@@ -571,7 +580,7 @@ class TestClass:
             #           est_alt_allele_prob_single: Test the option est_alt_allele_prob
             #                                       for a single metafounder
             #           est_alt_allele_prob_multiple: Test the option est_alt_allele_prob
-            #                                         for a single metafounder
+            #                                         for multiple metafounders
             #           both: Test the case when both options are used,
             #                 whether the inputted alternative allele probabilities are used as
             #                 a starting point for alternative allele probabilities estimation
@@ -581,9 +590,10 @@ class TestClass:
             #                                no main metafounder is being provided as input,
             #                                test whether 0 would be replaced by the default MF_1
             #           main_metafounder: Test if the input option main_metafounder is working
-            #           incorrect_main_metafounder: Test case when the input meta_founder does not start with MF_,
+            #                             i.e the user defines the default metafounder where 0 is used.
+            #           incorrect_main_metafounder: Test case when the input main_metafounder does not start with MF_,
             #                                       whether an error would be raised
-            #           incorrect_metafounder_in_file: Test case when Test case when the names of input metafounders
+            #           incorrect_metafounder_in_file: Test case when the names of input metafounders
             #                                          in the input alternative allele probability file do not start with MF_,
             #                                          whether an error would be raised
 
@@ -606,7 +616,7 @@ class TestClass:
                 self.expected = read_and_sort_file(
                     self.expected_file_path, decimal_place=1
                 )
-
+                # Each metafounder has alt_allele_prob of 0.5 per marker
                 assert self.output == self.expected
 
             elif self.test_cases == "alt_allele_prob_file_single":
@@ -628,7 +638,7 @@ class TestClass:
 
                 self.output = read_and_sort_file(self.output_file_path)
                 self.expected = read_and_sort_file(self.expected_file_path)
-
+                # Compares the outputted dosage file to the expected based on inputted alt_allele_prob file.
                 assert self.output == self.expected
 
             elif self.test_cases == "alt_allele_prob_file_multiple":
@@ -645,7 +655,7 @@ class TestClass:
 
                 self.output = read_and_sort_file(self.output_file_path)
                 self.expected = read_and_sort_file(self.expected_file_path)
-
+                # Compares the outputted dosage file to the expected based on inputted alt_allele_prob file.
                 assert self.output == self.expected
 
                 self.input_files.pop(-1)
@@ -668,7 +678,7 @@ class TestClass:
 
                 self.output = read_and_sort_file(self.output_file_path)
                 self.expected = read_and_sort_file(self.expected_file_path)
-
+                # Compares alt_allele_prob output with expected when estimated by AlphaPeel for one metafounder
                 assert self.output == self.expected
 
             elif self.test_cases == "est_alt_allele_prob_multiple":
@@ -685,7 +695,7 @@ class TestClass:
 
                 self.output = read_and_sort_file(self.output_file_path)
                 self.expected = read_and_sort_file(self.expected_file_path)
-
+                # Compares alt_allele_prob output with expected when estimated by AlphaPeel for multiple metafounders
                 assert self.output == self.expected
 
             elif self.test_cases == "both":
@@ -711,7 +721,7 @@ class TestClass:
                 self.generate_command()
                 stdout = subprocess.check_output(self.command, shell=True)
 
-                # check if error mesage is in the output
+                # check if error message is in the output
                 assert "" in stdout
 
                 self.input_files.pop(-1)
@@ -755,7 +765,7 @@ class TestClass:
                 self.generate_command()
                 stdout = subprocess.check_output(self.command, shell=True)
 
-                # check if error mesage is in the output
+                # check if error message is in the output
                 assert "" in stdout
 
                 self.arguments.pop("main_metafounder")
@@ -767,7 +777,7 @@ class TestClass:
                 self.generate_command()
                 stdout = subprocess.check_output(self.command, shell=True)
 
-                # check if error mesage is in the output
+                # check if error message is in the output
                 assert "" in stdout
 
             self.command = "AlphaPeel "
