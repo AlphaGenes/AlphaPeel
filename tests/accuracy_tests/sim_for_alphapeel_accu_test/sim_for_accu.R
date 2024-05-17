@@ -356,7 +356,62 @@ write.table(x = MF_alt_allele_prob, file = "true-single_MF_alt_allele_prob.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
 
-#2 a test with multiple metafounder in segregated lineages and user-provided alternative allele frequency
+#2 a test with multiple metafounder with overlapping lineages and user-provided alternative allele frequency
+
+# Take original pedigree and assign MF randomly 175:25 in base pop to have different base allele frequencies.
+# REVIEW: AF still quite similar, explore alternative (crossing two separate pedigrees)
+
+baseGeno <- genotypes[1:nIndPerGen,]
+
+i <- 1
+
+for (i in i:5){
+  sample <- sample(1:200, 25, replace = FALSE)
+  
+  MF_B <- baseGeno[sample,]
+  MF_B <- colMeans(MF_B)/2
+  vector <- rep(1:200)
+  MF_A <- baseGeno[!(vector %in% sample), ]
+  MF_A <- baseGeno[MF_A,]
+  MF_A <- colMeans(MF_A)/2
+  
+  test <- MF_A == MF_B
+  tmp <- test[test == TRUE]
+  
+  if (length(tmp) < 500){
+    break
+  }
+}
+
+
+
+MF_alt_allele_prob <- data.frame(matrix(ncol = 2, nrow = nLociAll+1))
+MF_alt_allele_prob[1,] <- c("MF_1", "MF_2")
+MF_alt_allele_prob[c(2:2001),1] <- MF_A
+MF_alt_allele_prob[c(2:2001),2] <- MF_B
+
+MF_input_alt_alle_prob <- data.frame(matrix(nrow = 2, ncol = nLociAll+1))
+MF_input_alt_alle_prob[,1] <- c("MF_1", "MF_2")
+MF_input_alt_alle_prob[1,c(2:2001)] <- MF_A
+MF_input_alt_alle_prob[2,c(2:2001)] <- MF_B
+
+MF_cross_pedigree <- pedigree
+MF_cross_pedigree$father[sample] <- "MF_2"
+MF_cross_pedigree$mother[sample] <- "MF_2"
+MF_cross_pedigree$father[MF_cross_pedigree$father == 0] <- "MF_1"
+MF_cross_pedigree$mother[MF_cross_pedigree$mother == 0] <- "MF_1"
+
+
+
+# Save
+write.table(x = MF_cross_pedigree, file = "MF_cross_ped_file.txt", 
+            row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(x = MF_input_alt_alle_prob, file = "MF_cross_alt_allele_prob.txt", 
+            row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(x = MF_alt_allele_prob, file = "true-MF_cross_alt_allele_prob.txt", 
+            row.names = FALSE, col.names = FALSE, quote = FALSE)
+
+#3 a test with multiple metafounder in segregated lineages and user-provided alternative allele frequency
 # Generate a pedigree with 500 in one MF_1 and 500 in another MF_2. Again, use user defined allele frequencies.
 
 # Generate two new pedigrees with 500 individuals
@@ -911,14 +966,7 @@ write.table(x = MF_multi_sep_rec_prob, file = "true-MF_multi_sep_rec_prob.txt",
 
 # seq_error and recob_error -> separated per MF, but probs need to combine.
 
-
-#3 a test with multiple metafounder with overlapping lineages and user-provided alternative allele frequency
-
-# Take the last two pedigrees (one MF_1 and the other MF_2) and cross from gen 3
-
-
-
-# Save into files
+# Keep exploring alternative for Test # 2 by cross the above two pedigrees together.
 
 #4 a test with multiple metafounder in segregated lineages and estimated alternative allele frequency
 # same input (minus user alt_allele_probs) and outputs as test 2, just different commands (est_alt_allele_prob)
