@@ -359,47 +359,90 @@ write.table(x = MF_alt_allele_prob, file = "true-single_MF_alt_allele_prob.txt",
 #2 a test with multiple metafounder with overlapping lineages and user-provided alternative allele frequency
 
 # Take original pedigree and assign MF randomly 175:25 in base pop to have different base allele frequencies.
-# REVIEW: AF still quite similar, explore alternative (crossing two separate pedigrees)
 
 baseGeno <- genotypes[1:nIndPerGen,]
 
+# Lets try segregating based on allele assigned in base pop.
+# Add iterate along loci until 50 individuals in MF_B
 i <- 1
 
-for (i in i:5){
-  sample <- sample(1:200, 25, replace = FALSE)
-  
-  MF_B <- baseGeno[sample,]
-  MF_B <- colMeans(MF_B)/2
-  vector <- rep(1:200)
-  MF_A <- baseGeno[!(vector %in% sample), ]
-  MF_A <- baseGeno[MF_A,]
-  MF_A <- colMeans(MF_A)/2
-  
-  test <- MF_A == MF_B
-  tmp <- test[test == TRUE]
-  
-  if (length(tmp) < 500){
-    break
+for (i in 1:nLociAll) {
+  locus <- baseGeno[,i]
+  locus <- locus == 2
+  MF_B <- baseGeno[locus,]
+  test <- !is.na(MF_B)
+  if (any(test)){
+    test <- nrow(MF_B) > 50
+    if (any(test)){
+      MF_A <- baseGeno[(!locus),]
+      MF_B_alt_allele_prob <- colMeans(MF_B)/2
+      MF_A_alt_allele_prob <- colMeans(MF_A)/2
+      break
+    }
   }
 }
 
 
-
 MF_alt_allele_prob <- data.frame(matrix(ncol = 2, nrow = nLociAll+1))
 MF_alt_allele_prob[1,] <- c("MF_1", "MF_2")
-MF_alt_allele_prob[c(2:2001),1] <- MF_A
-MF_alt_allele_prob[c(2:2001),2] <- MF_B
+MF_alt_allele_prob[c(2:2001),1] <- MF_A_alt_allele_prob
+MF_alt_allele_prob[c(2:2001),2] <- MF_B_alt_allele_prob
 
 MF_input_alt_alle_prob <- data.frame(matrix(nrow = 2, ncol = nLociAll+1))
 MF_input_alt_alle_prob[,1] <- c("MF_1", "MF_2")
-MF_input_alt_alle_prob[1,c(2:2001)] <- MF_A
-MF_input_alt_alle_prob[2,c(2:2001)] <- MF_B
+MF_input_alt_alle_prob[1,c(2:2001)] <- MF_A_alt_allele_prob
+MF_input_alt_alle_prob[2,c(2:2001)] <- MF_B_alt_allele_prob
 
-MF_cross_pedigree <- pedigree
-MF_cross_pedigree$father[sample] <- "MF_2"
-MF_cross_pedigree$mother[sample] <- "MF_2"
-MF_cross_pedigree$father[MF_cross_pedigree$father == 0] <- "MF_1"
-MF_cross_pedigree$mother[MF_cross_pedigree$mother == 0] <- "MF_1"
+# need to now assign metafounders based on above
+
+MF_cross_ped <- pedigree[c(1:200),]
+MF_cross_ped$father[locus] <- "MF_2"
+MF_cross_ped$mother[locus] <- "MF_2"
+MF_cross_ped$father[MF_cross_ped$father == 0] <- "MF_1"
+MF_cross_ped$mother[MF_cross_ped$mother == 0] <- "MF_1"
+MF_cross_pedigree <- data.frame(matrix(nrow = nInd, ncol = 3))
+names(MF_cross_pedigree) <- c("id", "father", "mother")
+MF_cross_pedigree[c(1:200),] <- MF_cross_ped
+MF_cross_pedigree[c(201:nInd),] <- pedigree[c(201:nInd),]
+
+# # Below segregates randomly
+# i <- 1
+# 
+# for (i in i:5){
+#   sample <- sample(1:200, 25, replace = FALSE)
+#   
+#   MF_B_alt_allele_prob <- baseGeno[sample,]
+#   MF_B_alt_allele_prob <- colMeans(MF_B_alt_allele_prob)/2
+#   vector <- rep(1:200)
+#   MF_A_alt_allele_prob <- baseGeno[!(vector %in% sample), ]
+#   MF_A_alt_allele_prob <- baseGeno[MF_A_alt_allele_prob,]
+#   MF_A_alt_allele_prob <- colMeans(MF_A_alt_allele_prob)/2
+#   
+#   test <- MF_A_alt_allele_prob == MF_B_alt_allele_prob
+#   tmp <- test[test == TRUE]
+#   
+#   if (length(tmp) < 500){
+#     break
+#   }
+# }
+# 
+# 
+# 
+# MF_alt_allele_prob <- data.frame(matrix(ncol = 2, nrow = nLociAll+1))
+# MF_alt_allele_prob[1,] <- c("MF_1", "MF_2")
+# MF_alt_allele_prob[c(2:2001),1] <- MF_A_alt_allele_prob
+# MF_alt_allele_prob[c(2:2001),2] <- MF_B_alt_allele_prob
+# 
+# MF_input_alt_alle_prob <- data.frame(matrix(nrow = 2, ncol = nLociAll+1))
+# MF_input_alt_alle_prob[,1] <- c("MF_1", "MF_2")
+# MF_input_alt_alle_prob[1,c(2:2001)] <- MF_A_alt_allele_prob
+# MF_input_alt_alle_prob[2,c(2:2001)] <- MF_B_alt_allele_prob
+# 
+# MF_cross_pedigree <- pedigree
+# MF_cross_pedigree$father[sample] <- "MF_2"
+# MF_cross_pedigree$mother[sample] <- "MF_2"
+# MF_cross_pedigree$father[MF_cross_pedigree$father == 0] <- "MF_1"
+# MF_cross_pedigree$mother[MF_cross_pedigree$mother == 0] <- "MF_1"
 
 
 
@@ -911,6 +954,10 @@ rec_prob <- rec_count / (nInd * 2)
 MF_2_rec_prob <- rec_prob
 
 # Combine into one pedigree and save
+MF_pedigree$father[MF_pedigree$father == 0] <- "MF_1"
+MF_pedigree$mother[MF_pedigree$mother == 0] <- "MF_1"
+MF_2_pedigree$father[MF_2_pedigree$father == 0] <- "MF_2"
+MF_2_pedigree$mother[MF_2_pedigree$mother == 0] <- "MF_2"
 
 MF_multi_sep_pedigree <- rbind(MF_pedigree, MF_2_pedigree)
 MF_multi_sep_haplotypes <- rbind(MF_haplotype, MF_2_haplotype)
@@ -924,14 +971,15 @@ MF_multi_sep_alt_allele_prob[1,] <- MF_1_alt_allele_prob[, 1]
 MF_multi_sep_alt_allele_prob[2,] <- MF_2_alt_allele_prob[, 1]
 MF_multi_sep_alt_allele_prob$MF <- c("MF_1", "MF_2")
 MF_multi_sep_alt_allele_prob <- MF_multi_sep_alt_allele_prob[c(2001, 1:2000)] # Input
-MF_multi_sep_out_alt_allele_prob <- data.frame(matrix(nrow = nLociAll, ncol = 2))
-MF_multi_sep_out_alt_allele_prob[,1] <- MF_1_alt_allele_prob[, 1]
-MF_multi_sep_out_alt_allele_prob[,2] <- MF_2_alt_allele_prob[, 1] # Output
+MF_multi_sep_out_alt_allele_prob <- data.frame(matrix(nrow = nLociAll+1, ncol = 2))
+MF_multi_sep_out_alt_allele_prob[1,] <- c("MF_1", "MF_2")
+MF_multi_sep_out_alt_allele_prob[c(2:2001),1] <- MF_1_alt_allele_prob[, 1]
+MF_multi_sep_out_alt_allele_prob[c(2:2001),2] <- MF_2_alt_allele_prob[, 1] # Output
 MF_multi_sep_geno_error <- cbind(MF_geno_error, MF_2_geno_error)
 MF_multi_sep_sequenceReads <- rbind(MF_sequenceReads, MF_2_sequenceReads)
 MF_multi_sep_seq_error <- cbind(MF_seq_error, MF_2_seq_error)
 MF_multi_sep_segregation <- rbind(MF_segregation, MF_2_segregation)
-MF_multi_rec_prob <- cbind(MF_rec_prob, MF_2_rec_prob)
+MF_multi_sep_rec_prob <- cbind(MF_rec_prob, MF_2_rec_prob)
 
 write.table(x = MF_multi_sep_pedigree, file = "MF_multi_sep_ped_file.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
@@ -946,7 +994,7 @@ write.table(x = MF_multi_sep_haplotypes, file = "true-MF_multi_sep_hap_0.5.txt",
             row.names = TRUE, col.names = FALSE, quote = FALSE)
 write.table(x = MF_multi_sep_phasedGenotypes, file = "true-MF_multi_sep_phased_geno_prob.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = MF_multi_sep_UnphasedGenotypes, file = "true-MF_multi_sep_geno_prob.txt",
+write.table(x = MF_multi_sep_unphasedGenotypes, file = "true-MF_multi_sep_geno_prob.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 write.table(x = MF_multi_sep_genotypes, file = "true-MF_multi_sep_geno_0.3333333333333333.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
@@ -964,7 +1012,7 @@ write.table(x = MF_multi_sep_segregation, "true-MF_multi_sep_seg_prob.txt",
 write.table(x = MF_multi_sep_rec_prob, file = "true-MF_multi_sep_rec_prob.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
-# seq_error and recob_error -> separated per MF, but probs need to combine.
+# seq_error and recob_error -> separated per MF, but probably need to combine?
 
 # Keep exploring alternative for Test # 2 by cross the above two pedigrees together.
 
