@@ -387,6 +387,21 @@ def getArgs():
             "stopsnp",
         ],
     )
+    input_parser.add_argument(
+        "-alt_allele_prob_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="The alternative allele probabilities per metafounder(s). Default: 0.5 per locus",
+    )
+    input_parser.add_argument(
+        "-main_metafounder",
+        default="MF_1",
+        required=False,
+        type=str,
+        help="The metafounder to use where parents are unknown with input '0'. Default: MF_1.",
+    )
 
     # Output options
     output_parser = parser.add_argument_group("Output Options")
@@ -531,6 +546,12 @@ def getArgs():
         action="store_true",
         required=False,
         help="A flag to indicate that input data is for a sex chromosome. Sex needs to be given in the pedigree file. This is currently an experimental option.",
+    )
+    peeling_control_parser.add_argument(
+        "-est_alt_allele_prob",
+        action="store_true",
+        require=False,
+        help="Flag to re-estimate the alternative allele probabilities after each peeling cycle.",
     )
 
     singleLocus_parser = parser.add_argument_group("Hybrid peeling arguments")
