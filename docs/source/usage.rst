@@ -22,11 +22,12 @@ Input Arguments
                           Sequence allele read count file(s) (see format below).
       -plink_file [BFILE ...]
                           Plink (binary) file(s).
+      -alt_allele_prob_file [ALT_ALLELE_PROB_FILE...]
+                          The alternative allele probabilities per metafounder(s). Default: 0.5 per marker.
       -start_snp START_SNP
                           The first marker to consider. The first marker is "1". Default: 1.
-      -stop_snp STOP_SNP  The last marker to consider. Default: all markers considered.
-      -alt_allele_prob_file ALT_ALLELE_PROB_FILE
-                          The alternative allele probabilities per metafounder(s). Default: 0.5 per locus
+      -stop_snp STOP_SNP
+                          The last marker to consider. Default: all markers considered.
       -main_metafounder
                           The metafounder to use where parents are unknown with input "0". Default: MF_1.
 
@@ -111,7 +112,7 @@ Peeling arguments
                             each peeling cycle.
       -est_rec_prob         Flag to re-estimate the recombination rates after
                             each peeling cycle.
-      -est_alt_allele_prob  Flag to re-estimate the alternative allele probabilities after
+      -est_alt_allele_prob  Flag to re-estimate the alternative allele probabilities for each metafounder after
                             each peeling cycle.
       -no_phase_founder    A flag phase a heterozygous allele in one of the
                             founders (if such an allele can be found).
@@ -156,7 +157,7 @@ Input file formats
 Pedigree file
 =============
 
-Each line of a pedigree file has three values, the individual's id, their father's id, and their mother's id. "0" represents an unknown id. Individuals with one unknown parent get internally assigned a dummy/unknown parent. Hence all individuals have both or none parents known. Individuals with two unknown parents are considered as founders and are internally allocated to a metafounder (unknown parent group) "MF_1" (or defined by the user through ``-main_metafounder``). Users can provide additional metafounders as shown below - these must start with "MF_".
+Each line of a pedigree file has three values, the individual's id, their father's id, and their mother's id. "0" represents an unknown id. Individuals with one unknown parent get internally assigned a dummy/unknown parent. Hence all individuals have both or none parents known. Individuals with two unknown parents are considered as founders and are internally allocated to a metafounder (unknown parent group) ``"MF_1"`` (or defined by the user through ``-main_metafounder``). Users can provide additional metafounders as shown below - these must start with ``"MF_"``.
 
 Example:
 
@@ -340,16 +341,17 @@ Example:
 Model parameter files
 =====================
 
-|Software| outputs three model parameter files, ``.alt_allele_prob.txt``, ``.seq_error_prob.txt``, ``.geno_error_prob.txt``, ``.rec_prob.txt``. These give the minor allele frequency, sequencing error rates, genotyping error rates and recombination rates used. All three files contain a single column with an entry for each marker.
+|Software| outputs four model parameter files: ``.alt_allele_prob.txt``, ``.seq_error_prob.txt``, ``.geno_error_prob.txt``, ``.rec_prob.txt``. These give the alternative allele frequency, sequencing error rates, genotyping error rates and the recombination rates used. In the ``.alt_allele_prob.txt``, there is a column per metafounder with an alternative allele frequency for each marker. The other three files contain a single column with an entry for each marker.
 
-Example ``.alt_allele_prob.txt`` file for four loci:
+Example ``.alt_allele_prob.txt`` file for two metafounders and four loci:
 
 ::
 
-  0.468005
-  0.195520
-  0.733061
-  0.145847
+  MF_1      MF_2
+  0.468005  0.390000
+  0.195520  0.219890
+  0.733061  0.509849
+  0.145847  0.090000
 
 
 .. |Software| replace:: AlphaPeel

@@ -17,7 +17,14 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     # Right now maf _only_ uses the penetrance so can be estimated once.
     if args.est_alt_allele_prob:
         PeelingUpdates.updateMaf(pedigree, peelingInfo)
-
+    if args.alt_allele_prob_file is not None:
+        pedigree.readInAAP(pedigree, args.alt_allele_prob_file)
+        for ind in pedigree:
+            if ind.MetaFounder is not None:
+                mfx = ind.MetaFounder
+                aaf = pedigree.AAP[mfx]
+                aafGeno = ProbMath.getGenotypesFromMaf(aaf)
+                peelingInfo.anterior[ind.idn, :, :] = aafGeno
     for i in range(args.n_cycle):
         print("Cycle ", i)
         peelingCycle(pedigree, peelingInfo, args=args, singleLocusMode=singleLocusMode)
@@ -282,6 +289,14 @@ def get_input_options():
         nargs="*",
         help="A haplotype file in AlphaGenes format.",
     )
+    parse_dictionary["altalleleprobfile"] = lambda parser: parser.add_argument(
+        "-alt_allele_prob_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="The alternative allele probabilities per metafounder(s). Default: 0.5 per marker"
+    )
     parse_dictionary["startsnp"] = lambda parser: parser.add_argument(
         "-start_snp",
         default=None,
@@ -296,6 +311,13 @@ def get_input_options():
         type=int,
         help="The last marker to consider. Default: all markers considered.",
     )
+    parse_dictionary["mainmetafounder"] = lambda parser: parser.add_argument(
+        "-main_metafounder",
+        default = "MF_1",
+        required = False,
+        type = str,
+        help = "The metafounder to use where parents are unknown with input 0. Default: MF_1."
+    )
     parse_dictionary["seed"] = lambda parser: parser.add_argument(
         "-seed",
         default=None,
@@ -305,7 +327,6 @@ def get_input_options():
     )
 
     return parse_dictionary
-
 
 def get_output_options():
     parse_dictionary = dict()
@@ -332,7 +353,6 @@ def get_output_options():
     )
 
     return parse_dictionary
-
 
 def get_multithread_options():
     parse_dictionary = dict()
@@ -383,11 +403,12 @@ def getArgs():
             "phasefile",
             "seqfile",
             "pedigree",
+            "altalleleprobfile",
             "startsnp",
             "stopsnp",
+            "mainmetafounder"
         ],
     )
-
     # Output options
     output_parser = parser.add_argument_group("Output Options")
 
@@ -518,7 +539,7 @@ def getArgs():
         "-est_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Flag to re-estimate the alternative allele probabilities after each peeling cycle.",
+        help="Flag to re-estimate the alternative allele probabilities for each metafounder after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
         "-no_phase_founder",
@@ -573,6 +594,8 @@ def main():
     args.pedigree = args.ped_file
     args.startsnp = args.start_snp
     args.stopsnp = args.stop_snp
+    args.altalleleprobfile = args.alt_allele_prob_file
+    args.mainmetafounder = args.main_metafounder
     args.writekey = args.out_id_order
     args.onlykeyed = args.out_id_only
     args.iothreads = args.n_io_thread
@@ -602,11 +625,12 @@ def main():
     )
     if not args.no_param:
         PeelingIO.writeOutParamaters(peelingInfo)
+    if not args.altalleleprobfile: # Only write alternative allele probabilities if user has **not** inputted them
+        PeelingIO.writeOutAltAlleleProb(pedigree, peelingInfo)
     if not singleLocusMode and args.seg_prob:
         InputOutput.writeIdnIndexedMatrix(
             pedigree, peelingInfo.segregation, args.out_file + ".seg_prob.txt"
         )
-
 
 if __name__ == "__main__":
     main()
