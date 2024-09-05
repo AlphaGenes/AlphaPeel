@@ -26,16 +26,17 @@ def updateMaf(pedigree, peelingInfo):
         print(
             "Updating error rates and minor allele frequencies for sex chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
+    MF = list(pedigree.AAP.keys())
+    for mfx in MF:
+        maf = pedigree.AAP[mfx]
+        for i in range(peelingInfo.nLoci):
+            maf[i] = newtonMafUpdates(peelingInfo, i)
 
-    maf = peelingInfo.maf
-    for i in range(peelingInfo.nLoci):
-        maf[i] = newtonMafUpdates(peelingInfo, i)
-
-    mafGeno = ProbMath.getGenotypesFromMaf(maf)
-    for ind in pedigree:
-        if ind.isFounder():
-            peelingInfo.anterior[ind.idn, :, :] = mafGeno
-    peelingInfo.maf = maf.astype(np.float32)
+        mafGeno = ProbMath.getGenotypesFromMaf(maf)
+        for ind in pedigree:
+            if ind.MetaFounder == mfx and ind.isFounder():
+                peelingInfo.anterior[ind.idn, :, :] = mafGeno
+        pedigree.AAP[mfx] = maf.astype(np.float32)
 
 
 def newtonMafUpdates(peelingInfo, index):

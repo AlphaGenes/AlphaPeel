@@ -28,7 +28,7 @@ Input Arguments
                           The first marker to consider. The first marker is "1". Default: 1.
       -stop_snp STOP_SNP
                           The last marker to consider. Default: all markers considered.
-      -main_metafounder
+      -main_metafounder MAIN_METAFOUNDER
                           The metafounder to use where parents are unknown with input "0". Default: MF_1.
 
 |Software| requires a pedigree file (``-ped_file``) and one or more genomic data files to run the analysis.
@@ -65,6 +65,7 @@ Output Arguments
     Peeling output options:
       -no_dosage            Flag to suppress the dosage files.
       -no_param             Flag to suppress writing the model parameter files.
+      -alt_allele_prob      Flag to write out the alternative allele frequencies for each metafounder.
       -seg_prob             Flag to enable writing out the segregation probabilities.
       -phased_geno_prob     Flag to enable writing out the phased genotype probabilities.
       -geno_prob            Flag to enable writing out the genotype probabilities.
@@ -79,7 +80,7 @@ Output Arguments
       -binary_call_file    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
-By default |Software| produces a dosage file and two model parameter files (genotype error rate and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, and ``-no_param`` options. |Software| can also write out the phased genotype probability file (.phased_geno_prob.txt) with the `-phased_geno_prob` argument and the segregation probability file (.seg_prob.txt) with the `-seg_prob` argument.
+By default |Software| produces a dosage file and two model parameter files (genotype error rate and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, and ``-no_param`` options. |Software| can also write out the alternative allele frequencies per metafounder (*.alt_allele_prob.txt*) with ``-alt_allele_prob`` argument, the phased genotype probability file (*.phased_geno_prob.txt*) with the ``-phased_geno_prob`` argument and the segregation probability file (*.seg_prob.txt*) with the ``-seg_prob`` argument.
 
 The ``-geno_threshold`` and ``-hap_threshold`` arguments respectively control control which genotypes and haplotypes are called. A threshold of 0.9 will give calls only if the probability mass for one genotype (or haplotype) is higher than 0.9. Using a higher-value will increase the accuracy of called genotypes (or haplotypes), but will result in fewer called genotypes (or haplotypes). Since there are three genotypes states and two haplotype states, "best-guess" genotypes and haplotypes are respectively called with a threshold less than ``1/3`` and ``1/2``.
 
@@ -212,7 +213,7 @@ Example:
 Binary plink file
 =================
 
-Binary Plink files are supported using the package ``AlphaPlinkPython``. The pedigree supplied by the ``.fam`` file will be used if a pedigree file is not supplied. Otherwise, the pedigree file will be used and the ``.fam`` file will be ignored. 
+Binary Plink files are supported using the package ``AlphaPlinkPython``. The pedigree supplied by the *.fam* file will be used if a pedigree file is not supplied. Otherwise, the pedigree file will be used and the *.fam* file will be ignored.
 
 Map file 
 ========
@@ -341,7 +342,7 @@ Example:
 Model parameter files
 =====================
 
-|Software| outputs four model parameter files: ``.alt_allele_prob.txt``, ``.seq_error_prob.txt``, ``.geno_error_prob.txt``, ``.rec_prob.txt``. These give the alternative allele frequency, sequencing error rates, genotyping error rates and the recombination rates used. In the ``.alt_allele_prob.txt``, there is a column per metafounder with an alternative allele frequency for each marker. The other three files contain a single column with an entry for each marker.
+|Software| outputs four model parameter files: *.alt_allele_prob.txt*, *.seq_error_prob.txt*, *.geno_error_prob.txt*, *.rec_prob.txt*. These give the alternative allele frequency, sequencing error rates, genotyping error rates and the recombination rates used. In the *.alt_allele_prob.txt*, there is a column per metafounder with an alternative allele frequency for each marker. The other three files contain a single column with an entry for each marker. By default, |Software| will output *.seq_error_prob.txt*, *.geno_error_prob.txt* and *.rec_prob.txt*. The *.alt_allele_prob.txt* will only be outputted with the argument ``-alt_allele_prob``.
 
 Example ``.alt_allele_prob.txt`` file for two metafounders and four loci:
 

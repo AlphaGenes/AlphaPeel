@@ -73,32 +73,15 @@ def writeOutParamaters(peelingInfo):
     # np.savetxt(args.out_file + ".trans", peelingInfo.transmissionRate, fmt = "%f")
     # np.savetxt(args.out_file + ".alt_allele_prob.txt", peelingInfo.maf, fmt="%f")
 
-def writeOutAltAlleleProb(pedigree, peelingInfo):
+def writeOutAltAlleleProb(pedigree):
     args = InputOutput.args
-    aaf = {}
-    nLoci = pedigree.nLoci
-    for ind in pedigree:
-        if ind.MetaFounder is not None:
-            mfx = ind.MetaFounder
-            if aaf.get(mfx) is None:
-                ind_anterior = peelingInfo.anterior[ind.idn, :, :]
-                maf = np.full((1, nLoci, 1), .5, dtype=np.float32)
-                i = 0
-                for i in range(nLoci):
-                    marker_aa = ind_anterior[:, 0, i]
-                    marker_aA = ind_anterior[:, 1, i]
-                    marker_Aa = ind_anterior[:, 2, i]
-                    marker_AA = ind_anterior[:, 3, i]
-                    tmp = np.copy(0.5 * (marker_aA + marker_Aa) + marker_AA)
-                    maf[:, i] = tmp
-                aaf[mfx] = np.copy(maf)
     # Order the metafounders: MF_1, MF_2, etc.
-    sorted_aaf = dict(sorted(aaf.items()))
-    sorted_MF = list(sorted_aaf.keys())
+    sorted_AAP = dict(sorted(pedigree.AAP.items()))
+    sorted_MF = list(sorted_AAP.keys())
     # Combine data into a single 2D array
-    combined_aaf = np.hstack([sorted_aaf[key].reshape(nLoci, -1) for key in sorted_MF])
+    combined_AAP = np.hstack([sorted_AAP[key].reshape(nLoci, -1) for key in sorted_MF])
     # Save into text file with metafounders heading columns
-    np.savetxt(args.out_file + ".alt_allele_prob.txt", combined_aaf, delimiter='\t', fmt='%.2f', header='\t'.join(sorted_MF), comments='')
+    np.savetxt(args.out_file + ".alt_allele_prob.txt", combined_AAP, delimiter='\t', fmt='%.2f', header='\t'.join(sorted_MF), comments='')
 
 def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
     args = InputOutput.args

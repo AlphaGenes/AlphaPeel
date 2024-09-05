@@ -350,15 +350,17 @@ class TestClass:
         # 0: not exist
         # 1: exist
         expect = {
-            "no_dosage": [0, 0, 1, 1, 1, 0],
-            "seg_prob": [1, 1, 1, 1, 1, 0],
+            "no_dosage": [0, 0, 0, 1, 1, 0],
+            "seg_prob": [1, 1, 0, 1, 1, 0],
+            "alt_allele_prob": [1, 0, 1, 1, 1, 0]
             "no_param": [1, 0, 0, 0, 0, 0],
-            "phased_geno_prob": [1, 0, 1, 1, 1, 1],
+            "phased_geno_prob": [1, 0, 0, 1, 1, 1],
         }
 
         for self.test_cases in [
             "no_dosage",
             "seg_prob",
+            "alt_allele_prob",
             "no_param",
             "phased_geno_prob",
         ]:
@@ -601,6 +603,7 @@ class TestClass:
 
             if self.test_cases == "default":
                 self.output_file_to_check = "alt_allele_prob"
+                self.arguments["alt_allele_prob"] = None # To output the alt_allele_prob
                 self.generate_command()
                 os.system(self.command)
 
