@@ -182,7 +182,7 @@ class TestClass:
         self.expected = read_and_sort_file(self.expected_file_path)
 
         # Produced dosage file correctly where multiple different files are inputted of unrelated individuals:
-            # Geno_file, hap_file, ped_file, penetrance, and seq_file
+        # Geno_file, hap_file, ped_file, penetrance, and seq_file
         assert self.output == self.expected
 
     def test_subset(self):
@@ -352,7 +352,7 @@ class TestClass:
         expect = {
             "no_dosage": [0, 0, 0, 1, 1, 0],
             "seg_prob": [1, 1, 0, 1, 1, 0],
-            "alt_allele_prob": [1, 0, 1, 1, 1, 0]
+            "alt_allele_prob": [1, 0, 1, 1, 1, 0],
             "no_param": [1, 0, 0, 0, 0, 0],
             "phased_geno_prob": [1, 0, 0, 1, 1, 1],
         }
@@ -370,10 +370,10 @@ class TestClass:
             self.generate_command()
             os.system(self.command)
             # When requested through commands, test the presents of file outputs:
-                # no_dosage, output files: alt_allele_prob, geno_error_prob, seg_error_prob
-                # seg_prob, output files: dosage, seg_prob, alt_allele_prob, geno_error_prob, seg_error_prob
-                # no_param, output file: dosage
-                # phased_geno_prob, output files: dosage, alt_allele_prob, geno_error_prob, seg_error_prob, phased_geno_prob
+            # no_dosage, output files: alt_allele_prob, geno_error_prob, seg_error_prob
+            # seg_prob, output files: dosage, seg_prob, alt_allele_prob, geno_error_prob, seg_error_prob
+            # no_param, output file: dosage
+            # phased_geno_prob, output files: dosage, alt_allele_prob, geno_error_prob, seg_error_prob, phased_geno_prob
             assert self.check_files() == expect[self.test_cases]
 
             self.arguments.pop(self.test_cases)
@@ -476,7 +476,7 @@ class TestClass:
 
             self.output = read_and_sort_file(self.output_file_path)
             self.expected = read_and_sort_file(self.expected_file_path)
-            #Compares outputted seg_prob files to expected.
+            # Compares outputted seg_prob files to expected.
             assert self.output == self.expected
             self.command = "AlphaPeel "
 
@@ -603,7 +603,9 @@ class TestClass:
 
             if self.test_cases == "default":
                 self.output_file_to_check = "alt_allele_prob"
-                self.arguments["alt_allele_prob"] = None # To output the alt_allele_prob
+                self.arguments[
+                    "alt_allele_prob"
+                ] = None  # To output the alt_allele_prob
                 self.generate_command()
                 os.system(self.command)
 

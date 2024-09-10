@@ -2,6 +2,7 @@ import numpy as np
 from numba import jit
 from ..tinyhouse import InputOutput
 
+
 def readInSeg(pedigree, fileName, start=None, stop=None):
     print("Reading in seg file:", fileName)
     if start is None:
@@ -73,15 +74,26 @@ def writeOutParamaters(peelingInfo):
     # np.savetxt(args.out_file + ".trans", peelingInfo.transmissionRate, fmt = "%f")
     # np.savetxt(args.out_file + ".alt_allele_prob.txt", peelingInfo.maf, fmt="%f")
 
+
 def writeOutAltAlleleProb(pedigree):
     args = InputOutput.args
     # Order the metafounders: MF_1, MF_2, etc.
     sorted_AAP = dict(sorted(pedigree.AAP.items()))
     sorted_MF = list(sorted_AAP.keys())
     # Combine data into a single 2D array
-    combined_AAP = np.hstack([sorted_AAP[key].reshape(nLoci, -1) for key in sorted_MF])
+    combined_AAP = np.hstack(
+        [sorted_AAP[key].reshape(pedigree.nLoci, -1) for key in sorted_MF]
+    )
     # Save into text file with metafounders heading columns
-    np.savetxt(args.out_file + ".alt_allele_prob.txt", combined_AAP, delimiter='\t', fmt='%.2f', header='\t'.join(sorted_MF), comments='')
+    np.savetxt(
+        args.out_file + ".alt_allele_prob.txt",
+        combined_AAP,
+        delimiter="\t",
+        fmt="%.2f",
+        header="\t".join(sorted_MF),
+        comments="",
+    )
+
 
 def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
     args = InputOutput.args

@@ -2,6 +2,7 @@ import numpy as np
 
 from .tinyhouse import Pedigree
 from .tinyhouse import InputOutput
+from .tinyhouse import ProbMath
 
 from .Peeling import Peeling
 from .Peeling import PeelingIO
@@ -12,12 +13,17 @@ import concurrent.futures
 from itertools import repeat
 import argparse
 
+
 def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     # Right now maf _only_ uses the penetrance so can be estimated once.
     if args.alt_allele_prob_file is not None:
         for ind in pedigree:
             if ind.isFounder() and ind.MetaFounder is not None:
                 mfx = ind.MetaFounder
+                if pedigree.AAP.get(mfx) is None:
+                    pedigree.AAP[mfx] = np.full(
+                        (1, pedigree.nLoci, 1), 0.5, dtype=np.float32
+                    )
                 aaf = pedigree.AAP[mfx]
                 aafGeno = ProbMath.getGenotypesFromMaf(aaf)
                 peelingInfo.anterior[ind.idn, :, :] = aafGeno
@@ -26,7 +32,9 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
             if ind.MetaFounder is not None:
                 mfx = ind.MetaFounder
                 if pedigree.AAP.get(mfx) is None:
-                    pedigree.AAP[mfx]= np.full((1, pedigree.nLoci, 1), .5, dtype=np.float32)
+                    pedigree.AAP[mfx] = np.full(
+                        (1, pedigree.nLoci, 1), 0.5, dtype=np.float32
+                    )
     if args.est_alt_allele_prob:
         PeelingUpdates.updateMaf(pedigree, peelingInfo)
     for i in range(args.n_cycle):
@@ -299,7 +307,7 @@ def get_input_options():
         required=False,
         type=str,
         nargs="*",
-        help="The alternative allele probabilities per metafounder(s). Default: 0.5 per marker"
+        help="The alternative allele probabilities per metafounder(s). Default: 0.5 per marker",
     )
     parse_dictionary["startsnp"] = lambda parser: parser.add_argument(
         "-start_snp",
@@ -317,10 +325,10 @@ def get_input_options():
     )
     parse_dictionary["main_metafounder"] = lambda parser: parser.add_argument(
         "-main_metafounder",
-        default = "MF_1",
-        required = False,
-        type = str,
-        help = "The metafounder to use where parents are unknown with input 0. Default: MF_1."
+        default="MF_1",
+        required=False,
+        type=str,
+        help="The metafounder to use where parents are unknown with input 0. Default: MF_1.",
     )
     parse_dictionary["seed"] = lambda parser: parser.add_argument(
         "-seed",
@@ -331,6 +339,7 @@ def get_input_options():
     )
 
     return parse_dictionary
+
 
 def get_output_options():
     parse_dictionary = dict()
@@ -357,6 +366,7 @@ def get_output_options():
     )
 
     return parse_dictionary
+
 
 def get_multithread_options():
     parse_dictionary = dict()
@@ -410,7 +420,7 @@ def getArgs():
             "alt_allele_prob_file",
             "startsnp",
             "stopsnp",
-            "main_metafounder"
+            "main_metafounder",
         ],
     )
     # Output options
@@ -438,7 +448,7 @@ def getArgs():
         "-alt_allele_prob",
         action="store_true",
         required=False,
-        help="Flag to write out the alternative allele frequencies for each metafounder."
+        help="Flag to write out the alternative allele frequencies for each metafounder.",
     )
     output_parser.add_argument(
         "-geno_prob",
@@ -639,6 +649,7 @@ def main():
         InputOutput.writeIdnIndexedMatrix(
             pedigree, peelingInfo.segregation, args.out_file + ".seg_prob.txt"
         )
+
 
 if __name__ == "__main__":
     main()
