@@ -443,7 +443,7 @@ def getArgs():
         "-geno",
         action="store_true",
         required=False,
-        help="Flag to call and write out the genotypes.",
+        help="Flag to call and write out the genotypes. If the ``-geno_threshold`` parameter is not provided, the default genotype calling threshold is set to 1/3.",
     )
     output_parser.add_argument(
         "-binary_call_file",
@@ -455,7 +455,7 @@ def getArgs():
         "-hap",
         action="store_true",
         required=False,
-        help="Flag to call and write out the haplotypes.",
+        help="Flag to call and write out the haplotypes. If the ``-hap_threshold`` parameter is not provided, the default haplotype calling threshold is set to 1/2.",
     )
 
     InputOutput.add_arguments_from_dictionary(
