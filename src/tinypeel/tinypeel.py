@@ -443,7 +443,7 @@ def getArgs():
         "-geno",
         action="store_true",
         required=False,
-        help="Flag to call and write out the genotypes.If the ``-geno_threshold`` parameter is not provided, the default genotype calling threshold is set to 1/3.",
+        help="Flag to call and write out the genotypes. If the ``-geno_threshold`` parameter is not provided, the default genotype calling threshold is set to 1/3.",
     )
     output_parser.add_argument(
         "-binary_call_file",
