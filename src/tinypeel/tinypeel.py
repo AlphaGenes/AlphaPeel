@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 
 from .tinyhouse import Pedigree
 from .tinyhouse import InputOutput
@@ -17,23 +18,34 @@ import argparse
 def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     # Right now maf _only_ uses the penetrance so can be estimated once.
     if args.alt_allele_prob_file is not None:
+        mf_pedigree = []
         for ind in pedigree:
             if ind.isFounder() and ind.MetaFounder is not None:
                 mfx = ind.MetaFounder
+                if mfx not in mf_pedigree:
+                    mf_pedigree.append(mfx)
                 if pedigree.AAP.get(mfx) is None:
                     pedigree.AAP[mfx] = np.full(
-                        (1, pedigree.nLoci, 1), 0.5, dtype=np.float32
+                        peelingInfo.nLoci, 0.5, dtype=np.float32
                     )
                 aaf = pedigree.AAP[mfx]
                 aafGeno = ProbMath.getGenotypesFromMaf(aaf)
                 peelingInfo.anterior[ind.idn, :, :] = aafGeno
+        mf_input = pedigree.AAP.copy()
+        # removal of any metafounders not in pedigree
+        for mfx in mf_input:
+            if mfx not in mf_pedigree:
+                del pedigree.AAP[mfx]
+                warnings.warn(
+                    f"{mfx} is not in the pedigree. The alternative allele probability for {mfx} has been ignored."
+                )
     else:
         for ind in pedigree:
             if ind.MetaFounder is not None:
                 mfx = ind.MetaFounder
                 if pedigree.AAP.get(mfx) is None:
                     pedigree.AAP[mfx] = np.full(
-                        (1, pedigree.nLoci, 1), 0.5, dtype=np.float32
+                        peelingInfo.nLoci, 0.5, dtype=np.float32
                     )
     if args.est_alt_allele_prob:
         PeelingUpdates.updateMaf(pedigree, peelingInfo)
