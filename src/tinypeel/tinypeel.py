@@ -1,7 +1,9 @@
 import numpy as np
+import warnings
 
 from .tinyhouse import Pedigree
 from .tinyhouse import InputOutput
+from .tinyhouse import ProbMath
 
 from .Peeling import Peeling
 from .Peeling import PeelingIO
@@ -15,9 +17,38 @@ import argparse
 
 def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     # Right now maf _only_ uses the penetrance so can be estimated once.
+    if args.alt_allele_prob_file is not None:
+        mf_pedigree = []
+        for ind in pedigree:
+            if ind.isFounder() and ind.MetaFounder is not None:
+                mfx = ind.MetaFounder
+                if mfx not in mf_pedigree:
+                    mf_pedigree.append(mfx)
+                if pedigree.AAP.get(mfx) is None:
+                    pedigree.AAP[mfx] = np.full(
+                        peelingInfo.nLoci, 0.5, dtype=np.float32
+                    )
+                aaf = pedigree.AAP[mfx]
+                aafGeno = ProbMath.getGenotypesFromMaf(aaf)
+                peelingInfo.anterior[ind.idn, :, :] = aafGeno
+        mf_input = pedigree.AAP.copy()
+        # removal of any metafounders not in pedigree
+        for mfx in mf_input:
+            if mfx not in mf_pedigree:
+                del pedigree.AAP[mfx]
+                warnings.warn(
+                    f"{mfx} is not in the pedigree. The alternative allele probability for {mfx} has been ignored."
+                )
+    else:
+        for ind in pedigree:
+            if ind.MetaFounder is not None:
+                mfx = ind.MetaFounder
+                if pedigree.AAP.get(mfx) is None:
+                    pedigree.AAP[mfx] = np.full(
+                        peelingInfo.nLoci, 0.5, dtype=np.float32
+                    )
     if args.est_alt_allele_prob:
         PeelingUpdates.updateMaf(pedigree, peelingInfo)
-
     for i in range(args.n_cycle):
         print("Cycle ", i)
         peelingCycle(pedigree, peelingInfo, args=args, singleLocusMode=singleLocusMode)
@@ -282,6 +313,14 @@ def get_input_options():
         nargs="*",
         help="A haplotype file in AlphaGenes format.",
     )
+    parse_dictionary["alt_allele_prob_file"] = lambda parser: parser.add_argument(
+        "-alt_allele_prob_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="The alternative allele probabilities per metafounder(s). Default: 0.5 per marker",
+    )
     parse_dictionary["startsnp"] = lambda parser: parser.add_argument(
         "-start_snp",
         default=None,
@@ -295,6 +334,13 @@ def get_input_options():
         required=False,
         type=int,
         help="The last marker to consider. Default: all markers considered.",
+    )
+    parse_dictionary["main_metafounder"] = lambda parser: parser.add_argument(
+        "-main_metafounder",
+        default="MF_1",
+        required=False,
+        type=str,
+        help="The metafounder to use where parents are unknown with input 0. Default: MF_1.",
     )
     parse_dictionary["seed"] = lambda parser: parser.add_argument(
         "-seed",
@@ -383,11 +429,12 @@ def getArgs():
             "phasefile",
             "seqfile",
             "pedigree",
+            "alt_allele_prob_file",
             "startsnp",
             "stopsnp",
+            "main_metafounder",
         ],
     )
-
     # Output options
     output_parser = parser.add_argument_group("Output Options")
 
@@ -408,6 +455,12 @@ def getArgs():
         action="store_true",
         required=False,
         help="Flag to suppress writing the model parameter files.",
+    )
+    output_parser.add_argument(
+        "-alt_allele_prob",
+        action="store_true",
+        required=False,
+        help="Flag to write out the alternative allele frequencies for each metafounder.",
     )
     output_parser.add_argument(
         "-geno_prob",
@@ -518,7 +571,7 @@ def getArgs():
         "-est_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Flag to re-estimate the alternative allele probabilities after each peeling cycle.",
+        help="Flag to re-estimate the alternative allele probabilities for each metafounder after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
         "-no_phase_founder",
@@ -602,6 +655,8 @@ def main():
     )
     if not args.no_param:
         PeelingIO.writeOutParamaters(peelingInfo)
+    if args.alt_allele_prob:
+        PeelingIO.writeOutAltAlleleProb(pedigree)
     if not singleLocusMode and args.seg_prob:
         InputOutput.writeIdnIndexedMatrix(
             pedigree, peelingInfo.segregation, args.out_file + ".seg_prob.txt"

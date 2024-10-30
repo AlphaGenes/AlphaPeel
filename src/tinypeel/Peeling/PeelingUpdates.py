@@ -26,25 +26,33 @@ def updateMaf(pedigree, peelingInfo):
         print(
             "Updating error rates and minor allele frequencies for sex chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
+    MF = list(pedigree.AAP.keys())
+    for mfx in MF:
+        AAP = pedigree.AAP[mfx]
+        for i in range(peelingInfo.nLoci):
+            AAP[i] = newtonMafUpdates(peelingInfo, AAP, i)
 
-    maf = peelingInfo.maf
-    for i in range(peelingInfo.nLoci):
-        maf[i] = newtonMafUpdates(peelingInfo, i)
-
-    mafGeno = ProbMath.getGenotypesFromMaf(maf)
-    for ind in pedigree:
-        if ind.isFounder():
-            peelingInfo.anterior[ind.idn, :, :] = mafGeno
-    peelingInfo.maf = maf.astype(np.float32)
+        mafGeno = ProbMath.getGenotypesFromMaf(AAP)
+        for ind in pedigree:
+            if ind.MetaFounder == mfx and ind.isFounder():
+                peelingInfo.anterior[ind.idn, :, :] = mafGeno
+        pedigree.AAP[mfx] = AAP.astype(np.float32)
 
 
-def newtonMafUpdates(peelingInfo, index):
+def newtonMafUpdates(peelingInfo, AAP, index):
     # This function gives an iterative approximation for the minor allele frequency. It uses a maximum of 5 iterations.
-    maf = 0.5
-    maf_old = 0.5
+
+    if AAP[index] < 0.01:
+        maf = 0.01
+    elif AAP[index] > 0.99:
+        maf = 0.99
+    else:
+        maf = AAP[index]
+
     iters = 5
     converged = False
     while not converged:
+        maf_old = maf
         delta = getNewtonUpdate(maf_old, peelingInfo, index)
         maf = maf_old + delta
         if maf < 0.01:
