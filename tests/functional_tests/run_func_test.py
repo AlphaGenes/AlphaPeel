@@ -576,9 +576,9 @@ class TestClass:
             "default",
             "alt_allele_prob_file_single",
             "alt_allele_prob_file_multiple",
-            # "est_alt_allele_prob_single",
-            # "est_alt_allele_prob_multiple",
-            # "both",
+            "update_alt_allele_prob_single",
+            "update_alt_allele_prob_multiple",
+            "both",
             "incorrect_pedigree",
             "default_metafounder",
             "main_metafounder",
@@ -593,9 +593,9 @@ class TestClass:
             #                                   for a single metafounder
             #           alt_allele_prob_file_multiple: Test the input option alt_allele_prob_file
             #                                     for multiple metafounders
-            #           est_alt_allele_prob_single: Test the option est_alt_allele_prob
+            #           update_alt_allele_prob_single: Test the option alt_allele_prob_method
             #                                       for a single metafounder
-            #           est_alt_allele_prob_multiple: Test the option est_alt_allele_prob
+            #           update_alt_allele_prob_multiple: Test the option alt_allele_prob_method
             #                                         for multiple metafounders
             #           both: Test the case when both options are used,
             #                 whether the inputted alternative allele probabilities are used as
@@ -643,7 +643,7 @@ class TestClass:
                 assert self.output == self.expected
 
             elif self.test_cases == "alt_allele_prob_file_single":
-                self.input_files.append("alt_allele_prob_file")
+                # self.input_files.append("alt_allele_prob_file")
                 self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
 
                 self.output_file_to_check = "dosage"
@@ -659,8 +659,9 @@ class TestClass:
                     self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
                 )
 
-                self.output = read_and_sort_file(self.output_file_path)
+                self.output = read_and_sort_file(self.output_file_path, decimal_place=1)
                 self.expected = read_and_sort_file(self.expected_file_path)
+
                 # Compares the outputted dosage file to the expected based on inputted alt_allele_prob file.
                 assert self.output == self.expected
 
@@ -676,16 +677,16 @@ class TestClass:
                     self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
                 )
 
-                self.output = read_and_sort_file(self.output_file_path)
+                self.output = read_and_sort_file(self.output_file_path, decimal_place=1)
                 self.expected = read_and_sort_file(self.expected_file_path)
                 # Compares the outputted dosage file to the expected based on inputted alt_allele_prob file.
                 assert self.output == self.expected
 
-                self.input_files.pop(-1)
+                # self.input_files.pop(-1)
                 self.input_file_depend_on_test_cases.pop(-1)
 
-            elif self.test_cases == "est_alt_allele_prob_single":
-                self.arguments["est_alt_allele_prob"] = None
+            elif self.test_cases == "update_alt_allele_prob_single":
+                self.arguments["update_alt_allele_prob"] = None
                 self.output_file_to_check = "alt_allele_prob"
 
                 self.generate_command()
@@ -708,7 +709,7 @@ class TestClass:
                 # Compares alt_allele_prob output with expected when estimated by AlphaPeel for one metafounder
                 assert self.output == self.expected
 
-            elif self.test_cases == "est_alt_allele_prob_multiple":
+            elif self.test_cases == "update_alt_allele_prob_multiple":
                 self.generate_command()
                 os.system(self.command)
 
@@ -730,8 +731,10 @@ class TestClass:
                 assert self.output == self.expected
 
             elif self.test_cases == "both":
-                self.input_files.append("alt_allele_prob_file")
-                self.input_file_depend_on_test_cases("alt_allele_prob_file")
+                self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
 
                 self.generate_command()
                 os.system(self.command)
@@ -744,11 +747,14 @@ class TestClass:
                 self.output, MF = read_and_sort_file(
                     self.output_file_path, test_alt_allele_prob=True
                 )
+                self.expected, MF = read_and_sort_file(
+                    self.expected_file_path, test_alt_allele_prob=True
+                )
 
-                # check if the estimated alt_allele_prob is in between 0.5 and 1 (include 0.5 and exclude 1)
-                assert all(map(lambda prob: 1 > prob >= 0.5, self.output[1:]))
+                # check if the estimated alt_allele_prob is 0.5
+                assert self.output == self.expected
 
-                self.arguments.pop("est_alt_allele_prob")
+                self.arguments.pop("update_alt_allele_prob")
 
             elif self.test_cases == "incorrect_pedigree":
                 self.generate_command()
@@ -757,8 +763,7 @@ class TestClass:
                 # check if error message is in the output
                 assert exit_code in [512, 2]
 
-                # self.input_files.pop(-1)
-                # self.input_file_depend_on_test_cases(-1)
+                self.input_file_depend_on_test_cases.pop(-1)
 
             elif self.test_cases == "default_metafounder":
                 self.generate_command()

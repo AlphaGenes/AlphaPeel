@@ -113,9 +113,12 @@ Peeling arguments
                             each peeling cycle.
       -est_rec_prob         Flag to re-estimate the recombination rates after
                             each peeling cycle.
-      -est_alt_allele_prob  Flag to re-estimate the alternative allele probabilities for each metafounder after
-                            each peeling cycle.
-      -no_phase_founder    A flag phase a heterozygous allele in one of the
+      -est_alt_allele_prob  Flag to estimate the alternative allele frequencies using
+                            all observed genotypes prior to peeling.
+      -update_alt_allele_prob
+                            Flag to re-estimate the alternative allele frequencies
+                            for each metafounder after each peeling cycle.
+      -no_phase_founder     A flag phase a heterozygous allele in one of the
                             founders (if such an allele can be found).
       -sex_chrom            A flag to indicate that input data is for a sex chromosome. Sex needs to
                             be given in the pedigree file. This is currently an
@@ -133,7 +136,7 @@ For hybrid peeling, where a large amount (millions of segregating sites) of sequ
 
 The ``-geno_error_prob``, ``-seq_error_prob`` and ``-rec_length`` arguments control some of the model parameters used in the model. ``-seq_error_prob`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
 
-The ``-est_geno_error_prob`` and ``-est_seq_error_prob`` options estimate the genotyping error rate and the sequencing error rate based on miss-match between observed and inferred states. This option is generally not necessary and can increase runtime. ``-est_alt_allele_prob`` estimates the alternative allele probabilities after each peeling cycle. This option can be useful if there are a large number of non-genotyped founders. If both ``-alt_allele_prob_file`` and ``-est_alt_allele_prob`` are used, the inputted alternative allele probabilities are used as a starting point for alternative allele probabilities estimation.
+The ``-est_geno_error_prob`` and ``-est_seq_error_prob`` options estimate the genotyping error rate and the sequencing error rate based on miss-match between observed and inferred states. This option is generally not necessary and can increase runtime. ``-est_alt_allele_prob`` estimates the alternative allele frequencies before peeling using all available observed genotypes. This option can be useful if there are a large number of non-genotyped founders. ``-update_alt_allele_prob`` re-estimates the alternative allele frequencies per metafounder after each peeling cycle using the inferred genotype probabilities of the founders. For implementation of metafounders (**without** ``-alt_allele_prob_file``), both ``-est_alt_allele_prob`` and ``-update_alt_allele_prob`` should be used.
 
 Hybrid peeling arguments 
 ------------------------
@@ -342,7 +345,7 @@ Example:
 Model parameter files
 =====================
 
-|Software| outputs four model parameter files: *.alt_allele_prob.txt*, *.seq_error_prob.txt*, *.geno_error_prob.txt*, *.rec_prob.txt*. These give the alternative allele frequency, sequencing error rates, genotyping error rates and the recombination rates used. In the *.alt_allele_prob.txt*, there is a column per metafounder with an alternative allele frequency for each marker. The other three files contain a single column with an entry for each marker. By default, |Software| will output *.seq_error_prob.txt*, *.geno_error_prob.txt* and *.rec_prob.txt*. The *.alt_allele_prob.txt* will only be outputted with the argument ``-alt_allele_prob``.
+|Software| outputs four model parameter files: *.alt_allele_prob.txt*, *.seq_error_prob.txt*, *.geno_error_prob.txt*, *.rec_prob.txt*. These give the alternative allele frequency, sequencing error rates, genotyping error rates and the recombination rates used. In the *.alt_allele_prob.txt*, there is a column per metafounder with an alternative allele frequency for each marker. Here, all values will range from 0.01 to 0.99. The other three files contain a single column with an entry for each marker. By default, |Software| will output *.seq_error_prob.txt*, *.geno_error_prob.txt* and *.rec_prob.txt*. The *.alt_allele_prob.txt* will only be outputted with the argument ``-alt_allele_prob``.
 
 Example ``.alt_allele_prob.txt`` file for two metafounders and four loci:
 
