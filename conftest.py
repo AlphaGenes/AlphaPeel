@@ -125,7 +125,11 @@ def pytest_terminal_summary(terminalreporter):
     test_names = list(
         map(
             lambda x: x["Test Name"],
-            filter(lambda x: x["File Name"] == file_types[0] or x["File Name"] == file_types[6], mkr_accu),
+            filter(
+                lambda x: x["File Name"] == file_types[0]
+                or x["File Name"] == file_types[6],
+                mkr_accu,
+            ),
         )
     )
     test_nums = {}

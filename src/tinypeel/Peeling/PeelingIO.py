@@ -77,8 +77,14 @@ def writeOutParamaters(peelingInfo):
 
 def writeOutAltAlleleProb(pedigree):
     args = InputOutput.args
-    # Order the metafounders: MF_1, MF_2, etc.
-    sorted_AAP = dict(sorted(pedigree.AAP.items()))
+
+    # Custom sorting key to extract numeric part of metafounder keys if it's an integer
+    def sort_key(mf_key):
+        part = mf_key.split("_")[1]
+        return (0, int(part)) if part.isdigit() else (1, part)
+
+    # Order the metafounders: MF_1, MF_2, ..., MF_11, etc., otherwise keep original order
+    sorted_AAP = dict(sorted(pedigree.AAP.items(), key=lambda item: sort_key(item[0])))
     sorted_MF = list(sorted_AAP.keys())
     # Combine data into a single 2D array
     combined_AAP = np.hstack(

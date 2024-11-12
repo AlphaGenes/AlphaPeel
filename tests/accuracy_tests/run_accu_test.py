@@ -136,10 +136,11 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
     Assess the performance of the peeling
     """
     if metafounder:
-        file_to_check = ["dosage",
-                         "geno_prob",
-                         "phased_geno_prob",
-                         ]
+        file_to_check = [
+            "dosage",
+            "geno_prob",
+            "phased_geno_prob",
+        ]
     else:
         file_to_check = [
             "dosage",

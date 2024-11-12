@@ -136,7 +136,9 @@ For hybrid peeling, where a large amount (millions of segregating sites) of sequ
 
 The ``-geno_error_prob``, ``-seq_error_prob`` and ``-rec_length`` arguments control some of the model parameters used in the model. ``-seq_error_prob`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
 
-The ``-est_geno_error_prob`` and ``-est_seq_error_prob`` options estimate the genotyping error rate and the sequencing error rate based on miss-match between observed and inferred states. This option is generally not necessary and can increase runtime. ``-est_alt_allele_prob`` estimates the alternative allele frequencies before peeling using all available observed genotypes. This option can be useful if there are a large number of non-genotyped founders. ``-update_alt_allele_prob`` re-estimates the alternative allele frequencies per metafounder after each peeling cycle using the inferred genotype probabilities of the founders. For implementation of metafounders (**without** ``-alt_allele_prob_file``), both ``-est_alt_allele_prob`` and ``-update_alt_allele_prob`` should be used.
+The ``-est_geno_error_prob`` and ``-est_seq_error_prob`` options estimate the genotyping error rate and the sequencing error rate based on miss-match between observed and inferred states. This option is generally not necessary and can increase runtime. ``-est_alt_allele_prob`` estimates the alternative allele frequency for the base population before peeling using all available genotypes. This option can be useful if there are a large number of non-genotyped founders. ``-update_alt_allele_prob`` re-estimates the alternative allele frequencies per metafounder after each peeling cycle using the inferred genotype probabilities of the founders. 
+
+For a pedigree with multiple metafounders, the user has three options: (1) use ``-update_alt_allele_prob`` only, (2) use ``est_alt_allele_prob`` and ``-update_alt_allele_prob``, or (3) input estimates of the alternative allele frequencies for each metafounder via the ``-alt_allele_prob_file`` with or without ``-update_alt_allele_prob``.
 
 Hybrid peeling arguments 
 ------------------------
@@ -235,7 +237,7 @@ Example:
 Alternative Allele Probability File
 ===================================
 
-The alternative allele probability file allows for user-defined population alternative allele probabilities. This file contains the metafounder group denoted MF_x, where x is by default "1" but see ``-main_metafounder``, followed by alternative allele probabilities for all the markers. In case of multiple metafounders, provide multiple rows in the file. The default starting alternative allele probabilities are 0.5 for each marker. If you don't have information for some markers, provide 0.5 for these in the file.
+The alternative allele probability file allows for user-defined population alternative allele frequencies. This file contains the metafounder group denoted MF_x, where x is by default "1" but see ``-main_metafounder``, followed by alternative allele frequencies for all the markers. In case of multiple metafounders, provide multiple rows in the file. The default starting alternative allele frequencies are 0.5 for each marker. If you don't have information for some markers, provide 0.5 for these in the file.
 
 Example:
 

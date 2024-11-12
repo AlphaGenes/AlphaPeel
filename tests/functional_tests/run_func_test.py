@@ -586,6 +586,7 @@ class TestClass:
             "incorrect_metafounder_in_file",
             "missing_metafounder_in_file",
             "extra_metafounder_in_file",
+            "metafounder_order_in_output",
         ]:
             # test case default: Test the default values of the alternative allele frequency
             #                    without any input or estimation with multiple metafounders
@@ -614,6 +615,7 @@ class TestClass:
             #                                          whether an error would be raised
             #           missing_metafounder_in_file: Test case when a metafounder is present in the pedigree but missing in the input alternative allele probability file.
             #           extra_metafounder_in_file: Test case when an additional metafounder is present in the input alternative allele probability file.
+            #           metafounder_order_in_output: Check the order of metafounders in the output is numerical when over 10 metafounders.
 
             self.output_file_prefix = f"alt_allele_prob.{self.test_cases}"
 
@@ -869,6 +871,39 @@ class TestClass:
                 )
                 # Check that the extra is removed from the alt_allele_prob output
                 assert self.output == self.expected
+
+                self.input_files.pop(-1)
+                self.input_file_depend_on_test_cases.pop(-1)
+
+            elif self.test_cases == "metafounder_order_in_output":
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+
+                self.output, MF = read_and_sort_file(
+                    self.output_file_path, test_alt_allele_prob=True
+                )
+
+                # Check that the metafounders are in the correct order in the output
+                print(MF)
+                assert MF == [
+                    "MF_1",
+                    "MF_2",
+                    "MF_3",
+                    "MF_4",
+                    "MF_5",
+                    "MF_6",
+                    "MF_7",
+                    "MF_8",
+                    "MF_9",
+                    "MF_10",
+                    "MF_11",
+                    "MF_12",
+                ]
 
             self.command = "AlphaPeel "
 

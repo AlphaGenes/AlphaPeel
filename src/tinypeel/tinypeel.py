@@ -56,9 +56,9 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
                         peelingInfo.nLoci, 0.5, dtype=np.float32
                     )
     if args.est_alt_allele_prob:
-        if args.alt_allele_prob_file is not None:
+        if args.alt_allele_prob_file is not None and len(pedigree.AAP) > 1:
             warnings.warn(
-                "-est_alt_allele_prob will update the inputted alternative allele frequencies using all available observed genotypes. Therefore, will overwrite any differences between metafounders."
+                "-est_alt_allele_prob will overwrite any differences between metafounders. To avoid this, please use -update_alt_allele_prob instead"
             )
         PeelingUpdates.updateMaf(pedigree, peelingInfo)
     for i in range(args.n_cycle):
