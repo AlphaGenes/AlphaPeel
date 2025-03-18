@@ -65,7 +65,7 @@ Install the package by using the built wheel distribution:
 
 .. code-block:: bash
 
-    python3 -m pip install dist/AlphaPeel*.whl
+    python3 -m pip install dist/alphapeel*.whl
 
 Move to example folder to run an example:
 
