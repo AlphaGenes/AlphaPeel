@@ -43,6 +43,8 @@ def pytest_runtest_makereport():
         stdout = report.sections
         if "multi" in report.nodeid:
             num_file = 6
+        elif "metafounder" in report.nodeid:
+            num_file = 3
         else:
             num_file = 5
         accu = stdout[-1][-1].split("\n")[-(2 + 3 * num_file) :]
@@ -73,6 +75,9 @@ def pytest_terminal_summary(terminalreporter):
         "geno_prob",
         "phased_geno_prob",
         "seg_prob",
+        "metafounder_dosage",
+        "metafounder_geno_prob",
+        "metafounder_phased_geno_prob",
     ]
     columns = (
         "Test Name",
@@ -85,7 +90,7 @@ def pytest_terminal_summary(terminalreporter):
         "Gen4 Accu",
         "Gen5 Accu",
     )
-    dt = {"names": columns, "formats": ("U76", "U25", "U25") + ("f4",) * (nGen + 1)}
+    dt = {"names": columns, "formats": ("U76", "U28", "U25") + ("f4",) * (nGen + 1)}
     accu = np.loadtxt("tests/accuracy_tests/accu_report.txt", encoding=None, dtype=dt)
 
     mkr_accu = list(
@@ -120,7 +125,11 @@ def pytest_terminal_summary(terminalreporter):
     test_names = list(
         map(
             lambda x: x["Test Name"],
-            filter(lambda x: x["File Name"] == file_types[0], mkr_accu),
+            filter(
+                lambda x: x["File Name"] == file_types[0]
+                or x["File Name"] == file_types[6],
+                mkr_accu,
+            ),
         )
     )
     test_nums = {}

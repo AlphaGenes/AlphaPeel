@@ -77,7 +77,7 @@ for (generation in 1:(nGen - 1)) {
   allPop <- c(allPop, currentPop)
 }
 
-# ----- Collect/Generate data& Calculate realised rates -----
+# ----- Collect/Generate data & Calculate realised rates -----
 
 # ----- Pedigree -----
 
@@ -334,3 +334,4 @@ subset <- floor(seq(1, nLociAll, length.out = nSegMap))
 subsetValues <- values[subset,]
 write.table(x = subsetValues, file = "seg_map_file.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
+

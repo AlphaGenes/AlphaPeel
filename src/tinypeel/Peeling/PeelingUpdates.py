@@ -6,18 +6,18 @@ from ..tinyhouse import ProbMath
 
 from . import PeelingInfo
 
-#####################################################################
-# In this module we will update 3 things:                           #
-# 1) Our estimate for the MAF.                                      #
-# 2) Our estimate of the locus specific (sequencing) error rate.    #
-# 3) Our estimate of the locus specific recombination rate.         #
-#####################################################################
+#########################################################################################
+# In this module we will update 3 things:                                               #
+# 1) Our estimate for the MAF (both prior to peeling and after each peeling cycle) .    #
+# 2) Our estimate of the locus specific (sequencing) error rate.                        #
+# 3) Our estimate of the locus specific recombination rate.                             #
+#########################################################################################
 
 
-# Estimating the minor allele frequency. This update is done by using an iterative approach
+# Estimating the alternative allele frequency. This update is done by using an iterative approach
 # which maximizes the likelihood of the observed genotypes conditional on them having been
 # generated from hardy-weinberg equilibrium with a fixed maf value. To speed up, we use
-# Newton style updates to re-estimate the minor allele frequency.
+# Newton style updates to estimate the alternative allele frequency.
 # There is math on how to do this... somewhere?
 
 
@@ -26,25 +26,33 @@ def updateMaf(pedigree, peelingInfo):
         print(
             "Updating error rates and minor allele frequencies for sex chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
+    MF = list(pedigree.AAP.keys())
+    for mfx in MF:
+        AAP = pedigree.AAP[mfx]
+        for i in range(peelingInfo.nLoci):
+            AAP[i] = newtonMafUpdates(peelingInfo, AAP, i)
 
-    maf = peelingInfo.maf
-    for i in range(peelingInfo.nLoci):
-        maf[i] = newtonMafUpdates(peelingInfo, i)
-
-    mafGeno = ProbMath.getGenotypesFromMaf(maf)
-    for ind in pedigree:
-        if ind.isFounder():
-            peelingInfo.anterior[ind.idn, :, :] = mafGeno
-    peelingInfo.maf = maf.astype(np.float32)
+        mafGeno = ProbMath.getGenotypesFromMaf(AAP)
+        for ind in pedigree:
+            if ind.MetaFounder == mfx and ind.isFounder():
+                peelingInfo.anterior[ind.idn, :, :] = mafGeno
+        pedigree.AAP[mfx] = AAP.astype(np.float32)
 
 
-def newtonMafUpdates(peelingInfo, index):
-    # This function gives an iterative approximation for the minor allele frequency. It uses a maximum of 5 iterations.
-    maf = 0.5
-    maf_old = 0.5
+def newtonMafUpdates(peelingInfo, AAP, index):
+    # This function gives an iterative approximation for the alternative allele frequency. It uses a maximum of 5 iterations.
+
+    if AAP[index] < 0.01:
+        maf = 0.01
+    elif AAP[index] > 0.99:
+        maf = 0.99
+    else:
+        maf = AAP[index]
+
     iters = 5
     converged = False
     while not converged:
+        maf_old = maf
         delta = getNewtonUpdate(maf_old, peelingInfo, index)
         maf = maf_old + delta
         if maf < 0.01:
@@ -101,6 +109,34 @@ def addIndividualToUpdate(d, p, LLp, LLpp):
     LLpp += fpp / f - (fp / f) ** 2
 
     return LLp, LLpp
+
+
+def updateMafAfterPeeling(pedigree, peelingInfo):
+    MF = list(pedigree.AAP.keys())
+    for mfx in MF:
+        AAP = pedigree.AAP[mfx]
+        sumOfGenotypes = np.full((4, peelingInfo.nLoci), 0, dtype=np.float32)
+        n = 0
+        for ind in pedigree:
+            if ind.MetaFounder == mfx and ind.isFounder():
+                ind_genotype = peelingInfo.getGenoProbs(ind.idn)
+                sumOfGenotypes += ind_genotype
+                n += 1
+        for i in range(peelingInfo.nLoci):
+            marker_Aa = sumOfGenotypes[1, i]
+            marker_aA = sumOfGenotypes[2, i]
+            marker_AA = sumOfGenotypes[3, i]
+            AAP[i] = (0.5 * (marker_Aa + marker_aA) + marker_AA) / n
+            if AAP[i] < 0.01:
+                AAP[i] = 0.01
+            elif AAP[i] > 0.99:
+                AAP[i] = 0.99
+
+        mafGeno = ProbMath.getGenotypesFromMaf(AAP)
+        for ind in pedigree:
+            if ind.MetaFounder == mfx and ind.isFounder():
+                peelingInfo.anterior[ind.idn, :, :] = mafGeno
+        pedigree.AAP[mfx] = AAP.astype(np.float32)
 
 
 # Commenting out the following code. This was used to do updates via grid search.

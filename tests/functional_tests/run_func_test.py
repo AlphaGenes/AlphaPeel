@@ -2,7 +2,7 @@ import os
 import shutil
 
 
-def read_file(file_path, **kwargs):
+def read_file(file_path, test_alt_allele_prob=False, **kwargs):
     """
     INPUT:
     file_path: str, the path of the file to be read
@@ -13,6 +13,9 @@ def read_file(file_path, **kwargs):
     """
     with open(file_path, "r") as file:
         values = [line.strip().split() for line in file]
+    if test_alt_allele_prob:
+        MF = values[0]
+        values.pop(0)
 
     if "decimal_place" in kwargs.keys():
         # round the data if data and rounding decimal place exist
@@ -29,11 +32,13 @@ def read_file(file_path, **kwargs):
             [line[0]] + [float(data) for data in line[1:]] if line else line
             for line in values
         ]
+    if test_alt_allele_prob:
+        return values, MF
+    else:
+        return values
 
-    return values
 
-
-def read_and_sort_file(file_path, id_list=None, **kwargs):
+def read_and_sort_file(file_path, test_alt_allele_prob=False, id_list=None, **kwargs):
     """
     INPUT:
     file_path: str, the path of the file to be read
@@ -42,7 +47,10 @@ def read_and_sort_file(file_path, id_list=None, **kwargs):
     values: 2d list of str, store the sorted values of the (selected) records
     """
 
-    values = read_file(file_path, **kwargs)
+    if test_alt_allele_prob:
+        values, MF = read_file(file_path, test_alt_allele_prob, **kwargs)
+    else:
+        values = read_file(file_path, test_alt_allele_prob, **kwargs)
 
     if id_list is not None:
         # consider only the entries with id in id_list
@@ -54,7 +62,10 @@ def read_and_sort_file(file_path, id_list=None, **kwargs):
     # sort according to the id
     values.sort(key=lambda row: row[0])
 
-    return values
+    if test_alt_allele_prob:
+        return values, MF
+    else:
+        return values
 
 
 def delete_columns(two_d_list, col_del):
@@ -180,6 +191,8 @@ class TestClass:
         self.output = read_and_sort_file(self.output_file_path)
         self.expected = read_and_sort_file(self.expected_file_path)
 
+        # Produced dosage file correctly where multiple different files are inputted of unrelated individuals:
+        # Geno_file, hap_file, ped_file, penetrance, and seq_file
         assert self.output == self.expected
 
     def test_subset(self):
@@ -215,9 +228,10 @@ class TestClass:
 
         self.output = read_and_sort_file(self.output_file_path)
         self.expected = read_and_sort_file(self.expected_file_path)
-
+        # Remove the first and last column inline with start_snp (2) and stop_snp (4) command
         delete_columns(self.expected, [2, 6])
-
+        # Test start_snp and stop_snp commands across different input files
+        # Compares the outputted genotype dosage file with the expected genotype dosage.
         assert self.output == self.expected
 
     def test_out_id_order(self):
@@ -260,8 +274,9 @@ class TestClass:
             )
 
             self.output = read_file(self.output_file_path)
-
+            # Total four individuals across the five inputted files
             assert len(self.output) == 4
+            # Check the outputted order under different commands: id, pedigree, genotypes, sequence.
             assert self.output[0][0] == answer[self.test_cases]
 
             self.command = "AlphaPeel "
@@ -279,8 +294,9 @@ class TestClass:
         )
 
         self.output = read_file(self.output_file_path)
-
+        # one observation as one individual in seq file
         assert len(self.output) == 1
+        # First ID equal to "seq" (id used in sequence file)
         assert self.output[0][0] == "seq"
 
     def test_est(self):
@@ -324,7 +340,7 @@ class TestClass:
 
             self.output = read_and_sort_file(self.output_file_path)
             self.expected = read_and_sort_file(self.expected_file_path)
-
+            # Checking AlphaPeel runs so compares outputted genotypes, haplotypes, seq, and penetrance with expected.
             assert self.output == self.expected
 
             self.arguments.pop(self.test_cases)
@@ -344,15 +360,17 @@ class TestClass:
         # 0: not exist
         # 1: exist
         expect = {
-            "no_dosage": [0, 0, 1, 1, 1, 0],
-            "seg_prob": [1, 1, 1, 1, 1, 0],
+            "no_dosage": [0, 0, 0, 1, 1, 0],
+            "seg_prob": [1, 1, 0, 1, 1, 0],
+            "alt_allele_prob": [1, 0, 1, 1, 1, 0],
             "no_param": [1, 0, 0, 0, 0, 0],
-            "phased_geno_prob": [1, 0, 1, 1, 1, 1],
+            "phased_geno_prob": [1, 0, 0, 1, 1, 1],
         }
 
         for self.test_cases in [
             "no_dosage",
             "seg_prob",
+            "alt_allele_prob",
             "no_param",
             "phased_geno_prob",
         ]:
@@ -361,7 +379,11 @@ class TestClass:
 
             self.generate_command()
             os.system(self.command)
-
+            # When requested through commands, test the presents of file outputs:
+            # no_dosage, output files: alt_allele_prob, geno_error_prob, seg_error_prob
+            # seg_prob, output files: dosage, seg_prob, alt_allele_prob, geno_error_prob, seg_error_prob
+            # no_param, output file: dosage
+            # phased_geno_prob, output files: dosage, alt_allele_prob, geno_error_prob, seg_error_prob, phased_geno_prob
             assert self.check_files() == expect[self.test_cases]
 
             self.arguments.pop(self.test_cases)
@@ -420,7 +442,7 @@ class TestClass:
                 else:
                     self.output = read_and_sort_file(self.output_file_path)
                 self.expected = read_and_sort_file(self.expected_file_path)
-
+                # Check outputted dosage, phased, and seg to expected files
                 assert self.output == self.expected
 
             self.input_files.pop(-1)
@@ -464,7 +486,7 @@ class TestClass:
 
             self.output = read_and_sort_file(self.output_file_path)
             self.expected = read_and_sort_file(self.expected_file_path)
-
+            # Compares outputted seg_prob files to expected.
             assert self.output == self.expected
             self.command = "AlphaPeel "
 
@@ -533,11 +555,357 @@ class TestClass:
 
         self.output = read_file(self.output_file_path)
 
-        # no dummy individuals output
+        # Number of observations in dosage file is 6 as no dummy individuals in output.
         assert len(self.output) == 6
 
         for ind in self.output:
             assert "MotherOf" not in ind[0] and "FatherOf" not in ind[0]
+
+    def test_alt_allele_prob(self):
+        """
+        Run the test for alt_allele_prob and est_alt_allele_prob with multiple metafounders
+        """
+        self.test_name = "test_alt_allele_prob"
+        self.prepare_path()
+
+        self.input_files = ["geno_file", "ped_file"]
+        self.input_file_depend_on_test_cases = self.input_files
+        self.arguments = {"method": "multi", "out_id_only": None}
+
+        for self.test_cases in [
+            "default",
+            "alt_allele_prob_file_single",
+            "alt_allele_prob_file_multiple",
+            "update_alt_allele_prob_single",
+            "update_alt_allele_prob_multiple",
+            "both",
+            "incorrect_pedigree",
+            "default_metafounder",
+            "main_metafounder",
+            "incorrect_main_metafounder",
+            "incorrect_metafounder_in_file",
+            "missing_metafounder_in_file",
+            "extra_metafounder_in_file",
+            "metafounder_order_in_output",
+        ]:
+            # test case default: Test the default values of the alternative allele frequency
+            #                    without any input or estimation with multiple metafounders
+            #           alt_allele_prob_file_single: Test the input option alt_allele_prob_file
+            #                                   for a single metafounder
+            #           alt_allele_prob_file_multiple: Test the input option alt_allele_prob_file
+            #                                     for multiple metafounders
+            #           update_alt_allele_prob_single: Test the option alt_allele_prob_method
+            #                                       for a single metafounder
+            #           update_alt_allele_prob_multiple: Test the option alt_allele_prob_method
+            #                                         for multiple metafounders
+            #           both: Test the case when both options are used,
+            #                 whether the inputted alternative allele probabilities are used as
+            #                 a starting point for alternative allele probabilities estimation
+            #           incorrect_pedigree: Test case when a metafounder is written incorrectly as
+            #                               not a founder in the pedigree file
+            #           default_metafounder: Test case when 0 is being used as parents and
+            #                                no main metafounder is being provided as input,
+            #                                test whether 0 would be replaced by the default MF_1
+            #           main_metafounder: Test if the input option main_metafounder is working
+            #                             i.e the user defines the default metafounder where 0 is used.
+            #           incorrect_main_metafounder: Test case when the input main_metafounder does not start with MF_,
+            #                                       whether an error would be raised
+            #           incorrect_metafounder_in_file: Test case when the names of input metafounders
+            #                                          in the input alternative allele probability file do not start with MF_,
+            #                                          whether an error would be raised
+            #           missing_metafounder_in_file: Test case when a metafounder is present in the pedigree but missing in the input alternative allele probability file.
+            #           extra_metafounder_in_file: Test case when an additional metafounder is present in the input alternative allele probability file.
+            #           metafounder_order_in_output: Check the order of metafounders in the output is numerical when over 10 metafounders.
+
+            self.output_file_prefix = f"alt_allele_prob.{self.test_cases}"
+
+            if self.test_cases == "default":
+                self.output_file_to_check = "alt_allele_prob"
+                self.arguments[
+                    "alt_allele_prob"
+                ] = None  # To output the alt_allele_prob
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+
+                self.output, MF = read_and_sort_file(
+                    self.output_file_path, test_alt_allele_prob=True, decimal_place=1
+                )
+                self.expected, MF = read_and_sort_file(
+                    self.expected_file_path, test_alt_allele_prob=True, decimal_place=1
+                )
+                # Each metafounder has alt_allele_prob of 0.5 per marker
+                assert self.output == self.expected
+
+            elif self.test_cases == "alt_allele_prob_file_single":
+                # self.input_files.append("alt_allele_prob_file")
+                self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
+
+                self.output_file_to_check = "dosage"
+
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+
+                self.output = read_and_sort_file(self.output_file_path, decimal_place=1)
+                self.expected = read_and_sort_file(self.expected_file_path)
+
+                # Compares the outputted dosage file to the expected based on inputted alt_allele_prob file.
+                assert self.output == self.expected
+
+            elif self.test_cases == "alt_allele_prob_file_multiple":
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+
+                self.output = read_and_sort_file(self.output_file_path, decimal_place=1)
+                self.expected = read_and_sort_file(self.expected_file_path)
+                # Compares the outputted dosage file to the expected based on inputted alt_allele_prob file.
+                assert self.output == self.expected
+
+                # self.input_files.pop(-1)
+                self.input_file_depend_on_test_cases.pop(-1)
+
+            elif self.test_cases == "update_alt_allele_prob_single":
+                self.arguments["update_alt_allele_prob"] = None
+                self.output_file_to_check = "alt_allele_prob"
+
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+
+                self.output, MF = read_and_sort_file(
+                    self.output_file_path, test_alt_allele_prob=True
+                )
+                self.expected, MF = read_and_sort_file(
+                    self.expected_file_path, test_alt_allele_prob=True
+                )
+                # Compares alt_allele_prob output with expected when estimated by AlphaPeel for one metafounder
+                assert self.output == self.expected
+
+            elif self.test_cases == "update_alt_allele_prob_multiple":
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+
+                self.output, MF = read_and_sort_file(
+                    self.output_file_path, test_alt_allele_prob=True
+                )
+                self.expected, MF = read_and_sort_file(
+                    self.expected_file_path, test_alt_allele_prob=True
+                )
+                # Compares alt_allele_prob output with expected when estimated by AlphaPeel for multiple metafounders
+                assert self.output == self.expected
+
+            elif self.test_cases == "both":
+                self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+
+                self.output, MF = read_and_sort_file(
+                    self.output_file_path, test_alt_allele_prob=True
+                )
+                self.expected, MF = read_and_sort_file(
+                    self.expected_file_path, test_alt_allele_prob=True
+                )
+
+                # check if the estimated alt_allele_prob is 0.5
+                assert self.output == self.expected
+
+                self.arguments.pop("update_alt_allele_prob")
+
+            elif self.test_cases == "incorrect_pedigree":
+                self.generate_command()
+                exit_code = os.system(self.command)
+
+                # check if error message is in the output
+                assert exit_code in [512, 2]
+
+                self.input_file_depend_on_test_cases.pop(-1)
+
+            elif self.test_cases == "default_metafounder":
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_to_check = "alt_allele_prob"
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+
+                self.output, MF = read_and_sort_file(
+                    self.output_file_path, test_alt_allele_prob=True
+                )
+
+                # check if there is only one metafounder
+                assert len(MF) == 1
+                # check if the name of the metafounder is MF_1
+                assert MF[0] == "MF_1"
+
+            elif self.test_cases == "main_metafounder":
+                self.arguments["main_metafounder"] = "MF_test"
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+
+                self.output, MF = read_and_sort_file(
+                    self.output_file_path, test_alt_allele_prob=True
+                )
+
+                # check if there is only one metafounder
+                assert len(MF) == 1
+                # check if the name of the metafounder is MF_test
+                assert MF[0] == "MF_test"
+
+            elif self.test_cases == "incorrect_main_metafounder":
+                self.arguments["main_metafounder"] = "test"
+                self.generate_command()
+                exit_code = os.system(self.command)
+
+                # check if error message is in the output
+                assert exit_code in [512, 2]
+
+                self.arguments.pop("main_metafounder")
+
+            elif self.test_cases == "incorrect_metafounder_in_file":
+                self.input_files.append("alt_allele_prob_file")
+                self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
+
+                self.generate_command()
+                exit_code = os.system(self.command)
+
+                # check if error message is in the output
+                assert exit_code in [512, 2]
+
+            elif self.test_cases == "missing_metafounder_in_file":
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path,
+                    f"true-{self.output_file_to_check}-{self.test_cases}.txt",
+                )
+
+                self.output, MF = read_and_sort_file(
+                    self.output_file_path, test_alt_allele_prob=True
+                )
+
+                self.expected, MF = read_and_sort_file(
+                    self.expected_file_path, test_alt_allele_prob=True
+                )
+
+                # Check that the default is assigned to any metafounders present in the pedigree but not the alt_allele_prob_file
+                assert self.output == self.expected
+
+            elif self.test_cases == "extra_metafounder_in_file":
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path,
+                    f"true-{self.output_file_to_check}-{self.test_cases}.txt",
+                )
+
+                self.output, MF = read_and_sort_file(
+                    self.output_file_path, test_alt_allele_prob=True
+                )
+
+                self.expected, MF = read_and_sort_file(
+                    self.expected_file_path, test_alt_allele_prob=True
+                )
+                # Check that the extra is removed from the alt_allele_prob output
+                assert self.output == self.expected
+
+                self.input_files.pop(-1)
+                self.input_file_depend_on_test_cases.pop(-1)
+
+            elif self.test_cases == "metafounder_order_in_output":
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+
+                self.output, MF = read_and_sort_file(
+                    self.output_file_path, test_alt_allele_prob=True
+                )
+
+                # Check that the metafounders are in the correct order in the output
+                print(MF)
+                assert MF == [
+                    "MF_1",
+                    "MF_2",
+                    "MF_3",
+                    "MF_4",
+                    "MF_5",
+                    "MF_6",
+                    "MF_7",
+                    "MF_8",
+                    "MF_9",
+                    "MF_10",
+                    "MF_11",
+                    "MF_12",
+                ]
+
+            self.command = "AlphaPeel "
 
     # TODO test_plink for PLINK
     #      a. binary PLINK output

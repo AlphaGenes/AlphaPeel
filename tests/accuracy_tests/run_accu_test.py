@@ -36,6 +36,9 @@ def generate_command(
     est_geno_error_prob,
     est_seq_error_prob,
     seq_file,
+    alt_allele_prob_file,
+    update_alt_allele_prob,
+    metafounder,
     output_path,
 ):
     command = "AlphaPeel "
@@ -58,17 +61,24 @@ def generate_command(
     if est_geno_error_prob and est_seq_error_prob:
         arguments["est_geno_error_prob"] = None
         arguments["est_seq_error_prob"] = None
+    if update_alt_allele_prob:
+        arguments["update_alt_allele_prob"] = None
     if seq_file:
         input_file.append("seq_file")
     else:
         input_file.append("geno_file")
+    if alt_allele_prob_file:
+        input_file.append("alt_allele_prob_file")
     if method == "hybrid":
         input_file.append("map_file")
         input_file.append("seg_map_file")
         input_file.append("seg_file")
-
-    for file in input_file:
-        command += f"-{file} {os.path.join(sim_path, f'{file}.txt')} "
+    if metafounder:
+        for file in input_file:
+            command += f"-{file} {os.path.join(sim_path, f'metafounder_{file}.txt')} "
+    else:
+        for file in input_file:
+            command += f"-{file} {os.path.join(sim_path, f'{file}.txt')} "
 
     for key, value in arguments.items():
         if value is not None:
@@ -121,17 +131,24 @@ def get_ind_accu(output, real, nIndPerGen, n_row_per_ind, gen=None):
         return round(np.nanmean(accus), 3)
 
 
-def assess_peeling(sim_path, get_params, output_path, name, method):
+def assess_peeling(sim_path, get_params, output_path, name, method, metafounder):
     """
     Assess the performance of the peeling
     """
-    file_to_check = [
-        "dosage",
-        "geno_0.3333333333333333",
-        "hap_0.5",
-        "geno_prob",
-        "phased_geno_prob",
-    ]
+    if metafounder:
+        file_to_check = [
+            "dosage",
+            "geno_prob",
+            "phased_geno_prob",
+        ]
+    else:
+        file_to_check = [
+            "dosage",
+            "geno_0.3333333333333333",
+            "hap_0.5",
+            "geno_prob",
+            "phased_geno_prob",
+        ]
     if method == "multi":
         file_to_check.append("seg_prob")
 
@@ -153,12 +170,18 @@ def assess_peeling(sim_path, get_params, output_path, name, method):
             n_row_per_ind = 2
 
         file_path = os.path.join(output_path, f".{file}.txt")
-        true_path = os.path.join(sim_path, f"true-{file}.txt")
+        if metafounder:
+            true_path = os.path.join(sim_path, f"true-metafounder_{file}.txt")
+        else:
+            true_path = os.path.join(sim_path, f"true-{file}.txt")
 
         new_file = np.loadtxt(file_path, usecols=np.arange(1, nLociAll + 1))
         true_file = np.loadtxt(true_path, usecols=np.arange(1, nLociAll + 1))
 
-        print(f"File: {file}")
+        if metafounder:
+            print(f"File: metafounder_{file}")
+        else:
+            print(f"File: {file}")
 
         Marker_accu = [str(get_marker_accu(new_file[:, 1:], true_file[:, 1:]))]
         for gen in range(nGen):
@@ -201,30 +224,68 @@ def assess_peeling(sim_path, get_params, output_path, name, method):
 
 
 @pytest.mark.parametrize(
-    "method, est_alt_allele_prob, est_geno_error_prob, est_seq_error_prob, seq_file",
+    "method, est_alt_allele_prob, est_geno_error_prob, est_seq_error_prob, seq_file, alt_allele_prob_file, update_alt_allele_prob, metafounder",
     [
-        ("single", None, None, None, None),
-        ("single", "est_alt_allele_prob", None, None, None),
-        ("multi", None, None, None, None),
-        ("multi", "est_alt_allele_prob", None, None, None),
+        ("single", None, None, None, None, None, None, None),
+        ("single", "est_alt_allele_prob", None, None, None, None, None, None),
+        ("multi", None, None, None, None, None, None, None),
+        ("multi", "est_alt_allele_prob", None, None, None, None, None, None),
         (
             "multi",
             "est_alt_allele_prob",
             "est_geno_error_prob",
             "est_seq_error_prob",
             None,
+            None,
+            None,
+            None,
         ),
-        ("multi", None, None, None, "seq_file"),
-        ("multi", "est_alt_allele_prob", None, None, "seq_file"),
+        ("multi", None, None, None, "seq_file", None, None, None),
+        ("multi", "est_alt_allele_prob", None, None, "seq_file", None, None, None),
         (
             "multi",
             "est_alt_allele_prob",
             "est_geno_error_prob",
             "est_seq_error_prob",
             "seq_file",
+            None,
+            None,
+            None,
         ),
-        ("hybrid", None, None, None, None),
-        ("hybrid", None, None, None, "seq_file"),
+        ("hybrid", None, None, None, None, None, None, None),
+        ("hybrid", None, None, None, "seq_file", None, None, None),
+        ("single", None, None, None, None, "alt_allele_prob_file", None, "metafounder"),
+        ("single", "est_alt_allele_prob", None, None, None, None, None, "metafounder"),
+        (
+            "single",
+            None,
+            None,
+            None,
+            None,
+            None,
+            "update_alt_allele_prob",
+            "metafounder",
+        ),
+        (
+            "single",
+            "est_alt_allele_prob",
+            None,
+            None,
+            None,
+            None,
+            "update_alt_allele_prob",
+            "metafounder",
+        ),
+        (
+            "single",
+            None,
+            None,
+            None,
+            None,
+            "alt_allele_prob_file",
+            "update_alt_allele_prob",
+            "metafounder",
+        ),
     ],
 )
 def test_accu(
@@ -234,6 +295,9 @@ def test_accu(
     est_geno_error_prob,
     est_seq_error_prob,
     seq_file,
+    alt_allele_prob_file,
+    update_alt_allele_prob,
+    metafounder,
     sim_path,
     benchmark,
 ):
@@ -248,6 +312,9 @@ def test_accu(
                     est_geno_error_prob,
                     est_seq_error_prob,
                     seq_file,
+                    alt_allele_prob_file,
+                    update_alt_allele_prob,
+                    metafounder,
                 ],
             )
         ]
@@ -269,6 +336,9 @@ def test_accu(
                         est_geno_error_prob,
                         est_seq_error_prob,
                         seq_file,
+                        alt_allele_prob_file,
+                        update_alt_allele_prob,
+                        metafounder,
                     ],
                 )
             ]
@@ -293,9 +363,12 @@ def test_accu(
         est_geno_error_prob,
         est_seq_error_prob,
         seq_file,
+        alt_allele_prob_file,
+        update_alt_allele_prob,
+        metafounder,
         output_path,
     )
 
     benchmark(os.system, command)
 
-    assess_peeling(sim_path, get_params, output_path, name, method)
+    assess_peeling(sim_path, get_params, output_path, name, method, metafounder)

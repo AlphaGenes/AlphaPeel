@@ -72,7 +72,33 @@ def writeOutParamaters(peelingInfo):
         args.out_file + ".rec_prob.txt", np.empty((1, 1)), fmt="%f"
     )  # not be realized, just as a placeholder
     # np.savetxt(args.out_file + ".trans", peelingInfo.transmissionRate, fmt = "%f")
-    np.savetxt(args.out_file + ".alt_allele_prob.txt", peelingInfo.maf, fmt="%f")
+    # np.savetxt(args.out_file + ".alt_allele_prob.txt", peelingInfo.maf, fmt="%f")
+
+
+def writeOutAltAlleleProb(pedigree):
+    args = InputOutput.args
+
+    # Custom sorting key to extract numeric part of metafounder keys if it's an integer
+    def sort_key(mf_key):
+        part = mf_key.split("_")[1]
+        return (0, int(part)) if part.isdigit() else (1, part)
+
+    # Order the metafounders: MF_1, MF_2, ..., MF_11, etc., otherwise keep original order
+    sorted_AAP = dict(sorted(pedigree.AAP.items(), key=lambda item: sort_key(item[0])))
+    sorted_MF = list(sorted_AAP.keys())
+    # Combine data into a single 2D array
+    combined_AAP = np.hstack(
+        [sorted_AAP[key].reshape(pedigree.nLoci, -1) for key in sorted_MF]
+    )
+    # Save into text file with metafounders heading columns
+    np.savetxt(
+        args.out_file + ".alt_allele_prob.txt",
+        combined_AAP,
+        delimiter="\t",
+        fmt="%.2f",
+        header="\t".join(sorted_MF),
+        comments="",
+    )
 
 
 def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
