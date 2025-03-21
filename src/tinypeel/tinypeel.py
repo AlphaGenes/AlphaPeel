@@ -28,6 +28,14 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
                     pedigree.AAP[mfx] = np.full(
                         peelingInfo.nLoci, 0.5, dtype=np.float32
                     )
+                else:
+                    AAP = pedigree.AAP[mfx]
+                    for i in range(peelingInfo.nLoci):
+                        if AAP[i] < 0.01:
+                            AAP[i] = 0.01
+                        elif AAP[i] > 0.99:
+                            AAP[i] = 0.99
+                    pedigree.AAP[mfx] = AAP.astype(np.float32)
                 aaf = pedigree.AAP[mfx]
                 aafGeno = ProbMath.getGenotypesFromMaf(aaf)
                 peelingInfo.anterior[ind.idn, :, :] = aafGeno
@@ -48,6 +56,10 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
                         peelingInfo.nLoci, 0.5, dtype=np.float32
                     )
     if args.est_alt_allele_prob:
+        if args.alt_allele_prob_file is not None and len(pedigree.AAP) > 1:
+            warnings.warn(
+                "-est_alt_allele_prob will overwrite any differences between metafounders. To avoid this, please use -update_alt_allele_prob instead"
+            )
         PeelingUpdates.updateMaf(pedigree, peelingInfo)
     for i in range(args.n_cycle):
         print("Cycle ", i)
@@ -60,6 +72,9 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
         # PeelingUpdates.updateSeg(peelingInfo) #Option currently disabled.
         if args.est_geno_error_prob or args.est_seq_error_prob:
             PeelingUpdates.updatePenetrance(pedigree, peelingInfo, args)
+        if args.update_alt_allele_prob:
+            print("Updating Alternative Allele Frequencies")
+            PeelingUpdates.updateMafAfterPeeling(pedigree, peelingInfo)
 
 
 def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
@@ -571,7 +586,13 @@ def getArgs():
         "-est_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Flag to re-estimate the alternative allele probabilities for each metafounder after each peeling cycle.",
+        help="Flag to estimate the alternative allele frequency using all observed genotypes prior to peeling.",
+    )
+    peeling_control_parser.add_argument(
+        "-update_alt_allele_prob",
+        action="store_true",
+        required=False,
+        help="Flag to re-estimate the alternative allele frequencies for each metafounder after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
         "-no_phase_founder",
