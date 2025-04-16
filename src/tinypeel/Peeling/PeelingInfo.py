@@ -26,13 +26,17 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
     peelingInfo.positions = None
 
     # Generate the segregation tensors.
-    peelingInfo.segregationTensor = ProbMath.generateSegregation(e=1e-06)
-    peelingInfo.segregationTensor_norm = ProbMath.generateSegregation(
-        e=1e-06, partial=True
+    peelingInfo.segregationTensor = ProbMath.generateSegregation_mu(mu=1e-08)
+    peelingInfo.segregationTensor_norm = ProbMath.generateSegregation_mu(
+        mu=1e-08, partial=True
     )  # Partial gives the normalizing constant.
 
-    peelingInfo.segregationTensorXY = ProbMath.generateSegregationXYChrom(e=1e-06)
-    peelingInfo.segregationTensorXX = ProbMath.generateSegregationXXChrom(e=1e-06)
+    peelingInfo.segregationTensorXY = ProbMath.generateSegregationXYChrom(mu=1e-08)
+    peelingInfo.segregationTensorXY_norm = ProbMath.generateSegregationXYChrom(
+        mu=1e-08, partial=True)
+    peelingInfo.segregationTensorXX = ProbMath.generateSegregationXXChrom(mu=1e-08)
+    peelingInfo.segregationTensorXX_norm = ProbMath.generateSegregationXXChrom(
+        mu=1e-08, partial=True)
 
     peelingInfo.genoError[:] = args.geno_error_prob
     peelingInfo.seqError[:] = args.seq_error_prob
@@ -206,6 +210,8 @@ spec["segregationTensor_norm"] = optional(
 )  # Note: This one is a bit smaller.
 spec["segregationTensorXX"] = optional(float32[:, :, :, :])
 spec["segregationTensorXY"] = optional(float32[:, :, :, :])
+spec["segregationTensorXX_norm"] = optional(float32[:, :, :])
+spec["segregationTensorXY_norm"] = optional(float32[:, :, :])
 
 # Marker specific rates:
 spec["genoError"] = optional(float32[:])
@@ -233,6 +239,11 @@ class jit_peelingInformation(object):
         self.positions = None
         self.segregationTensor = None
         self.segregationTensor_norm = None
+
+        self.segregationTensorXY = None
+        self.segregationTensorXY_norm = None
+        self.segregationTensorXX = None
+        self.segregationTensorXX_norm = None
 
     def construct(self, createSeg=True):
         baseValue = 0.25

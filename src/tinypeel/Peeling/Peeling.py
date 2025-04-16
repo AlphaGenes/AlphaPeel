@@ -16,7 +16,7 @@ PEEL_DOWN = 1
 def peel(family, operation, peelingInfo, singleLocusMode):
     isSexChrom = peelingInfo.isSexChrom
 
-    e = 0.000001
+    e = 0
     e1e = 1 - e
     e4 = e / 4
 
@@ -105,8 +105,10 @@ def peel(family, operation, peelingInfo, singleLocusMode):
 
         if isSexChrom and peelingInfo.sex[child] == 0:  # 0 for male, 1 for female.
             segregationTensor = peelingInfo.segregationTensorXY
+            segregationTensor_norm = peelingInfo.segregationTensorXY_norm
         if isSexChrom and peelingInfo.sex[child] == 1:  # 0 for male, 1 for female.
             segregationTensor = peelingInfo.segregationTensorXX
+            segregationTensor_norm = peelingInfo.segregationTensorXX_norm
 
         # Einstien sum notation 2: Create the child-specific segregation tensor using the child's currrent segregation estimate.
         # childSegTensor[index,:,:,:,:] = np.einsum("abcd, di -> abci", segregationTensor, currentSeg)
@@ -206,8 +208,10 @@ def peel(family, operation, peelingInfo, singleLocusMode):
 
             if isSexChrom and peelingInfo.sex[child] == 0:  # 0 for male, 1 for female.
                 segregationTensor = peelingInfo.segregationTensorXY
+                segregationTensor_norm = peelingInfo.segregationTensorXY_norm
             if isSexChrom and peelingInfo.sex[child] == 1:  # 0 for male, 1 for female.
                 segregationTensor = peelingInfo.segregationTensorXX
+                segregationTensor_norm = peelingInfo.segregationTensorXX_norm
 
             # Einstien sum notation 5:
             # pointSeg[child,:,:] = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild[i,:,:,:], childValues)
