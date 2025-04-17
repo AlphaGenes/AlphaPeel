@@ -274,6 +274,13 @@ def get_probability_options():
         type=float,
         help="Sequencing error rate. Default: 0.001.",
     )
+    parse_dictionary["mutation_rate"] = lambda parser: parser.add_argument(
+        "-mutation_rate",
+        default=1e-8,
+        required=False,
+        type=float,
+        help="mutation rate. Default: 1e-8.",
+    )
 
     return parse_dictionary
 
@@ -566,7 +573,7 @@ def getArgs():
     InputOutput.add_arguments_from_dictionary(
         peeling_parser,
         get_probability_options(),
-        options=["geno_error_prob", "seq_error_prob"],
+        options=["geno_error_prob", "seq_error_prob", "mutation_rate"],
     )
 
     peeling_control_parser = parser.add_argument_group("Peeling control arguments")

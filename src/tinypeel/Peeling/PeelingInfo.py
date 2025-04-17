@@ -25,18 +25,25 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
     # Information about the peeling positions are handled elsewhere.
     peelingInfo.positions = None
 
+    mutation_rate = args.mutation_rate
     # Generate the segregation tensors.
-    peelingInfo.segregationTensor = ProbMath.generateSegregation_mu(mu=1e-08)
+    peelingInfo.segregationTensor = ProbMath.generateSegregation_mu(mu=mutation_rate)
     peelingInfo.segregationTensor_norm = ProbMath.generateSegregation_mu(
-        mu=1e-08, partial=True
+        mu=mutation_rate, partial=True
     )  # Partial gives the normalizing constant.
 
-    peelingInfo.segregationTensorXY = ProbMath.generateSegregationXYChrom(mu=1e-08)
+    peelingInfo.segregationTensorXY = ProbMath.generateSegregationXYChrom(
+        mu=mutation_rate
+    )
     peelingInfo.segregationTensorXY_norm = ProbMath.generateSegregationXYChrom(
-        mu=1e-08, partial=True)
-    peelingInfo.segregationTensorXX = ProbMath.generateSegregationXXChrom(mu=1e-08)
+        mu=mutation_rate, partial=True
+    )
+    peelingInfo.segregationTensorXX = ProbMath.generateSegregationXXChrom(
+        mu=mutation_rate
+    )
     peelingInfo.segregationTensorXX_norm = ProbMath.generateSegregationXXChrom(
-        mu=1e-08, partial=True)
+        mu=mutation_rate, partial=True
+    )
 
     peelingInfo.genoError[:] = args.geno_error_prob
     peelingInfo.seqError[:] = args.seq_error_prob

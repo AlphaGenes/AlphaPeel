@@ -131,12 +131,13 @@ Peeling arguments
                             Genotyping error rate. [Default 0.0001]
       -seq_error_prob SEQ_ERROR_PROB
                             Sequencing error rate. [Default 0.001]
-
+      -mutation_rate MUTATION_RATE
+                            mutation rate. [Default 1e-8]
 ``-method`` controls whether the program is run in "single-locus" or "multi-locus" model. Single locus mode does not use linkage information to perform imputation. It is fast, but not very accurate. Multi-locus mode runs multi-locus iterative peeling which uses linkage information to increase accuracy and calculate segregation values.
 
 For hybrid peeling, where a large amount (millions of segregating sites) of sequence allele read counts needs to be imputed, first run the program in multi-locus mode to generate a segregation file, and then run the program in single-locus mode with a known segregation file.
 
-The ``-geno_error_prob``, ``-seq_error_prob`` and ``-rec_length`` arguments control some of the model parameters used in the model. ``-seq_error_prob`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
+The ``-geno_error_prob``, ``-seq_error_prob``, ``-mutation_rate`` and ``-rec_length`` arguments control some of the model parameters used in the model. ``-seq_error_prob`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
 
 The ``-est_geno_error_prob`` and ``-est_seq_error_prob`` options estimate the genotyping error rate and the sequencing error rate based on miss-match between observed and inferred states. This option is generally not necessary and can increase runtime. ``-est_alt_allele_prob`` estimates the alternative allele frequency for the base population before peeling using all available genotypes. This option can be useful if there are a large number of non-genotyped founders. ``-update_alt_allele_prob`` re-estimates the alternative allele frequencies per metafounder after each peeling cycle using the inferred genotype probabilities of the founders. 
 
