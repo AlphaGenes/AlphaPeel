@@ -42,7 +42,7 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
                 )
 
             if idx not in pedigree.individuals:
-                print(f"Individual {idx} not found in pedigree. Individual ignored.")
+                print(f"Individual {idx} is found not in pedigree. Individual ignored.")
             else:
                 ind = pedigree.individuals[idx]
                 if e == 0:
@@ -198,31 +198,36 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
                     )
 
 
-def writeDosages(pedigree, genoProbFunc, isSexChrom, outputFile):
+def writeDosages(pedigree, genoProbFunc, isSexChrom, outputFile):  # remove isSexChrom,
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
-            matrix = np.dot(np.array([0, 1, 1, 2]), genoProbFunc(ind.idn))
-
             if isSexChrom and ind.sex == 0:
-                matrix *= 2
-
+                tmp = np.array([0, 1, 0, 1])
+            else:
+                tmp = np.array([0, 1, 1, 2])
+            matrix = np.dot(tmp, genoProbFunc(ind.idn))
             f.write(ind.idx + " " + " ".join(map("{:.4f}".format, matrix)) + "\n")
 
 
-def writeCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, thresh):
+def writeCalledGenotypes(
+    pedigree, genoProbFunc, isSexChrom, outputFile, thresh
+):  # isSexChrom,
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
+            if isSexChrom and ind.sex == 0:
+                matrixCollapsedHets = np.array(
+                    [matrix[0, :] + matrix[2, :], matrix[1, :] + matrix[3, :]],
+                    dtype=np.float32,
+                )
+            else:
+                matrixCollapsedHets = np.array(
+                    [matrix[0, :], matrix[1, :] + matrix[2, :], matrix[3, :]],
+                    dtype=np.float32,
+                )
 
-            matrixCollapsedHets = np.array(
-                [matrix[0, :], matrix[1, :] + matrix[2, :], matrix[3, :]],
-                dtype=np.float32,
-            )
             calledGenotypes = np.argmax(matrixCollapsedHets, axis=0)
             setMissing(calledGenotypes, matrixCollapsedHets, thresh)
-            if isSexChrom and ind.sex == 0:
-                doubleIfNotMissing(calledGenotypes)
-
             f.write(ind.idx + " " + " ".join(map(str, calledGenotypes)) + "\n")
 
 
@@ -250,7 +255,9 @@ def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
             f.write(ind.idx + " " + " ".join(map(str, maternal_haplotype)) + "\n")
 
 
-def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, thresh):
+def writeBinaryCalledGenotypes(
+    pedigree, genoProbFunc, isSexChrom, outputFile, thresh
+):  # remve isSexChrom,
     for idx, ind in pedigree.writeOrder():
         matrix = genoProbFunc(ind.idn)
         matrixCollapsedHets = np.array(
@@ -258,8 +265,8 @@ def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, t
         )
         calledGenotypes = np.argmax(matrixCollapsedHets, axis=0)
         setMissing(calledGenotypes, matrixCollapsedHets, thresh)
-        if isSexChrom and ind.sex == 0:
-            doubleIfNotMissing(calledGenotypes)
+        # if isSexChrom and ind.sex == 0:
+        #     doubleIfNotMissing(calledGenotypes)
         ind.genotypes = calledGenotypes.astype(np.int8)
 
     InputOutput.writeOutGenotypesPlink(pedigree, outputFile)
