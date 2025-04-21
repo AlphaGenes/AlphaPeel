@@ -265,19 +265,11 @@ def writeBinaryCalledGenotypes(
         )
         calledGenotypes = np.argmax(matrixCollapsedHets, axis=0)
         setMissing(calledGenotypes, matrixCollapsedHets, thresh)
-        # if isSexChrom and ind.sex == 0:
-        #     doubleIfNotMissing(calledGenotypes)
         ind.genotypes = calledGenotypes.astype(np.int8)
 
     InputOutput.writeOutGenotypesPlink(pedigree, outputFile)
 
 
-@jit(nopython=True)
-def doubleIfNotMissing(calledGenotypes):
-    nLoci = len(calledGenotypes)
-    for i in range(nLoci):
-        if calledGenotypes[i] == 1:
-            calledGenotypes[i] = 2
 
 
 @jit(nopython=True)
