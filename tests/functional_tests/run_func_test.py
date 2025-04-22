@@ -455,12 +455,15 @@ class TestClass:
     def test_sex(self):
         """
         Run the test of the sex chromosome functionality of AlphaPeel
-        -sex_chrom still under development...
         """
         self.test_name = "test_sex"
         self.prepare_path()
 
-        self.arguments = {"method": "multi", "sex_chrom": None, "seg_prob": None}
+        self.arguments = {
+            "method": "multi",
+            "sex_chrom": "sex_chrom",
+            "seg_prob": "seg_prob",
+        }
         self.input_files = ["geno_file", "seq_file", "ped_file"]
         self.input_file_depend_on_test_cases = ["geno_file", "seq_file"]
 
