@@ -270,8 +270,6 @@ def writeBinaryCalledGenotypes(
     InputOutput.writeOutGenotypesPlink(pedigree, outputFile)
 
 
-
-
 @jit(nopython=True)
 def setMissing(calledGenotypes, matrix, thresh):
     nLoci = len(calledGenotypes)
