@@ -195,10 +195,15 @@ def updatePenetrance(pedigree, peelingInfo, args):
         ):
             loci = PeelingInfo.getHetMidpoint(ind.genotypes)
             if loci is not None:
-                e = peelingInfo.genoError[loci]
-                peelingInfo.penetrance[ind.idn, :, loci] = np.array(
-                    [e / 3, e / 3, 1 - e, e / 3], dtype=np.float32
-                )
+                error = peelingInfo.genoError[loci]
+                if sexChromFlag:
+                    peelingInfo.penetrance[ind.idn, :, loci] = np.array(
+                        [error / 3, 1 - error, error / 3, error / 3], dtype=np.float32
+                    )
+                else:
+                    peelingInfo.penetrance[ind.idn, :, loci] = np.array(
+                        [error / 3, error / 3, 1 - error, error / 3], dtype=np.float32
+                    )
 
 
 def updateGenoError(pedigree, peelingInfo):
