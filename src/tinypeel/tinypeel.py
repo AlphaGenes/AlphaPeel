@@ -19,7 +19,7 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     """
     This function sets up and runs each of the peeling cycles (default is 5).
     The set up includes:
-    - saving the alternative allele probabilities for each metafounder 
+    - saving the alternative allele probabilities for each metafounder
         - either with default of 0.5 or the -alt_allele_prob_file option input.
         - using the est_alt_allele_prob option to estimate the alternative allele frequency.
     - user warnings if metafounder is not in pedigree, or est_alt_allele_prob is used with -alt_allele_prob_file.
@@ -264,8 +264,8 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
     """
     This function:
         If the -seg_file option is used,
-        - collects the segregation file, 
-        - reads in the SNP and segregation map files, 
+        - collects the segregation file,
+        - reads in the SNP and segregation map files,
         - calculates the loci and distance from each SNP
         - adjust loci indices to align with segregation file
         - interpolates the segregation probabilities based on the distance and segregation probabilities at the two neighbouring markers.
@@ -298,7 +298,7 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
 
 def get_probability_options():
     """
-    This function collects potential user inputs for genotype error rate and sequencing error rate, 
+    This function collects potential user inputs for genotype error rate and sequencing error rate,
     otherwise the default is 0.0001 and 0.01 respectively.
     """
     parse_dictionary = dict()
@@ -631,7 +631,7 @@ def getArgs():
         required=False,
         type=str,
         nargs="*",
-        help=argparse.SUPPRESS, # This argument will not appear in the help message, but is still available to use.
+        help=argparse.SUPPRESS,  # This argument will not appear in the help message, but is still available to use.
     )  # help='An optional external penetrance file. This will overwrite the default penetrance values.')
     InputOutput.add_arguments_from_dictionary(
         peeling_parser,
