@@ -16,6 +16,18 @@ import argparse
 
 
 def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
+    """
+    This function sets up and runs each of the peeling cycles (default is 5).
+    The set up includes:
+    - saving the alternative allele probabilities for each metafounder 
+        - either with default of 0.5 or the -alt_allele_prob_file option input.
+        - using the est_alt_allele_prob option to estimate the alternative allele frequency.
+    - user warnings if metafounder is not in pedigree, or est_alt_allele_prob is used with -alt_allele_prob_file.
+    Running the peeling cycles includes:
+    - peeling down and up for each generation
+    - collecting iterations
+    - updating alternative allele frequencies for each metafounder, genotyping error rate, and sequencing error rate if the options are selected.
+    """
     # Right now maf _only_ uses the penetrance so can be estimated once.
     if args.alt_allele_prob_file is not None:
         mf_pedigree = []
@@ -78,6 +90,10 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
 
 
 def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
+    """
+    This function runs a single peeling cycle.
+    Starts with peeling down, then peeling up.
+    """
     nWorkers = args.maxthreads
 
     for index, generation in enumerate(pedigree.generations):
@@ -135,6 +151,9 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
 
 
 def updatePosterior(pedigree, peelingInfo, sires, dams):
+    """
+    Update the posterior term for a specific set of sires and dams.
+    """
     # if pedigree.mapSireToFamilies is None or pedigree.mapDamToFamilies is None:
     #     pedigree.setupFamilyMap()
 
@@ -146,6 +165,9 @@ def updatePosterior(pedigree, peelingInfo, sires, dams):
 
 
 def updateSire(sire, peelingInfo):
+    """
+    Update the posterior term for a specific sire.
+    """
     famList = [fam.idn for fam in sire.families]
     sire = sire.idn
     peelingInfo.posterior[sire, :, :] = 0
@@ -175,6 +197,9 @@ def updateSire(sire, peelingInfo):
 
 
 def updateDam(dam, peelingInfo):
+    """
+    Update the posterior term for a specific dam.
+    """
     famList = [fam.idn for fam in dam.families]
     dam = dam.idn
     peelingInfo.posterior[dam, :, :] = 0
@@ -202,6 +227,9 @@ def updateDam(dam, peelingInfo):
 
 
 def getLociAndDistance(snpMap, segMap):
+    """
+    This function takes the snpMap and segMap and returns the loci and distance for each snp.
+    """
     nSnp = len(snpMap)
     distance = np.full(nSnp, 0, dtype=np.float32)
     loci = np.full((nSnp, 2), 0, dtype=np.int64)
@@ -233,6 +261,16 @@ def getLociAndDistance(snpMap, segMap):
 
 
 def generateSingleLocusSegregation(peelingInfo, pedigree, args):
+    """
+    This function:
+        If the -seg_file option is used,
+        - collects the segregation file, 
+        - reads in the SNP and segregation map files, 
+        - calculates the loci and distance from each SNP
+        - adjust loci indices to align with segregation file
+        - interpolates the segregation probabilities based on the distance and segregation probabilities at the two neighbouring markers.
+        Otherwise, the segregation probabilities are set to 0.25.
+    """
     if args.segfile is not None:
         # This just gets the locations in the map files.
         snpMap = np.array(
@@ -259,6 +297,10 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
 
 
 def get_probability_options():
+    """
+    This function collects potential user inputs for genotype error rate and sequencing error rate, 
+    otherwise the default is 0.0001 and 0.01 respectively.
+    """
     parse_dictionary = dict()
     parse_dictionary["geno_error_prob"] = lambda parser: parser.add_argument(
         "-geno_error_prob",
@@ -279,6 +321,20 @@ def get_probability_options():
 
 
 def get_input_options():
+    """
+    This function collects the input options of the program as a dictionary. The options are:
+    -plink_file: bfile
+    -geno_file: genotypes
+    -reference: reference
+    -seq_file: seqfile
+    -ped_file: pedigree
+    -hap_file: phasefile
+    -alt_allele_prob_file: alt_allele_prob_file
+    -start_snp: startsnp
+    -stop_snp: stopsnp
+    -main_metafounder: main_metafounder
+    -seed: seed (for debugging)
+    """
     parse_dictionary = dict()
     parse_dictionary["bfile"] = lambda parser: parser.add_argument(
         "-plink_file",
@@ -369,6 +425,12 @@ def get_input_options():
 
 
 def get_output_options():
+    """
+    This function collects the optional output options of the program as a dictionary. The options are:
+    -out_id_order: writekey (write in the same order as pedigree input)
+    -out_id_only: onlykeyed (only include individuals from the pedigree input)
+    -iothreads: iothreads
+    """
     parse_dictionary = dict()
 
     parse_dictionary["writekey"] = lambda parser: parser.add_argument(
@@ -396,6 +458,11 @@ def get_output_options():
 
 
 def get_multithread_options():
+    """
+    This function collects the optional multithread options of the program as a dictionary. The options are:
+    -n_io_thread: iothreads
+    -n_thread: maxthreads
+    """
     parse_dictionary = dict()
     parse_dictionary["iothreads"] = lambda parser: parser.add_argument(
         "-n_io_thread",
@@ -418,6 +485,9 @@ def get_multithread_options():
 
 
 def getArgs():
+    """
+    This function collects the arguments from the command line and returns them as a dictionary.
+    """
     parser = argparse.ArgumentParser(description="")
     core_parser = parser.add_argument_group("Core arguments")
     core_parser.add_argument(
@@ -561,7 +631,7 @@ def getArgs():
         required=False,
         type=str,
         nargs="*",
-        help=argparse.SUPPRESS,
+        help=argparse.SUPPRESS, # This argument will not appear in the help message, but is still available to use.
     )  # help='An optional external penetrance file. This will overwrite the default penetrance values.')
     InputOutput.add_arguments_from_dictionary(
         peeling_parser,
@@ -635,6 +705,9 @@ def getArgs():
 
 
 def main():
+    """
+    Main function for the AlphaPeel program. This function collects the arguments from the command line and runs the peeling algorithm.
+    """
     args = getArgs()
     if args.start_snp:
         args.start_snp -= 1

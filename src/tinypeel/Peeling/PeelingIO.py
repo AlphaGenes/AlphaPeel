@@ -4,6 +4,9 @@ from ..tinyhouse import InputOutput
 
 
 def readInSeg(pedigree, fileName, start=None, stop=None):
+    """
+    Reads in a segregation file and returns a 3D numpy array of segregation probabilities.
+    """
     print("Reading in seg file:", fileName)
     if start is None:
         start = 0
@@ -64,6 +67,9 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
 
 
 def writeOutParamaters(peelingInfo):
+    """
+    Writes out the geno error rate, seq error rate, and recombination probabilities.
+    """
     args = InputOutput.args
 
     np.savetxt(args.out_file + ".geno_error_prob.txt", peelingInfo.genoError, fmt="%f")
@@ -76,6 +82,9 @@ def writeOutParamaters(peelingInfo):
 
 
 def writeOutAltAlleleProb(pedigree):
+    """
+    Writes out the alternative allele probabilities for each locus and metafounder in the pedigree.
+    """
     args = InputOutput.args
 
     # Custom sorting key to extract numeric part of metafounder keys if it's an integer
@@ -102,6 +111,14 @@ def writeOutAltAlleleProb(pedigree):
 
 
 def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
+    """
+    Writes out the genotypes for each individual. This has multiple options:
+    - Dosages
+    - Phased genotype probabilities
+    - Genotype probabilities
+    - Called genotypes (based on user inputted threshold or default 1/3)
+    - Called haplotypes (based on user inputted threshold or default 1/2)
+    """
     args = InputOutput.args
     if not args.no_dosage:
         writeDosages(pedigree, genoProbFunc, isSexChrom, args.out_file + ".dosage.txt")
@@ -148,6 +165,9 @@ def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
 
 
 def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
+    """
+    Function to write the phased genotype probabilities to a file.
+    """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
@@ -159,6 +179,9 @@ def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
 
 
 def writeGenoProbs(pedigree, genoProbFunc, outputFile):
+    """
+    Function to write out the non phased genotype probabilities to file.
+    """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
@@ -183,6 +206,9 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
 
 
 def writeDosages(pedigree, genoProbFunc, isSexChrom, outputFile):
+    """
+    Function to write out the dosages to file.
+    """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = np.dot(np.array([0, 1, 1, 2]), genoProbFunc(ind.idn))
@@ -194,6 +220,9 @@ def writeDosages(pedigree, genoProbFunc, isSexChrom, outputFile):
 
 
 def writeCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, thresh):
+    """
+    Function to write out the called genotypes to file.
+    """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
@@ -211,6 +240,9 @@ def writeCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, thresh)
 
 
 def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
+    """
+    Function to write out the called haplotypes to file.
+    """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
@@ -235,6 +267,9 @@ def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
 
 
 def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, thresh):
+    """
+    Function to write out the called genotypes to file in binary format.
+    """
     for idx, ind in pedigree.writeOrder():
         matrix = genoProbFunc(ind.idn)
         matrixCollapsedHets = np.array(
@@ -251,6 +286,9 @@ def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, t
 
 @jit(nopython=True)
 def doubleIfNotMissing(calledGenotypes):
+    """
+    Function to double the called genotype, used for (female) sex chromosomes.
+    """
     nLoci = len(calledGenotypes)
     for i in range(nLoci):
         if calledGenotypes[i] == 1:
@@ -259,6 +297,9 @@ def doubleIfNotMissing(calledGenotypes):
 
 @jit(nopython=True)
 def setMissing(calledGenotypes, matrix, thresh):
+    """
+    Function to set the called genotypes to missing if the probability is below the threshold.
+    """
     nLoci = len(calledGenotypes)
     for i in range(nLoci):
         if matrix[calledGenotypes[i], i] <= thresh:
@@ -266,6 +307,9 @@ def setMissing(calledGenotypes, matrix, thresh):
 
 
 def fullOutput(pedigree, peelingInfo, args):
+    """
+    Function to write out the full output of the peeling process (for testing purposes).
+    """
     InputOutput.writeIdnIndexedMatrix(
         pedigree, peelingInfo.penetrance, args.out_file + ".penetrance"
     )
