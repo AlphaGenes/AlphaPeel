@@ -14,6 +14,11 @@ PEEL_DOWN = 1
     locals={"e": float32, "e4": float32, "e16": float32, "e1e": float32},
 )
 def peel(family, operation, peelingInfo, singleLocusMode):
+    """
+    This function performs the peeling operation on a family of individuals.
+    peelingInfo is updated via the locally created variables.
+    The operation is either PEEL_UP (0) or PEEL_DOWN (1).
+    """
     isSexChrom = peelingInfo.isSexChrom
 
     e = 0.000001
@@ -234,6 +239,9 @@ def peel(family, operation, peelingInfo, singleLocusMode):
 
 @jit(nopython=True, nogil=True)
 def getJointParents(probSire, probDam):
+    """
+    This function creates the joint parental genotypes based on the probabilities for each parent.
+    """
     # jointParents = np.einsum("ai, bi -> abi", probSire, probDam)
     nLoci = probSire.shape[1]
     output = np.full(shape=(4, 4, nLoci), fill_value=0, dtype=np.float32)
@@ -246,6 +254,9 @@ def getJointParents(probSire, probDam):
 
 @jit(nopython=True, nogil=True)
 def createChildSegs(segregationTensor, currentSeg, output):
+    """
+    This function creates the child-specific segregation tensor using the child's current segregation estimate.
+    """
     # childSegs[index,:,:,:,:] = np.einsum("abcd, di -> abci", segregationTensor, currentSeg)
     nLoci = currentSeg.shape[1]
     output[:, :, :, :] = 0
@@ -263,6 +274,9 @@ def createChildSegs(segregationTensor, currentSeg, output):
 
 @jit(nopython=True, nogil=True)
 def projectChildGenotypes(childSegs, childValues, output):
+    """
+    This function projects the offsprings' genotypes to the parents posterior term.
+    """
     # childToParents[index,:,:,:] = np.einsum("abci, ci -> abi", childSegs[index,:,:,:,:], childValues)
     nLoci = childSegs.shape[3]
     output[:, :, :] = 0
@@ -277,6 +291,9 @@ def projectChildGenotypes(childSegs, childValues, output):
 
 @jit(nopython=True, nogil=True)
 def projectParentGenotypes(childSegs, parentValues, output):
+    """
+    This function projects the parents' genotypes to the offspring in the anterior term
+    """
     # anterior[child,:,:] = np.einsum("abci, abi -> ci", childSegs[i,:,:,:,:], parentsMinusChild[i,:,:,:])
     nLoci = childSegs.shape[3]
     output[:, :] = 0
@@ -291,6 +308,10 @@ def projectParentGenotypes(childSegs, parentValues, output):
 
 @jit(nopython=True, nogil=True)
 def estimateSegregation(segregationTensor, parentValues, childValues, output):
+    """
+    This function estimates the segregation probabilities for each child without normalisation.
+    """
+    # NOTE: This function is not called/used - remove?
     # pointSeg[child,:,:] = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild[i,:,:,:], childValues)
     nLoci = childValues.shape[1]
     output[:, :] = 0
@@ -311,6 +332,9 @@ def estimateSegregation(segregationTensor, parentValues, childValues, output):
 def estimateSegregationWithNorm(
     segregationTensor, segregationTensor_norm, parentValues, childValues, output
 ):
+    """
+    This function estimates the segregation probabilities for each child with normalisation.
+    """
     # pointSeg[child,:,:] = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild[i,:,:,:], childValues)
     nLoci = childValues.shape[1]
     output[:, :] = 0
@@ -332,6 +356,9 @@ def estimateSegregationWithNorm(
 
 @jit(nopython=True, nogil=True)
 def combineAndReduceAxis1(jointEstimate, parentEstimate):
+    """
+    This function combines the joint estimate and the parent estimate to get the posterior estimate for the sire.
+    """
     # output = np.einsum("abi, bi-> ai", jointEstimate, parentEstimate)
     nLoci = parentEstimate.shape[1]
     output = np.full((4, nLoci), 0, dtype=np.float32)
@@ -344,6 +371,9 @@ def combineAndReduceAxis1(jointEstimate, parentEstimate):
 
 @jit(nopython=True, nogil=True)
 def combineAndReduceAxis0(jointEstimate, parentEstimate):
+    """
+    This function combines the joint estimate and the parent estimate to get the posterior estimate for the dam.
+    """
     # output = np.einsum("abi, ai-> bi", jointEstimate, parentEstimate)
     nLoci = parentEstimate.shape[1]
     output = np.full((4, nLoci), 0, dtype=np.float32)
@@ -356,6 +386,9 @@ def combineAndReduceAxis0(jointEstimate, parentEstimate):
 
 @jit(nopython=True, nogil=True)
 def expNorm2D(mat):
+    """
+    This function takes the exponential of the matrix and normalizes each locus.
+    """
     # Matrix is 4x4xnLoci: Output is to take the exponential of the matrix and normalize each locus. We need to make sure that there are not any overflow values.
     nLoci = mat.shape[2]
     for i in range(nLoci):
@@ -384,6 +417,9 @@ def expNorm2D(mat):
 
 @jit(nopython=True, nogil=True)
 def expNorm1D(mat):
+    """
+    This function takes the exponential of the matrix and normalizes each locus.
+    """
     # Matrix is 4x4xnLoci: Output is to take the exponential of the matrix and normalize each locus. We need to make sure that there are not any overflow values.
     nLoci = mat.shape[1]
     for i in range(nLoci):
@@ -411,6 +447,9 @@ def expNorm1D(mat):
     locals={"e": float32, "e2": float32, "e1e": float32, "e2i": float32},
 )
 def collapsePointSeg(pointSeg, transmission):
+    """
+    This function collapses the point segregation estimates into a single estimate.
+    """
     # This is the forward backward algorithm.
     # Segregation estimate state ordering: pp, pm, mp, mm
     nLoci = pointSeg.shape[1]

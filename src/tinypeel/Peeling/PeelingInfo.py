@@ -15,6 +15,11 @@ from ..tinyhouse import HaplotypeOperations
 
 
 def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
+    """
+    This function creates the peeling information object. It sets up the
+    genotype probabilities, the segregation tensors, and the transmission
+    rates. It also sets up the genotype status for each individual.
+    """
     # NOTE: createSeg is added as an option to decrease memory usage during the single locus peeling steps.
     nLoci = pedigree.nLoci
 
@@ -99,6 +104,10 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
 
 
 def setupTransmission(length, peelingInfo):
+    """
+    This function sets up the transmission rate for each locus based on the distance between paired neighbouring loci
+    """
+    # Relative positions of the loci on a chromosome, scaled between 0 and 1.
     if peelingInfo.positions is None:
         localMap = np.linspace(0, 1, num=peelingInfo.nLoci, dtype=np.float32)
     else:
@@ -113,6 +122,10 @@ def setupTransmission(length, peelingInfo):
 
 @jit(nopython=True)
 def setGenotypeStatusGenotypes(idn, genotypes, peelingInfo):
+    """
+    This function sets the genotype status for each individual based on the genotypes provided.
+    It is used to determine if an individual is genotyped or not.
+    """
     nLoci = len(genotypes)
     if genotypes is not None:
         for i in range(nLoci):
@@ -123,6 +136,9 @@ def setGenotypeStatusGenotypes(idn, genotypes, peelingInfo):
 
 @jit(nopython=True)
 def setGenotypeStatusReads(idn, reads0, reads1, peelingInfo):
+    """
+    This function sets the genotype status for each individual based on the reads provided.
+    """
     nLoci = len(reads0)
     if reads0 is not None and reads1 is not None:
         for i in range(nLoci):
@@ -132,8 +148,9 @@ def setGenotypeStatusReads(idn, reads0, reads1, peelingInfo):
 
 
 def addPenetranceFromExternalFile(pedigree, peelingInfo, fileName, args):
-    # This function allows external penetrance files to be read in and added to the gentoype probabilities for an individual.
-
+    """
+    This function allows external genotype penetrance files to be read in and added to the gentoype probabilities for an individual.
+    """
     print("Reading in penetrance file:", fileName)
     with open(fileName) as f:
         e = 0
@@ -161,6 +178,9 @@ def addPenetranceFromExternalFile(pedigree, peelingInfo, fileName, args):
 
 @jit(nopython=True)
 def getHetMidpoint(geno):
+    """
+    This function finds the midpoint of the heterozygous loci in a genotype array.
+    """
     nLoci = len(geno)
     midpoint = int(nLoci / 2)
     index = 0
@@ -189,9 +209,7 @@ spec["anterior"] = float32[:, :, :]
 spec["posterior"] = float32[:, :, :]
 spec["penetrance"] = float32[:, :, :]
 spec["segregation"] = optional(float32[:, :, :])
-spec["pointSeg"] = optional(
-    float32[:, :, :]
-)  # I think we don't use this any more. Potentially could be dropped.
+spec["pointSeg"] = optional(float32[:, :, :])
 
 # Family terms. Each will be nFam x 4 x nLoci
 spec["posteriorSire_minusFam"] = float32[:, :, :]
@@ -219,7 +237,14 @@ spec["iteration"] = int64
 
 @jitclass(spec)
 class jit_peelingInformation(object):
+    """
+    This class holds the peeling information for a given pedigree.
+    """
+
     def __init__(self, nInd, nFam, nLoci, createSeg=True):
+        """
+        Initialize the peeling information object.
+        """
         self.iteration = 0
         self.nInd = nInd
         self.nFam = nFam
@@ -235,6 +260,9 @@ class jit_peelingInformation(object):
         self.segregationTensor_norm = None
 
     def construct(self, createSeg=True):
+        """
+        This function sets up the peeling information object.
+        """
         baseValue = 0.25
         self.sex = np.full(self.nInd, 0, dtype=np.int64)
 
@@ -281,6 +309,9 @@ class jit_peelingInformation(object):
         self.transmissionRate = np.full((self.nLoci - 1), 0, dtype=np.float32)
 
     def getGenoProbs(self, idn):
+        """
+        This function returns the genotype probabilities for a given individual.
+        """
         genoProbs = (
             self.anterior[idn, :, :]
             * self.posterior[idn, :, :]

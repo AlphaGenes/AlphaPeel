@@ -22,9 +22,13 @@ from . import PeelingInfo
 
 
 def updateMaf(pedigree, peelingInfo):
+    """
+    This function estimates the alternative allele frequency at all loci (i.e markers).
+    Updates the alternative allele frequency for each unknown parent group, then the anterior term for each founder.
+    """
     if peelingInfo.isSexChrom:
         print(
-            "Updating error rates and minor allele frequencies for sex chromosomes are not well test and will break in interesting ways. Recommend running without that option."
+            "Updating error rates and alternative allele frequencies for sex chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
     MF = list(pedigree.AAP.keys())
     for mfx in MF:
@@ -40,7 +44,14 @@ def updateMaf(pedigree, peelingInfo):
 
 
 def newtonMafUpdates(peelingInfo, AAP, index):
-    # This function gives an iterative approximation for the alternative allele frequency. It uses a maximum of 5 iterations.
+    """
+    This function gives an iterative approximation for the alternative allele frequency.
+    First the starting alternative allele frequency is restricted to be between 0.01 and 0.99.
+    Then the iteration is set up for Newton's method. This finishes at convergence or 5 iterations.
+    Each iteration collects delta via the getNewtonUpdate function, adds delta to the current alternative alllele frequency,
+    and checks for convergence.
+    The function returns the final alternative allele frequency.
+    """
 
     if AAP[index] < 0.01:
         maf = 0.01
@@ -69,6 +80,11 @@ def newtonMafUpdates(peelingInfo, AAP, index):
 
 @jit(nopython=True)
 def getNewtonUpdate(p, peelingInfo, index):
+    """
+    This function calculates the Newton update for the alternative allele frequency.
+    Considers uncertainty in the available genotype data through the penetrance.
+    Returns delta
+    """
     # Log liklihood's first + second derivitives
     LLp = 0
     LLpp = 0
@@ -97,6 +113,9 @@ def getNewtonUpdate(p, peelingInfo, index):
 
 @jit(nopython=True)
 def addIndividualToUpdate(d, p, LLp, LLpp):
+    """
+    This function adds each available genotype data to first and second derivatives of the log likelihood.
+    """
     d0 = d[0]
     d1 = d[1] + d[2]
     d2 = d[3]
@@ -112,6 +131,11 @@ def addIndividualToUpdate(d, p, LLp, LLpp):
 
 
 def updateMafAfterPeeling(pedigree, peelingInfo):
+    """
+    This function updates the alternative allele frequency for each unknown parent group based on the mean genotype probabilities of the founders.
+    If triggered, this function will be called after each peeling cycle.
+    Currently restricts alternative allele frequencies from 0.01 to 0.99.
+    """
     MF = list(pedigree.AAP.keys())
     for mfx in MF:
         AAP = pedigree.AAP[mfx]
@@ -166,6 +190,9 @@ def updateMafAfterPeeling(pedigree, peelingInfo):
 
 
 def updatePenetrance(pedigree, peelingInfo, args):
+    """
+    This function updates the penetrance matrix for each individual.
+    """
     if args.est_geno_error_prob:
         peelingInfo.genoError = updateGenoError(pedigree, peelingInfo)
     if args.est_seq_error_prob:
@@ -202,10 +229,11 @@ def updatePenetrance(pedigree, peelingInfo, args):
 
 
 def updateGenoError(pedigree, peelingInfo):
-    # The following is a simple EM update for the genotyping error rate at each locus.
-    # This update adds the expected number of errors that an individual marginalizing over their current estimate of their genotype probabilities.
-    # We use a max value of 5% and a min value of .0001 percent to make sure the values are reasonable
-
+    """
+    This function updates the genotype error rate for each locus using simple EM.
+    Adds the expected number of errors that an individual has, marginalising over their current estimate of their genotype probabilities.
+    We use a max value of 5% and a min value of .0001 percent to make sure the values are reasonable.
+    """
     counts = np.full(pedigree.nLoci, 1, dtype=np.float32)
     errors = np.full(pedigree.nLoci, 0.0001, dtype=np.float32)
 
@@ -221,6 +249,9 @@ def updateGenoError(pedigree, peelingInfo):
 
 @jit(nopython=True)
 def updateGenoError_ind(counts, errors, genotypes, genoProbs):
+    """
+    This function updates the genotype error rate at each locus with non-missing genotype.
+    """
     for i in range(len(counts)):
         if genotypes[i] != 9:  # Only include non-missing genotypes.
             counts[i] += 1
@@ -233,11 +264,12 @@ def updateGenoError_ind(counts, errors, genotypes, genoProbs):
 
 
 def updateSeqError(pedigree, peelingInfo):
-    # The following is a simple EM update for the genotyping error rate at each locus.
-    # This update adds the expected number of errors that an individual has marginalizing over their current genotype probabilities.
-    # This only uses the homozygotic states, heterozygotic states are ignored (in both the counts + errors terms).
-    # We use a max value of 5% and a min value of .0001 percent to make sure the values are reasonable
-
+    """
+    The following is a simple EM update for the genotyping error rate at each locus.
+    This update adds the expected number of errors that an individual has marginalizing over their current genotype probabilities.
+    This only uses the homozygotic states, heterozygotic states are ignored (in both the counts + errors terms).
+    We use a max value of 5% and a min value of .0001 percent to make sure the values are reasonable
+    """
     counts = np.full(pedigree.nLoci, 1, dtype=np.float32)
     errors = np.full(pedigree.nLoci, 0.001, dtype=np.float32)
 
@@ -258,6 +290,10 @@ def updateSeqError(pedigree, peelingInfo):
 
 @jit(nopython=True)
 def updateSeqError_ind(counts, errors, refReads, altReads, genoProbs):
+    """
+    This function updates the sequencing error rate at each locus with non-missing genotype.
+    This is completed only for the homozygotic states.
+    """
     # Errors occur when genotype is 0 and an alternative allele happens.
     # Errors occur when genotype is 2 (coded as 3) and a reference allele happens.
     # Number of observations is number of reads * probability the individual is homozygous.
@@ -288,6 +324,9 @@ def updateSeqError_ind(counts, errors, refReads, altReads, genoProbs):
 
 
 def estDistanceFromBreaks(loc1, loc2, nBreaks, peelingInfo):
+    """
+    This function estimates the distance of a locus from a break in the haplotype due to recombination.
+    """
     breakPoints = np.floor(np.linspace(loc1, loc2, nBreaks)).astype(dtype=np.int64)
     distances = [
         getDistance(breakPoints[i], breakPoints[i + 1], peelingInfo)
@@ -298,6 +337,9 @@ def estDistanceFromBreaks(loc1, loc2, nBreaks, peelingInfo):
 
 
 def getDistance(loc1, loc2, peelingInfo):
+    """
+    This function estimates the distance between two loci based on the recombination rate.
+    """
     patSeg1 = getSumSeg(loc1, peelingInfo)
     patSeg2 = getSumSeg(loc2, peelingInfo)
 
@@ -325,6 +367,9 @@ def getDistance(loc1, loc2, peelingInfo):
 
 
 def getSumSeg(loc, peelingInfo):
+    """
+    This function calculates the total probability of the grand maternal allele being transmitted from the father in patSeg.
+    """
     seg = peelingInfo.segregation[:, :, loc]
     sumSeg = np.sum(seg, 1)
     patSeg = (seg[:, 2] + seg[:, 3]) / sumSeg
@@ -333,4 +378,8 @@ def getSumSeg(loc, peelingInfo):
 
 
 def haldane(difference):
+    """
+    This function converts the recombination rate to a distance using Haldane's formula.
+    Haldane's formula considers the fixation probability of a beneficial allele in a population.
+    """
     return -np.log(1.0 - 2.0 * difference) / 2.0
