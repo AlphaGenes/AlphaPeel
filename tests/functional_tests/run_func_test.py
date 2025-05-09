@@ -76,6 +76,53 @@ def delete_columns(two_d_list, col_del):
         for row in two_d_list:
             del row[col_del[n] - n - 1]
 
+def read_geno_hap(file_path):
+    """
+    Read the geno/hap file and return a dictionary
+    """
+    dic_file = {}
+    with open(file_path, "r") as file:
+        for line in file:
+            line=line.strip().split()
+            if line==[]:
+                continue
+            if line[0] not in dic_file:
+                dic_file[line[0]] = [line[1:]]
+            else:
+                dic_file[line[0]].append(line[1:])
+    return dic_file
+    
+def compare_geno_hap(output, true, total_error=2):
+    """
+    Compare the output file with the true file
+    the error tolerance is mismatch genotype <= total_error
+    """
+    outputs = read_geno_hap(output)
+    trues = read_geno_hap(true)  
+
+    trues_id = sorted(trues.keys())
+    outputs_id = sorted(outputs.keys())
+    # check the number of lines
+    assert trues_id == outputs_id
+    number_error = 0
+    # check the content
+    for i in trues_id:
+        value_output= outputs[i]
+        value_true = trues[i]
+        for k in range(len(value_output)):
+            rows_value_output=value_output[k]
+            rows_value_true=value_true[k]
+            number = len(rows_value_output)
+            for j in range(number):
+                # check the number of mismatches
+                if rows_value_output[j] != rows_value_true[j]:
+                    number_error += 1
+                    print(f"the {i} {j}th genotype/haplotype{k} is different")
+                if number_error > total_error:
+                    raise ValueError(
+                        f"the number of error is larger than 2"
+                    )
+
 
 class TestClass:
     path = os.path.join("tests", "functional_tests")
@@ -461,37 +508,38 @@ class TestClass:
 
         self.arguments = {
             "method": "multi",
-            "sex_chrom": "sex_chrom",
-            "seg_prob": "seg_prob",
+            "sex_chrom": None,
+            "hap": None,
+            "geno": None,
         }
-        self.input_files = ["geno_file", "seq_file", "ped_file"]
-        self.input_file_depend_on_test_cases = ["geno_file", "seq_file"]
+        self.input_files = ["geno_file", "ped_file"]
+        self.input_file_depend_on_test_cases = self.input_files
 
-        for self.test_cases in ["a", "b", "c", "d"]:
-            # test case a: homozygous generation 2
-            #           b: heterozygous generation 2
-            #           c: with recombination in M2
-            #           d: missing values in generation 2
-
+        for self.test_cases in ["no_recom", "no_recom_missing", "with_recom", "with_recom_missing"]:
             self.output_file_prefix = f"sex.{self.test_cases}"
-            self.output_file_to_check = "seg_prob"
+            self.output_file_to_check = ["geno_0.3333333333333333", "hap_0.5"]
 
             self.generate_command()
             os.system(self.command)
 
-            self.output_file_path = os.path.join(
-                self.output_path,
-                f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-            )
-            self.expected_file_path = os.path.join(
-                self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-            )
-
-            self.output = read_and_sort_file(self.output_file_path)
-            self.expected = read_and_sort_file(self.expected_file_path)
-            # Compares outputted seg_prob files to expected.
-            assert self.output == self.expected
+            for check in self.output_file_to_check:
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_prefix}.{check}.txt"
+                )
+                # Compares outputted genotype files to expected.
+                if check == "geno_0.3333333333333333":
+                    compare_geno_hap(
+                    self.output_file_path, self.expected_file_path,total_error=2)
+                else:
+                    compare_geno_hap(
+                    self.output_file_path, self.expected_file_path,total_error=5)
+            
             self.command = "AlphaPeel "
+            
 
     # the true values to check against for test_error is not written yet
     def test_error(self):

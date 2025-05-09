@@ -289,7 +289,7 @@ for (ind in (nIndPerGen + 1):nInd) {
     }
     maternalPattern[1:4, start:nLociAll] <- 
       matrix(data = rep(pattern, times = nLociAll - start + 1), 
-             nrow = 4, ncol = nLociAll - start + 1)
+            nrow = 4, ncol = nLociAll - start + 1)
   }
   
   nPaternalComb <- nrow(indRecHist[[2]])
@@ -305,7 +305,7 @@ for (ind in (nIndPerGen + 1):nInd) {
     }
     paternalPattern[1:4, start:nLociAll] <- 
       matrix(data = rep(pattern, times = nLociAll - start + 1),
-             nrow = 4, ncol = nLociAll - start + 1)
+            nrow = 4, ncol = nLociAll - start + 1)
   }
   
   startRow <- 4 * (ind - 1) + 1
