@@ -10,18 +10,28 @@ library(AlphaSimR)
 # geno - matrix, genotypes (ind x loc) coded as 0, 1, 2, or 9 (missing)
 # error - numeric, probability of observing an error (single value or
 #         multiple to add variation across loci)
-generateGenoErr <- function(geno, error) {
+generateGenoErr <- function(geno, error,sex) {
   nLoci <- ncol(geno)
   for (ind in 1:nInd){
+    sex_ind=sex[ind]
     for (locus in 1:nLoci){
       if (geno[ind, locus] != 9 && rbinom(n = 1, size = 1, prob = error) == 1) {
-        if (geno[ind, locus] == 0) {
+        if (sex_ind == 1){        
+          if (geno[ind, locus] == 0) {
           geno[ind, locus] <- sample(c(1, 2), size = 1)
         } else if (geno[ind, locus] == 1) {
           geno[ind, locus] <- sample(c(0, 2), size = 1)
         } else {
           geno[ind, locus] <- sample(c(0, 1), size = 1)
         }
+          }else{
+            if (geno[ind, locus] == 0) {
+              geno[ind, locus] <- 1
+            } else {
+              geno[ind, locus] <- 0
+            }
+        }
+
       }
     }
   }
@@ -56,7 +66,7 @@ source(file = url)
 # nSegMap -> nSegMap -> subset of SNP to seg map file (the first nSegMap sites)
 
 #setwd("/Users/s2587593/Experinment/AlphaPeel_develop/simulation_sexchromsome")
-parameters <- read.table("./simulation_parameters.txt")
+parameters <- read.table("../simulation_parameters.txt")
 nparams <- nrow(parameters)
 for (parameter in (1:nparams)) {
   eval(parse(text = paste0(parameters$V1[parameter], "<-", parameters$V2[parameter])))
@@ -201,7 +211,7 @@ for (ind in 1:nInd) {
     genotypesObs[ind, markersHD_without_LD] <- 9
   }
 }
-genotypesObs_w_error <- generateGenoErr(geno = genotypesObs, error = genoError)
+genotypesObs_w_error <- generateGenoErr(geno = genotypesObs, error = genoError,sex = sex)
 
 # ----- Realised allele frequency in the base population -----
 
@@ -335,11 +345,11 @@ rec_prob <- rec_count / (nInd * 2)
 
 # ---- Write the files to disk ----
 
-write.table(x = pedigree, file = "sex_chr_ped_file.txt", 
+write.table(x = pedigree, file = "X_chr_ped_file.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = genotypesObs_w_error, file = "sex_chr_geno_file.txt", 
+write.table(x = genotypesObs_w_error, file = "X_chr_geno_file.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
-write.table(x = sequenceReads, file = "sex_chr_seq_file.txt", 
+write.table(x = sequenceReads, file = "X_chr_seq_file.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
 haplotypes_new<-haplotypes
@@ -348,26 +358,26 @@ for (ind in 1:nInd) {
     haplotypes_new[ind * 2 - 1, ] <- 9
   }
 }
-write.table(x = haplotypes_new, file = "true-sex_chr_hap_0.5.txt", 
+write.table(x = haplotypes_new, file = "true-X_chr_hap_0.5.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
-write.table(x = phasedGenotypes, file = "true-sex_chr_phased_geno_prob.txt", 
+write.table(x = phasedGenotypes, file = "true-X_chr_phased_geno_prob.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = UnphasedGenotypes, file = "true-sex_chr_geno_prob.txt",
+write.table(x = UnphasedGenotypes, file = "true-X_chr_geno_prob.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = genotypes, file = "true-sex_chr_geno_0.3333333333333333.txt", 
+write.table(x = genotypes, file = "true-X_chr_geno_0.3333333333333333.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
-write.table(x = genotypes, file = "true-sex_chr_dosage.txt", 
+write.table(x = genotypes, file = "true-X_chr_dosage.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
 
-write.table(x = geno_error, file = "sex_chr_true-geno_error_prob.txt", 
+write.table(x = geno_error, file = "true-X_chr_geno_error_prob.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = seq_error, file = "sex_chr_true-seq_error_prob.txt", 
+write.table(x = seq_error, file = "true-X_chr_seq_error_prob.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = alt_allele_prob, file = "sex_chr_true-alt_allele_prob.txt", 
+write.table(x = alt_allele_prob, file = "true-X_chr_alt_allele_prob.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = segregation, "sex_chr_true-seg_prob.txt", 
+write.table(x = segregation, "true-X_chr_seg_prob.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = rec_prob, file = "sex_chr_true-rec_prob.txt",
+write.table(x = rec_prob, file = "true-X_chr_rec_prob.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
 # ----- Map file -----
@@ -388,13 +398,13 @@ for (chr in (2:nChr)) {
   colnames(value) <- c("Chromosome number", "Marker name", "Base pair position")
   values <- rbind(values, value)
 }
-write.table(x = values, file = "sex_chr_map_file.txt", 
+write.table(x = values, file = "X_chr_map_file.txt", 
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 
 # ----- Segregation map file -----
 
 subset <- floor(seq(1, nLociAll, length.out = nSegMap))
 subsetValues <- values[subset,]
-write.table(x = subsetValues, file = "sex_chr_seg_map_file.txt",
+write.table(x = subsetValues, file = "X_chr_seg_map_file.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 

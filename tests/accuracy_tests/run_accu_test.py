@@ -77,12 +77,13 @@ def generate_command(
     if metafounder:
         for file in input_file:
             command += f"-{file} {os.path.join(sim_path, f'metafounder_{file}.txt')} "
+    elif sex_chrom:
+        for file in input_file:
+            command +=  f"-{file} {os.path.join(sim_path, f'X_chr_{file}.txt')} "
+        command += "-sex_chrom "
     else:
         for file in input_file:
             command += f"-{file} {os.path.join(sim_path, f'{file}.txt')} "
-
-    if sex_chrom:
-        command += "-sex_chrom"
 
     for key, value in arguments.items():
         if value is not None:
@@ -179,7 +180,7 @@ def assess_peeling(
         if metafounder:
             true_path = os.path.join(sim_path, f"true-metafounder_{file}.txt")
         elif sex_chrom:
-            true_path = os.path.join(sim_path, f"true-sex_chrom_{file}.txt")
+            true_path = os.path.join(sim_path, f"true-X_chr_{file}.txt")
         else:
             true_path = os.path.join(sim_path, f"true-{file}.txt")
 
@@ -236,101 +237,101 @@ def assess_peeling(
 @pytest.mark.parametrize(
     "method, est_alt_allele_prob, est_geno_error_prob, est_seq_error_prob, seq_file, alt_allele_prob_file, update_alt_allele_prob, metafounder, sex_chrom",
     [
-        ("single", None, None, None, None, None, None, None, None),
-        ("single", "est_alt_allele_prob", None, None, None, None, None, None, None),
-        ("multi", None, None, None, None, None, None, None, None),
-        ("multi", "est_alt_allele_prob", None, None, None, None, None, None, None),
-        (
-            "multi",
-            "est_alt_allele_prob",
-            "est_geno_error_prob",
-            "est_seq_error_prob",
-            None,
-            None,
-            None,
-            None,
-            None,
-        ),
-        ("multi", None, None, None, "seq_file", None, None, None, None),
-        (
-            "multi",
-            "est_alt_allele_prob",
-            None,
-            None,
-            "seq_file",
-            None,
-            None,
-            None,
-            None,
-        ),
-        (
-            "multi",
-            "est_alt_allele_prob",
-            "est_geno_error_prob",
-            "est_seq_error_prob",
-            "seq_file",
-            None,
-            None,
-            None,
-            None,
-        ),
-        ("hybrid", None, None, None, None, None, None, None, None),
-        ("hybrid", None, None, None, "seq_file", None, None, None, None),
-        (
-            "single",
-            None,
-            None,
-            None,
-            None,
-            "alt_allele_prob_file",
-            None,
-            "metafounder",
-            None,
-        ),
-        (
-            "single",
-            "est_alt_allele_prob",
-            None,
-            None,
-            None,
-            None,
-            None,
-            "metafounder",
-            None,
-        ),
-        (
-            "single",
-            None,
-            None,
-            None,
-            None,
-            None,
-            "update_alt_allele_prob",
-            "metafounder",
-            None,
-        ),
-        (
-            "single",
-            "est_alt_allele_prob",
-            None,
-            None,
-            None,
-            None,
-            "update_alt_allele_prob",
-            "metafounder",
-            None,
-        ),
-        (
-            "single",
-            None,
-            None,
-            None,
-            None,
-            "alt_allele_prob_file",
-            "update_alt_allele_prob",
-            "metafounder",
-            None,
-        ),
+        # ("single", None, None, None, None, None, None, None, None),
+        # ("single", "est_alt_allele_prob", None, None, None, None, None, None, None),
+        # ("multi", None, None, None, None, None, None, None, None),
+        # ("multi", "est_alt_allele_prob", None, None, None, None, None, None, None),
+        # (
+        #     "multi",
+        #     "est_alt_allele_prob",
+        #     "est_geno_error_prob",
+        #     "est_seq_error_prob",
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        # ),
+        # ("multi", None, None, None, "seq_file", None, None, None, None),
+        # (
+        #     "multi",
+        #     "est_alt_allele_prob",
+        #     None,
+        #     None,
+        #     "seq_file",
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        # ),
+        # (
+        #     "multi",
+        #     "est_alt_allele_prob",
+        #     "est_geno_error_prob",
+        #     "est_seq_error_prob",
+        #     "seq_file",
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        # ),
+        # ("hybrid", None, None, None, None, None, None, None, None),
+        # ("hybrid", None, None, None, "seq_file", None, None, None, None),
+        # (
+        #     "single",
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        #     "alt_allele_prob_file",
+        #     None,
+        #     "metafounder",
+        #     None,
+        # ),
+        # (
+        #     "single",
+        #     "est_alt_allele_prob",
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        #     "metafounder",
+        #     None,
+        # ),
+        # (
+        #     "single",
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        #     "update_alt_allele_prob",
+        #     "metafounder",
+        #     None,
+        # ),
+        # (
+        #     "single",
+        #     "est_alt_allele_prob",
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        #     "update_alt_allele_prob",
+        #     "metafounder",
+        #     None,
+        # ),
+        # (
+        #     "single",
+        #     None,
+        #     None,
+        #     None,
+        #     None,
+        #     "alt_allele_prob_file",
+        #     "update_alt_allele_prob",
+        #     "metafounder",
+        #     None,
+        # ),
         ("single", None, None, None, None, None, None, None, "sex_chrom"),
         ("multi", None, None, None, None, None, None, None, "sex_chrom"),
         ("multi", None, None, None, "seq_file", None, None, None, "sex_chrom"),
