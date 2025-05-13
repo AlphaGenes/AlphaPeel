@@ -215,6 +215,16 @@ def updatePenetrance(pedigree, peelingInfo, args):
             sexChromFlag,
         )
 
+        if ind.phenotype is not None:
+            # TODO: What to do if a phenopenetrance is not supplied by user?
+            peelingInfo.penetrance[
+                ind.idn, :, :
+            ] = ProbMath.updateGenoProbsFromPhenotype(
+                peelingInfo.penetrance[ind.idn, :, :],
+                ind.phenotype,
+                pedigree.phenoPenetrance,
+            )
+
         if (
             ind.isGenotypedFounder()
             and (not InputOutput.args.no_phase_founder)

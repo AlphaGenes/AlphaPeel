@@ -64,6 +64,18 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
             sexChromFlag,
         )
 
+        if ind.phenotype is not None:
+            # If penetrance is yet updated, use uniform distribution of 0.25 for all genotypes established in initialisation.
+            # TODO: What to do if a phenopenetrance is not supplied by user?
+            # TODO: Update for if multiple phenotypes in input or multiple loci in genotypes.
+            peelingInfo.penetrance[
+                ind.idn, :, :
+            ] = ProbMath.updateGenoProbsFromPhenotype(
+                peelingInfo.penetrance[ind.idn, :, :],
+                ind.phenotype,
+                pedigree.phenoPenetrance,
+            )
+
         # Set the genotyping/read status for each individual. This will be used for, e.g., estimating the minor allele frequency.
         if ind.genotypes is not None:
             setGenotypeStatusGenotypes(ind.idn, ind.genotypes, peelingInfo)
@@ -319,3 +331,21 @@ class jit_peelingInformation(object):
         )
         genoProbs = genoProbs / np.sum(genoProbs, 0)
         return genoProbs
+
+    def getPhenoProbs(self, idn, phenoPenetrance):
+        """
+        This function returns the phenotype probabilities for a given individual.
+        """
+        genoProbs = self.getGenoProbs(idn)
+        nCol = len(phenoPenetrance[0, :])
+        i = 0
+        phenoProbs = np.zeros((nCol, 1), dtype=np.float32)
+        while i < nCol:
+            penetrance = np.zeros((4, 1), dtype=np.float32)
+            penetrance[:, 0] = phenoPenetrance[:, i]
+            tmp = genoProbs * penetrance
+            phenoProbs[i, 0] = np.sum(tmp)
+            i += 1
+
+        # phenoProbs = phenoProbs / np.sum(phenoProbs, 0) - commented out as this should not be needed and may interfer when more than two columns.
+        return phenoProbs

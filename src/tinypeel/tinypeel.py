@@ -325,6 +325,7 @@ def get_input_options():
     This function collects the input options of the program as a dictionary. The options are:
     -plink_file: bfile
     -geno_file: genotypes
+    -pheno_file: phenotype
     -reference: reference
     -seq_file: seqfile
     -ped_file: pedigree
@@ -351,6 +352,14 @@ def get_input_options():
         type=str,
         nargs="*",
         help="Genotype file(s) in AlphaGenes format.",
+    )
+    parse_dictionary["phenotype"] = lambda parser: parser.add_argument(
+        "-pheno_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="Phenotype file(s) in AlphaGenes format.",
     )
     parse_dictionary["reference"] = lambda parser: parser.add_argument(
         "-reference",
@@ -391,6 +400,14 @@ def get_input_options():
         type=str,
         nargs="*",
         help="The alternative allele probabilities per metafounder(s). Default: 0.5 per marker",
+    )
+    parse_dictionary["pheno_penetrance_file"] = lambda parser: parser.add_argument(
+        "-pheno_penetrance_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="The penetrance file for the phenotypes.",
     )
     parse_dictionary["startsnp"] = lambda parser: parser.add_argument(
         "-start_snp",
@@ -511,10 +528,12 @@ def getArgs():
         options=[
             "bfile",
             "genotypes",
+            "phenotype",
             "phasefile",
             "seqfile",
             "pedigree",
             "alt_allele_prob_file",
+            "pheno_penetrance_file",
             "startsnp",
             "stopsnp",
             "main_metafounder",
@@ -552,6 +571,12 @@ def getArgs():
         action="store_true",
         required=False,
         help="Flag to enable writing out the genotype probabilities.",
+    )
+    output_parser.add_argument(
+        "-pheno_prob",
+        action="store_true",
+        required=False,
+        help="Flag to enable writing out the phenotype probabilities.",
     )
     output_parser.add_argument(
         "-phased_geno_prob",
@@ -646,6 +671,12 @@ def getArgs():
         required=False,
         help="Flag to re-estimate the genotyping error rates after each peeling cycle.",
     )
+    # peeling_control_parser.add_argument(
+    #     "-est_pheno_error_prob",
+    #     action="store_true",
+    #     required=False,
+    #     help="Flag to re-estimate the phenotyping error rates after each peeling cycle.",
+    # )
     peeling_control_parser.add_argument(
         "-est_seq_error_prob",
         action="store_true",
@@ -715,6 +746,8 @@ def main():
         args.stop_snp -= 1
     args.bfile = args.plink_file
     args.genotypes = args.geno_file
+    args.phenotype = args.pheno_file
+    args.phenoPenetrance = args.pheno_penetrance_file
     args.phasefile = args.hap_file
     args.seqfile = args.seq_file
     args.pedigree = args.ped_file
@@ -751,6 +784,9 @@ def main():
         PeelingIO.writeOutParamaters(peelingInfo)
     if args.alt_allele_prob:
         PeelingIO.writeOutAltAlleleProb(pedigree)
+    if args.pheno_prob:
+        # TODO: What to do if a phenopenetrance is not supplied by user?
+        PeelingIO.writePhenoProbs(pedigree, phenoProbFunc=peelingInfo.getPhenoProbs)
     if not singleLocusMode and args.seg_prob:
         InputOutput.writeIdnIndexedMatrix(
             pedigree, peelingInfo.segregation, args.out_file + ".seg_prob.txt"

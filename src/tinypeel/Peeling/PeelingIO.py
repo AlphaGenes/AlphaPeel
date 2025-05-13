@@ -205,6 +205,21 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
                     )
 
 
+def writePhenoProbs(pedigree, phenoProbFunc):
+    """
+    Function to write out the phenotype probabilities to file.
+    """
+    args = InputOutput.args
+    with open(args.out_file + "pheno_prob.txt", "w+") as f:
+        for idx, ind in pedigree.writeOrder():
+            matrix = phenoProbFunc(ind.idn, pedigree.phenoPenetrance)
+            f.write("\n")
+            for i in range(matrix.shape[0]):
+                f.write(
+                    ind.idx + " " + " ".join(map("{:.4f}".format, matrix[i, :])) + "\n"
+                )
+
+
 def writeDosages(pedigree, genoProbFunc, isSexChrom, outputFile):
     """
     Function to write out the dosages to file.
