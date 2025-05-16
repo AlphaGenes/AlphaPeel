@@ -42,7 +42,7 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
                 )
 
             if idx not in pedigree.individuals:
-                print(f"Individual {idx} is found not in pedigree. Individual ignored.")
+                print(f"Individual {idx} is not found in pedigree. Individual ignored.")
             else:
                 ind = pedigree.individuals[idx]
                 if e == 0:
@@ -209,9 +209,7 @@ def writeDosages(pedigree, genoProbFunc, isXChr, outputFile):
             f.write(ind.idx + " " + " ".join(map("{:.4f}".format, matrix)) + "\n")
 
 
-def writeCalledGenotypes(
-    pedigree, genoProbFunc, isXChr, outputFile, thresh
-):
+def writeCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
@@ -255,9 +253,7 @@ def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
             f.write(ind.idx + " " + " ".join(map(str, maternal_haplotype)) + "\n")
 
 
-def writeBinaryCalledGenotypes(
-    pedigree, genoProbFunc, isXChr, outputFile, thresh
-):
+def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
     for idx, ind in pedigree.writeOrder():
         matrix = genoProbFunc(ind.idn)
         matrixCollapsedHets = np.array(
