@@ -508,7 +508,7 @@ class TestClass:
 
         self.arguments = {
             "method": "multi",
-            "sex_chrom": None,
+            "x_chr": None,
             "hap": None,
             "geno": None,
         }
