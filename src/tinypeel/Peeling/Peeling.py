@@ -14,9 +14,9 @@ PEEL_DOWN = 1
     locals={"e": float32, "e4": float32, "e16": float32, "e1e": float32},
 )
 def peel(family, operation, peelingInfo, singleLocusMode):
-    isSexChrom = peelingInfo.isSexChrom
+    isXChr = peelingInfo.isXChr
 
-    e = 0
+    e = 0.000001
     e1e = 1 - e
     e4 = e / 4
 
@@ -103,10 +103,10 @@ def peel(family, operation, peelingInfo, singleLocusMode):
         # else:
         #     currentSeg[:,:] = segregation[child,:,:]
 
-        if isSexChrom and peelingInfo.sex[child] == 0:  # 0 for male, 1 for female.
+        if isXChr and peelingInfo.sex[child] == 0:  # 0 for male, 1 for female.
             segregationTensor = peelingInfo.segregationTensorXY
             segregationTensor_norm = peelingInfo.segregationTensorXY_norm
-        if isSexChrom and peelingInfo.sex[child] == 1:  # 0 for male, 1 for female.
+        if isXChr and peelingInfo.sex[child] == 1:  # 0 for male, 1 for female.
             segregationTensor = peelingInfo.segregationTensorXX
             segregationTensor_norm = peelingInfo.segregationTensorXX_norm
 
@@ -206,10 +206,10 @@ def peel(family, operation, peelingInfo, singleLocusMode):
             childValues = childValues / np.sum(childValues, axis=0)
             childValues = e1e * childValues + e4
 
-            if isSexChrom and peelingInfo.sex[child] == 0:  # 0 for male, 1 for female.
+            if isXChr and peelingInfo.sex[child] == 0:  # 0 for male, 1 for female.
                 segregationTensor = peelingInfo.segregationTensorXY
                 segregationTensor_norm = peelingInfo.segregationTensorXY_norm
-            if isSexChrom and peelingInfo.sex[child] == 1:  # 0 for male, 1 for female.
+            if isXChr and peelingInfo.sex[child] == 1:  # 0 for male, 1 for female.
                 segregationTensor = peelingInfo.segregationTensorXX
                 segregationTensor_norm = peelingInfo.segregationTensorXX_norm
 

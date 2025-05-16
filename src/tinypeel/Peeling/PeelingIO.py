@@ -101,10 +101,10 @@ def writeOutAltAlleleProb(pedigree):
     )
 
 
-def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
+def writeGenotypes(pedigree, genoProbFunc, isXChr):
     args = InputOutput.args
     if not args.no_dosage:
-        writeDosages(pedigree, genoProbFunc, isSexChrom, args.out_file + ".dosage.txt")
+        writeDosages(pedigree, genoProbFunc, isXChr, args.out_file + ".dosage.txt")
     if args.phased_geno_prob:
         writePhasedGenoProbs(
             pedigree, genoProbFunc, args.out_file + ".phased_geno_prob.txt"
@@ -127,7 +127,7 @@ def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
                 writeBinaryCalledGenotypes(
                     pedigree,
                     genoProbFunc,
-                    isSexChrom,
+                    isXChr,
                     args.out_file + ".called." + str(threshold),
                     threshold,
                 )
@@ -135,7 +135,7 @@ def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
                 writeCalledGenotypes(
                     pedigree,
                     genoProbFunc,
-                    isSexChrom,
+                    isXChr,
                     args.out_file + ".geno_" + str(threshold) + ".txt",
                     threshold,
                 )
@@ -198,10 +198,10 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
                     )
 
 
-def writeDosages(pedigree, genoProbFunc, isSexChrom, outputFile):  # remove isSexChrom,
+def writeDosages(pedigree, genoProbFunc, isXChr, outputFile):
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
-            if isSexChrom and ind.sex == 0:
+            if isXChr and ind.sex == 0:
                 tmp = np.array([0, 1, 0, 1])
             else:
                 tmp = np.array([0, 1, 1, 2])
@@ -210,12 +210,12 @@ def writeDosages(pedigree, genoProbFunc, isSexChrom, outputFile):  # remove isSe
 
 
 def writeCalledGenotypes(
-    pedigree, genoProbFunc, isSexChrom, outputFile, thresh
-):  # isSexChrom,
+    pedigree, genoProbFunc, isXChr, outputFile, thresh
+):
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
-            if isSexChrom and ind.sex == 0:
+            if isXChr and ind.sex == 0:
                 matrixCollapsedHets = np.array(
                     [matrix[0, :] + matrix[2, :], matrix[1, :] + matrix[3, :]],
                     dtype=np.float32,
@@ -256,8 +256,8 @@ def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
 
 
 def writeBinaryCalledGenotypes(
-    pedigree, genoProbFunc, isSexChrom, outputFile, thresh
-):  # remve isSexChrom,
+    pedigree, genoProbFunc, isXChr, outputFile, thresh
+):
     for idx, ind in pedigree.writeOrder():
         matrix = genoProbFunc(ind.idn)
         matrixCollapsedHets = np.array(

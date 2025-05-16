@@ -22,9 +22,9 @@ from . import PeelingInfo
 
 
 def updateMaf(pedigree, peelingInfo):
-    if peelingInfo.isSexChrom:
+    if peelingInfo.isXChr:
         print(
-            "Updating error rates and minor allele frequencies for sex chromosomes are not well test and will break in interesting ways. Recommend running without that option."
+            "Updating error rates and minor allele frequencies for X chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
     MF = list(pedigree.AAP.keys())
     for mfx in MF:
@@ -171,21 +171,21 @@ def updatePenetrance(pedigree, peelingInfo, args):
     if args.est_seq_error_prob:
         peelingInfo.seqError = updateSeqError(pedigree, peelingInfo)
 
-    if peelingInfo.isSexChrom:
+    if peelingInfo.isXChr:
         print(
-            "Updating error rates and minor allele frequencies for sex chromosomes are not well test and will break in interesting ways. Recommend running without that option."
+            "Updating error rates and minor allele frequencies for X chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
     for ind in pedigree:
-        sexChromFlag = (
-            peelingInfo.isSexChrom and ind.sex == 0
-        )  # This is the sex chromosome and the individual is male.
+        XChrMaleFlag = (
+            peelingInfo.isXChr and ind.sex == 0
+        )  # This is the X chromosome and the individual is male.
         peelingInfo.penetrance[ind.idn, :, :] = ProbMath.getGenotypeProbabilities(
             peelingInfo.nLoci,
             ind.genotypes,
             ind.reads,
             peelingInfo.genoError,
             peelingInfo.seqError,
-            sexChromFlag,
+            XChrMaleFlag,
         )
 
         if (
@@ -196,7 +196,7 @@ def updatePenetrance(pedigree, peelingInfo, args):
             loci = PeelingInfo.getHetMidpoint(ind.genotypes)
             if loci is not None:
                 error = peelingInfo.genoError[loci]
-                if sexChromFlag:
+                if XChrMaleFlag:
                     peelingInfo.penetrance[ind.idn, :, loci] = np.array(
                         [error / 3, 1 - error, error / 3, error / 3], dtype=np.float32
                     )
