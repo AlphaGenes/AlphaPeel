@@ -122,7 +122,7 @@ Peeling arguments
                             for each metafounder after each peeling cycle.
       -no_phase_founder     A flag phase a heterozygous allele in one of the
                             founders (if such an allele can be found).
-      -sex_chrom            A flag to indicate that input data is for a sex chromosome.
+      -x_chr            A flag to indicate that input data is for the X chromosome.
                             
     Genotype probability arguments:
       -geno_error_prob GENO_ERROR_PROB
@@ -141,7 +141,7 @@ The ``-est_geno_error_prob`` and ``-est_seq_error_prob`` options estimate the ge
 
 For a pedigree with multiple metafounders, the user has three options: (1) use ``-update_alt_allele_prob`` only, (2) use ``est_alt_allele_prob`` and ``-update_alt_allele_prob``, or (3) input estimates of the alternative allele frequencies for each metafounder via the ``-alt_allele_prob_file`` with or without ``-update_alt_allele_prob``.
 
-When ``-sex_chrom`` is used, there are two requires for input file: (1) The pedigree file must include sex information in the fourth column (0 indicates male, 1 indicates female). See the Pedigree File Format section for an example. (2) male's genotype must be coded as {0,1}. See the Genotype file Format section for an example. Note: This option currently only considers the regions of the X chromosome excluding the pseudoautosomal regions (PARs) 
+When ``-x_chrom`` is used, there are two requirements for input files: (1) The pedigree file must include sex information in the fourth column (0 indicates male and 1 indicates female). See the Pedigree File Format section for an example. (2) Male's genotype must be coded as {0,1}. See the Genotype file Format section for an example. Note: This option currently only considers the regions of the X chromosome excluding the pseudo-autosomal regions (PARs).
 
 Hybrid peeling arguments 
 ------------------------
@@ -186,7 +186,7 @@ or
   id3 id1 id2
   id4 id1 id2
 
-If work on sex chromosome. 0 refer to male, and 1 refer to female.
+When working with X chromosome use this format - add sex information in the fourth column (0 indicates male and 1 indicates female):
 
 ::
 
@@ -210,7 +210,7 @@ Example:
   id3 2 0 2 0 
   id4 0 2 1 0
 
-If work on sex chromosome.
+When working with X chromosome, male's genotype must be coded as {0,1}:
 ::
 
   id1 0 1 9 0 
