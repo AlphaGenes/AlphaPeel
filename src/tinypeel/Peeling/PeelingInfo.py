@@ -65,8 +65,7 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
         )
 
         if ind.phenotype is not None:
-            # If penetrance is yet updated, use uniform distribution of 0.25 for all genotypes established in initialisation.
-            # TODO: What to do if a phenopenetrance is not supplied by user?
+            # If penetrance is yet updated by genotype inputs, use uniform distribution of 0.25 for all genotypes established in initialisation.
             # TODO: Update for if multiple phenotypes in input or multiple loci in genotypes.
             peelingInfo.penetrance[
                 ind.idn, :, :
@@ -347,5 +346,5 @@ class jit_peelingInformation(object):
             phenoProbs[i, 0] = np.sum(tmp)
             i += 1
 
-        # phenoProbs = phenoProbs / np.sum(phenoProbs, 0) - commented out as this should not be needed and may interfer when more than two columns.
+        phenoProbs = phenoProbs / np.sum(phenoProbs, 0)
         return phenoProbs

@@ -785,8 +785,12 @@ def main():
     if args.alt_allele_prob:
         PeelingIO.writeOutAltAlleleProb(pedigree)
     if args.pheno_prob:
-        # TODO: What to do if a phenopenetrance is not supplied by user?
-        PeelingIO.writePhenoProbs(pedigree, phenoProbFunc=peelingInfo.getPhenoProbs)
+        if args.phenoPenetrance is None:
+            warnings.warn(
+                "Phenotype probabilities are not available. Please provide a penetrance file with -pheno_penetrance_file. -pheno_prob will be ignored."
+            )
+        else:
+            PeelingIO.writePhenoProbs(pedigree, phenoProbFunc=peelingInfo.getPhenoProbs)
     if not singleLocusMode and args.seg_prob:
         InputOutput.writeIdnIndexedMatrix(
             pedigree, peelingInfo.segregation, args.out_file + ".seg_prob.txt"

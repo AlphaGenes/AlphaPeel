@@ -216,7 +216,6 @@ def updatePenetrance(pedigree, peelingInfo, args):
         )
 
         if ind.phenotype is not None:
-            # TODO: What to do if a phenopenetrance is not supplied by user?
             peelingInfo.penetrance[
                 ind.idn, :, :
             ] = ProbMath.updateGenoProbsFromPhenotype(
