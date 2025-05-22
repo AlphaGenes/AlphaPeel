@@ -913,7 +913,7 @@ class TestClass:
         """
         self.test_name = "test_pheno"
         self.prepare_path()
-        
+
         self.input_files = ["geno_file", "ped_file"]
         self.input_file_depend_on_test_cases = self.input_files
         self.arguments = {
@@ -926,23 +926,29 @@ class TestClass:
             "pheno_probs_with_penetrance",
             "pheno_file_with_penetrance",
             "pheno_file_with_multi_loci_geno_file",
-            "pheno_file_only",  
+            "pheno_file_only",
         ]:
             self.output_file_prefix = f"pheno.{self.test_cases}"
-            
+
             if self.test_cases == "pheno_probs_no_penetrance":
                 # This will give a warning and not print phenotype probabilities
                 self.arguments["pheno_prob"] = None
                 self.generate_command()
                 os.system(self.command)
 
-
                 self.output_file_to_check = "pheno_prob"
                 # Check the pheno_prob file does not exist
-                assert os.path.exists(os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt")) == False
-                
+
+                test = os.path.exists(
+                    os.path.join(
+                        self.output_path,
+                        f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                    )
+                )
+
+                expect = False
+                assert test == expect
+
                 self.command = "AlphaPeel "
 
             elif self.test_cases == "pheno_probs_with_penetrance":
@@ -1000,15 +1006,13 @@ class TestClass:
 
                 self.command = "AlphaPeel "
 
-                
-
             elif self.test_cases == "pheno_file_with_multi_loci_geno_file":
                 # This will flag an error and exit the program (at the moment)
                 self.generate_command()
                 exit_code = os.system(self.command)
                 # check if error message is in the output
                 assert exit_code in [256, 512, 2]
-                
+
                 self.input_file_depend_on_test_cases.pop(-2)
 
                 self.command = "AlphaPeel "
@@ -1021,9 +1025,6 @@ class TestClass:
                 assert exit_code in [256, 512, 2]
 
                 self.command = "AlphaPeel "
-
-            
-
 
     # TODO test_plink for PLINK
     #      a. binary PLINK output
