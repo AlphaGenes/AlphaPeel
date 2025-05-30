@@ -16,8 +16,7 @@ import argparse
 
 
 def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
-    """
-    This function sets up and runs each of the peeling cycles (default is 5).
+    """Sets up and runs each of the peeling cycles (default is 5).
     The set up includes:
     - saving the alternative allele probabilities for each metafounder
         - either with default of 0.5 or the -alt_allele_prob_file option input.
@@ -27,6 +26,16 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     - peeling down and up for each generation
     - collecting iterations
     - updating alternative allele frequencies for each metafounder, genotyping error rate, and sequencing error rate if the options are selected.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param args: argument container with configuration options for peeling
+    :type args: argparse.Namespace or similar object with attributes
+    :param singleLocusMode: whether method is single locus or not, defaults to False
+    :type singleLocusMode: bool, optional
+    :return: None. The function modifies the peelingInfo and pedigree object in place
     """
     # Right now maf _only_ uses the penetrance so can be estimated once.
     if args.alt_allele_prob_file is not None:
@@ -90,9 +99,18 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
 
 
 def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
-    """
-    This function runs a single peeling cycle.
+    """Runs a single peeling cycle.
     Starts with peeling down, then peeling up.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param args: argument container with configuration options for peeling
+    :type args: argparse.Namespace or similar object with attributes
+    :param singleLocusMode: whether method is single locus or not, defaults to False
+    :type singleLocusMode: bool, optional
+    :return: None. The function modifies the peelingInfo and pedigree object in place
     """
     nWorkers = args.maxthreads
 
@@ -151,8 +169,17 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
 
 
 def updatePosterior(pedigree, peelingInfo, sires, dams):
-    """
-    Update the posterior term for a specific set of sires and dams.
+    """Updates the posterior term for a specific set of sires and dams.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param sires: collection of sires to update
+    :type sires: set of class:`tinyhouse.Pedigree.Individual`
+    :param dams: collection of dams to update
+    :type dams: set of class:`tinyhouse.Pedigree.Individual`
+    :return: None. The function modifies the peelingInfo object in place
     """
     # if pedigree.mapSireToFamilies is None or pedigree.mapDamToFamilies is None:
     #     pedigree.setupFamilyMap()
@@ -165,8 +192,13 @@ def updatePosterior(pedigree, peelingInfo, sires, dams):
 
 
 def updateSire(sire, peelingInfo):
-    """
-    Update the posterior term for a specific sire.
+    """Updates the posterior term for a specific sire.
+
+    :param sire: the sire to update
+    :type sire: class: `tinyhouse.Pedigree.Individual`
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: None. The function modifies the peelingInfo object in place
     """
     famList = [fam.idn for fam in sire.families]
     sire = sire.idn
@@ -197,8 +229,13 @@ def updateSire(sire, peelingInfo):
 
 
 def updateDam(dam, peelingInfo):
-    """
-    Update the posterior term for a specific dam.
+    """Updates the posterior term for a specific dam.
+
+    :param dam: the dam to update
+    :type dam: class: `tinyhouse.Pedigree.Individual`
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: None. The function modifies the peelingInfo object in place
     """
     famList = [fam.idn for fam in dam.families]
     dam = dam.idn
@@ -227,8 +264,14 @@ def updateDam(dam, peelingInfo):
 
 
 def getLociAndDistance(snpMap, segMap):
-    """
-    This function takes the snpMap and segMap and returns the loci and distance for each snp.
+    """Takes the snpMap and segMap and returns the loci and distance for each snp.
+
+    :param snpMap: matrix for the position of the SNPs across and on the chromosome.
+    :type snpMap: 1D numpy array with length of nLoci
+    :param segMap: matrix for the position of the segregation markers across and on the chromosome.
+    :type segMap: 1D numpy array with length of nLoci
+    :return: loci and distance for each SNP
+    :rtype: tuple of (loci, distance)
     """
     nSnp = len(snpMap)
     distance = np.full(nSnp, 0, dtype=np.float32)
@@ -261,8 +304,7 @@ def getLociAndDistance(snpMap, segMap):
 
 
 def generateSingleLocusSegregation(peelingInfo, pedigree, args):
-    """
-    This function:
+    """Generates the segregation probabilities for each locus in the peelingInfo object.
         If the -seg_file option is used,
         - collects the segregation file,
         - reads in the SNP and segregation map files,
@@ -270,6 +312,14 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
         - adjust loci indices to align with segregation file
         - interpolates the segregation probabilities based on the distance and segregation probabilities at the two neighbouring markers.
         Otherwise, the segregation probabilities are set to 0.25.
+
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param args: argument container with configuration options for peeling
+    :type args: argparse.Namespace or similar object with attributes
+    :return: None. The function modifies the peelingInfo object in place
     """
     if args.segfile is not None:
         # This just gets the locations in the map files.
@@ -297,9 +347,11 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
 
 
 def get_probability_options():
-    """
-    This function collects potential user inputs for genotype error rate and sequencing error rate,
+    """Collects potential user inputs for genotype error rate and sequencing error rate,
     otherwise the default is 0.0001 and 0.01 respectively.
+
+    :return: A dictionary with the options for the genotype and sequencing error rates.
+    :rtype: dict
     """
     parse_dictionary = dict()
     parse_dictionary["geno_error_prob"] = lambda parser: parser.add_argument(
@@ -321,8 +373,7 @@ def get_probability_options():
 
 
 def get_input_options():
-    """
-    This function collects the input options of the program as a dictionary. The options are:
+    """Collects the input options of the program as a dictionary. The options are:
     -plink_file: bfile
     -geno_file: genotypes
     -pheno_file: phenotype
@@ -335,6 +386,9 @@ def get_input_options():
     -stop_snp: stopsnp
     -main_metafounder: main_metafounder
     -seed: seed (for debugging)
+
+    :return: the options for the input files and parameters.
+    :rtype: dict
     """
     parse_dictionary = dict()
     parse_dictionary["bfile"] = lambda parser: parser.add_argument(
@@ -442,11 +496,13 @@ def get_input_options():
 
 
 def get_output_options():
-    """
-    This function collects the optional output options of the program as a dictionary. The options are:
+    """Collects the optional output options of the program as a dictionary. The options are:
     -out_id_order: writekey (write in the same order as pedigree input)
     -out_id_only: onlykeyed (only include individuals from the pedigree input)
     -iothreads: iothreads
+
+    :return: the options for the output files and parameters.
+    :rtype: dict
     """
     parse_dictionary = dict()
 
@@ -475,10 +531,12 @@ def get_output_options():
 
 
 def get_multithread_options():
-    """
-    This function collects the optional multithread options of the program as a dictionary. The options are:
+    """Collects the optional multithread options of the program as a dictionary. The options are:
     -n_io_thread: iothreads
     -n_thread: maxthreads
+
+    :return: the options for the multithreading parameters.
+    :rtype: dict
     """
     parse_dictionary = dict()
     parse_dictionary["iothreads"] = lambda parser: parser.add_argument(
@@ -502,8 +560,10 @@ def get_multithread_options():
 
 
 def getArgs():
-    """
-    This function collects the arguments from the command line and returns them as a dictionary.
+    """Presents and collects the arguments from the command line.
+
+    :return: the user input arguments for the AlphaPeel program
+    :rtype: argparse.Namespace
     """
     parser = argparse.ArgumentParser(description="")
     core_parser = parser.add_argument_group("Core arguments")
@@ -736,9 +796,7 @@ def getArgs():
 
 
 def main():
-    """
-    Main function for the AlphaPeel program. This function collects the arguments from the command line and runs the peeling algorithm.
-    """
+    """Main function for the AlphaPeel program. This function collects the arguments from the command line and runs the peeling algorithm."""
     args = getArgs()
     if args.start_snp:
         args.start_snp -= 1

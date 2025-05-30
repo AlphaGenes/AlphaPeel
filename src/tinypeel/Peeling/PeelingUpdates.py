@@ -22,9 +22,13 @@ from . import PeelingInfo
 
 
 def updateMaf(pedigree, peelingInfo):
-    """
-    This function estimates the alternative allele frequency at all loci (i.e markers).
-    Updates the alternative allele frequency for each unknown parent group, then the anterior term for each founder.
+    """Estimates the alternative allele frequency at all loci (i.e markers).
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: None. The function updates the pedigree.AAP attribute with the new alternative allele frequencies.
     """
     if peelingInfo.isSexChrom:
         print(
@@ -44,13 +48,17 @@ def updateMaf(pedigree, peelingInfo):
 
 
 def newtonMafUpdates(peelingInfo, AAP, index):
-    """
-    This function gives an iterative approximation for the alternative allele frequency.
-    First the starting alternative allele frequency is restricted to be between 0.01 and 0.99.
-    Then the iteration is set up for Newton's method. This finishes at convergence or 5 iterations.
-    Each iteration collects delta via the getNewtonUpdate function, adds delta to the current alternative alllele frequency,
-    and checks for convergence.
-    The function returns the final alternative allele frequency.
+    """Iterative approximation for the prior alternative allele frequency.
+    Currently limits all AAP to be between 0.01 and 0.99.
+
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param AAP: starting alternative allele frequencies, default 0.5
+    :type AAP: 1D numpy array with length equal to the number of loci
+    :param index: the marker index for which to update the alternative allele frequency
+    :type index: int
+    :return: the updated alternative allele frequency for the given marker index
+    :rtype: float
     """
 
     if AAP[index] < 0.01:
@@ -80,10 +88,16 @@ def newtonMafUpdates(peelingInfo, AAP, index):
 
 @jit(nopython=True)
 def getNewtonUpdate(p, peelingInfo, index):
-    """
-    This function calculates the Newton update for the alternative allele frequency.
-    Considers uncertainty in the available genotype data through the penetrance.
-    Returns delta
+    """Calculates the alternative allele frequency using Newton's method of optimisation.
+
+    :param p: the current alternative allele frequency estimate
+    :type p: float
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param index: the marker index for which to update the alternative allele frequency
+    :type index: int
+    :return: ratio of the first and second derivatives of the log likelihood function to be added to the current alternative allele frequency estimate.
+    :rtype: float
     """
     # Log liklihood's first + second derivitives
     LLp = 0
@@ -113,8 +127,18 @@ def getNewtonUpdate(p, peelingInfo, index):
 
 @jit(nopython=True)
 def addIndividualToUpdate(d, p, LLp, LLpp):
-    """
-    This function adds each available genotype data to first and second derivatives of the log likelihood.
+    """Adds each available genotype data to first and second derivatives of the log likelihood.
+
+    :param d: the penetrance term for genotyped individuals as genotype probabilities
+    :type d: 1D numpy array with length 4 (i.e [p(AA), p(Aa), p(aA), p(aa)])
+    :param p: the current alternative allele frequency estimate
+    :type p: float
+    :param LLp: the first derivative of the log likelihood
+    :type LLp: float
+    :param LLpp: the second derivative of the log likelihood
+    :type LLpp: float
+    :return: updated first and second derivatives of the log likelihood
+    :rtype: tuple(float, float)
     """
     d0 = d[0]
     d1 = d[1] + d[2]
@@ -131,10 +155,14 @@ def addIndividualToUpdate(d, p, LLp, LLpp):
 
 
 def updateMafAfterPeeling(pedigree, peelingInfo):
-    """
-    This function updates the alternative allele frequency for each unknown parent group based on the mean genotype probabilities of the founders.
-    If triggered, this function will be called after each peeling cycle.
-    Currently restricts alternative allele frequencies from 0.01 to 0.99.
+    """Updates the alternative allele frequency for each unknown parent group based on the mean genotype probabilities of the founders.
+    Currently limits all AAP to be between 0.01 and 0.99.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: None. The function updates the pedigree.AAP attribute with the new alternative allele frequencies.
     """
     MF = list(pedigree.AAP.keys())
     for mfx in MF:
@@ -190,8 +218,15 @@ def updateMafAfterPeeling(pedigree, peelingInfo):
 
 
 def updatePenetrance(pedigree, peelingInfo, args):
-    """
-    This function updates the penetrance matrix for each individual.
+    """Updates the penetrance matrix for each individual.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param args: argument container with configuration options for peeling
+    :type args: argparse.Namespace or similar object with attributes
+    :return: None. The function updates the peelingInfo.penetrance attribute with the new genotype probabilities.
     """
     if args.est_geno_error_prob:
         peelingInfo.genoError = updateGenoError(pedigree, peelingInfo)
@@ -238,10 +273,16 @@ def updatePenetrance(pedigree, peelingInfo, args):
 
 
 def updateGenoError(pedigree, peelingInfo):
-    """
-    This function updates the genotype error rate for each locus using simple EM.
+    """Updates the genotype error rate for each locus using simple EM.
     Adds the expected number of errors that an individual has, marginalising over their current estimate of their genotype probabilities.
     We use a max value of 5% and a min value of .0001 percent to make sure the values are reasonable.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: the updated genotype error rates for each locus
+    :rtype: 1D numpy array with length equal to the number of loci
     """
     counts = np.full(pedigree.nLoci, 1, dtype=np.float32)
     errors = np.full(pedigree.nLoci, 0.0001, dtype=np.float32)
@@ -258,8 +299,17 @@ def updateGenoError(pedigree, peelingInfo):
 
 @jit(nopython=True)
 def updateGenoError_ind(counts, errors, genotypes, genoProbs):
-    """
-    This function updates the genotype error rate at each locus with non-missing genotype.
+    """Updates the genotype error rate at each locus with non-missing genotype.
+
+    :param counts: vector of counts for each locus, initialized to 1
+    :type counts: 1D numpy array with length equal to the number of loci
+    :param errors: vector of errors for each locus, initialized to 0.001
+    :type errors: 1D numpy array with length equal to the number of loci
+    :param genotypes: observed genotypes for an individual collected via the geno_file input option.
+    :type genotypes: 1D numpy array of Int8 with length nLoci
+    :param genoProbs: genotype probabilities for each genotype state at each locus for the individual.
+    :type genoProbs: 2D numpy array with shape 4 x nLoci
+    :return: None. The function updates the counts and errors arrays in place.
     """
     for i in range(len(counts)):
         if genotypes[i] != 9:  # Only include non-missing genotypes.
@@ -273,11 +323,17 @@ def updateGenoError_ind(counts, errors, genotypes, genoProbs):
 
 
 def updateSeqError(pedigree, peelingInfo):
-    """
-    The following is a simple EM update for the genotyping error rate at each locus.
+    """Updates the sequencing error rate at each locus homozygous states using simple EM.
     This update adds the expected number of errors that an individual has marginalizing over their current genotype probabilities.
     This only uses the homozygotic states, heterozygotic states are ignored (in both the counts + errors terms).
     We use a max value of 5% and a min value of .0001 percent to make sure the values are reasonable
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: the updated sequencing error rates for each locus
+    :rtype: 1D numpy array with length equal to the number of loci
     """
     counts = np.full(pedigree.nLoci, 1, dtype=np.float32)
     errors = np.full(pedigree.nLoci, 0.001, dtype=np.float32)
@@ -299,9 +355,19 @@ def updateSeqError(pedigree, peelingInfo):
 
 @jit(nopython=True)
 def updateSeqError_ind(counts, errors, refReads, altReads, genoProbs):
-    """
-    This function updates the sequencing error rate at each locus with non-missing genotype.
-    This is completed only for the homozygotic states.
+    """Updates the sequencing error rate for homozygotic states at each locus with non-missing genotype.
+
+    :param counts: vector of counts for each locus, initialized to 1
+    :type counts: 1D numpy array with length equal to the number of loci
+    :param errors: vector of errors for each locus, initialized to 0.001
+    :type errors: 1D numpy array with length equal to the number of loci
+    :param refReads: the number of sequencing reads supporting the reference allele at each locus
+    :type refReads: 1D numpy array of int64 with length nLoci
+    :param altReads: the number of sequencing reads supporting the alternative allele at each locus
+    :type altReads: 1D numpy array of int64 with length nLoci
+    :param genoProbs: genotype probabilities for each genotype state at each locus for the individual.
+    :type genoProbs: 2D numpy array with shape 4 x nLoci
+    :return: None. The function updates the counts and errors arrays in place.
     """
     # Errors occur when genotype is 0 and an alternative allele happens.
     # Errors occur when genotype is 2 (coded as 3) and a reference allele happens.
@@ -333,8 +399,18 @@ def updateSeqError_ind(counts, errors, refReads, altReads, genoProbs):
 
 
 def estDistanceFromBreaks(loc1, loc2, nBreaks, peelingInfo):
-    """
-    This function estimates the distance of a locus from a break in the haplotype due to recombination.
+    """Estimates the distance of a locus from a break in the haplotype due to recombination.
+
+    :param loc1: first locus number
+    :type loc1: float
+    :param loc2: second locus number
+    :type loc2: float
+    :param nBreaks: number of breaks to estimate the distance between the two loci.
+    :type nBreaks: int
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: the estimated distance between the two loci based on the recombination rate.
+    :rtype: float
     """
     breakPoints = np.floor(np.linspace(loc1, loc2, nBreaks)).astype(dtype=np.int64)
     distances = [
@@ -346,8 +422,16 @@ def estDistanceFromBreaks(loc1, loc2, nBreaks, peelingInfo):
 
 
 def getDistance(loc1, loc2, peelingInfo):
-    """
-    This function estimates the distance between two loci based on the recombination rate.
+    """Estimates the distance between two loci based on the recombination rate.
+
+    :param loc1: first locus number
+    :type loc1: float
+    :param loc2: second locus number
+    :type loc2: float
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: the estimated recombination rate between two loci in distance units.
+    :rtype: float
     """
     patSeg1 = getSumSeg(loc1, peelingInfo)
     patSeg2 = getSumSeg(loc2, peelingInfo)
@@ -376,8 +460,14 @@ def getDistance(loc1, loc2, peelingInfo):
 
 
 def getSumSeg(loc, peelingInfo):
-    """
-    This function calculates the total probability of the grand maternal allele being transmitted from the father in patSeg.
+    """Calculates the total probability of the grand maternal allele being transmitted from the father in patSeg.
+
+    :param loc: locus/marker number
+    :type loc: int
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: the probability of the grand maternal allele being transmitted from the father at the given locus.
+    :rtype: 1D numpy array with length equal to the number of individuals
     """
     seg = peelingInfo.segregation[:, :, loc]
     sumSeg = np.sum(seg, 1)
@@ -387,8 +477,12 @@ def getSumSeg(loc, peelingInfo):
 
 
 def haldane(difference):
-    """
-    This function converts the recombination rate to a distance using Haldane's formula.
+    """Converts the recombination rate to a distance using Haldane's formula.
     Haldane's formula considers the fixation probability of a beneficial allele in a population.
+
+    :param difference: estimated recombination rate between two loci.
+    :type difference: float
+    :return: Haldane distance, which is the distance between two loci based on the recombination rate.
+    :rtype: float
     """
     return -np.log(1.0 - 2.0 * difference) / 2.0
