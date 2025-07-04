@@ -378,6 +378,69 @@ def updateSeqError_ind(counts, errors, refReads, altReads, genoProbs):
         errors[i] += genoProbs[3, i] * refReads[i]
 
 
+def updatePhenoPenetrance(pedigree, peelingInfo):
+    """Updates the phenotype penetrance matrix for each individual based on their phenotype.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: None. The function updates the pedigree.phenoPenetrance attribute with the new phenotype penetrance matrix.
+    """
+    # Credit to Kinghorn (2003) A SIMPLE METHOD TO DETECT A SINGLE GENE THAT DETERMINES ACATEGORICAL TRAIT WITH INCOMPLETE PENETRANCE
+    rgPheno = len(pedigree.phenoPenetrance[0, :])  # Range of phenotype values
+    denominator =  np.full((4, pedigree.nLoci), 0, dtype = np.float32) # Sum of the genotypes across individuals with any phenotype data
+    #counts = np.full(rgPheno, 0, dtype=np.float32)
+    contributions = np.full((4, rgPheno), 0, dtype=np.float32)
+
+    for ind in pedigree:
+        if ind.phenotype is not None:
+            updatePhenoPenetrance_ind(
+                denominator,
+                contributions,
+                rgPheno,
+                ind.phenotype,
+                peelingInfo.getGenoProbs(ind.idn),
+            )
+
+    #mask = counts > 0
+    #pedigree.phenoPenetrance[:, mask] = contributions[:, mask] / counts[mask]
+    
+    for pheno in range(rgPheno):
+        pedigree.phenoPenetrance[:, pheno] = contributions[:, pheno] / denominator[:,0]
+
+    
+    # Normalize the contributions to get the penetrance matrix.
+    pedigree.phenoPenetrance = pedigree.phenoPenetrance / np.sum(
+        pedigree.phenoPenetrance, 1, keepdims=True
+    )
+    
+
+def updatePhenoPenetrance_ind(denominator, contributions, rgPheno, phenotype, genoProbs):
+    """Updates the phenotype penetrance matrix for an individual based on their phenotype and genotype probabilities.
+
+    :param denominator: 
+    :type denominator: 
+    :param contributions: matrix of contributions for each phenotype and genotype state, initialized to 0
+    :type contributions: 2D numpy array with shape nPhenotype categories x 4
+    :param rgPheno: number of phenotype categories
+    :type rgPheno: int
+    :param phenotype: the phenotype of the individual
+    :type phenotype: int
+    :param genoProbs: genotype probabilities for each genotype state at each locus for the individual.
+    :type genoProbs: 2D numpy array with shape 4 x nLoci
+    :return: None. The function updates the counts and contributions arrays in place.
+    """
+    # For now, assuming only single locus genotype input
+    # Handles multiple phenotype record as another count
+    
+    for pheno in phenotype:
+        pheno = int(pheno)
+        if 0 <= pheno < rgPheno:
+            denominator += genoProbs
+            contributions[:, pheno] += genoProbs[:, 0]
+
+
 #
 # NOTE: The following code is designed to estimate the recombination rate between markers.
 # This is currently broken and does not give good estimates. Strongly recommend not using it, and the associated options have been disabled in tinyPeel.py

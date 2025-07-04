@@ -93,6 +93,14 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
         # PeelingUpdates.updateSeg(peelingInfo) #Option currently disabled.
         if args.est_geno_error_prob or args.est_seq_error_prob:
             PeelingUpdates.updatePenetrance(pedigree, peelingInfo, args)
+        if args.update_pheno_penetrance:
+            if args.phenoPenetrance is None or args.phenotype is None:
+                warnings.warn(
+                    "Both -pheno_penetrance_file and -pheno_file are required to update the phenotype penetrance. Skipping update."
+                )
+            else:
+                print("Updating Phenotype Penetrance")
+                PeelingUpdates.updatePhenoPenetrance(pedigree, peelingInfo)
         if args.update_alt_allele_prob:
             print("Updating Alternative Allele Frequencies")
             PeelingUpdates.updateMafAfterPeeling(pedigree, peelingInfo)
@@ -627,6 +635,12 @@ def getArgs():
         help="Flag to write out the alternative allele frequencies for each metafounder.",
     )
     output_parser.add_argument(
+        "-pheno_penetrance",
+        action="store_true",
+        required=False,
+        help="Flag to write out the phenotype penetrance file.",
+    )
+    output_parser.add_argument(
         "-geno_prob",
         action="store_true",
         required=False,
@@ -731,12 +745,6 @@ def getArgs():
         required=False,
         help="Flag to re-estimate the genotyping error rates after each peeling cycle.",
     )
-    # peeling_control_parser.add_argument(
-    #     "-est_pheno_error_prob",
-    #     action="store_true",
-    #     required=False,
-    #     help="Flag to re-estimate the phenotyping error rates after each peeling cycle.",
-    # )
     peeling_control_parser.add_argument(
         "-est_seq_error_prob",
         action="store_true",
@@ -754,6 +762,12 @@ def getArgs():
         action="store_true",
         required=False,
         help="Flag to re-estimate the alternative allele frequencies for each metafounder after each peeling cycle.",
+    )
+    peeling_control_parser.add_argument(
+        "-update_pheno_penetrance",
+        action="store_true",
+        required=False,
+        help="Flag to re-estimate the phenotype penetrance after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
         "-no_phase_founder",
@@ -849,6 +863,13 @@ def main():
             )
         else:
             PeelingIO.writePhenoProbs(pedigree, phenoProbFunc=peelingInfo.getPhenoProbs)
+    if args.pheno_penetrance:
+        if pedigree.phenoPenetrance is None:
+            warnings.warn(
+                "Phenotype penetrance is not available. Please provide a penetrance file with -pheno_penetrance_file. -pheno_penetrance will be ignored."
+            )
+        else:
+            PeelingIO.writePhenoPenetrance(pedigree)
     if not singleLocusMode and args.seg_prob:
         InputOutput.writeIdnIndexedMatrix(
             pedigree, peelingInfo.segregation, args.out_file + ".seg_prob.txt"

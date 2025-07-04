@@ -129,6 +129,19 @@ def writeOutAltAlleleProb(pedigree):
     )
 
 
+def writePhenoPenetrance(pedigree):
+    """Writes out the phenotype penetrance for each individual in the pedigree.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :return: None. Writes to a file specified in the InputOutput.args.
+    """
+    args = InputOutput.args
+    np.savetxt(
+        args.out_file + ".pheno_penetrance.txt", pedigree.phenoPenetrance, fmt="%.2f"
+    )
+
+
 def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
     """Writes out the genotypes for each individual. Format depends on user input and arguments.
     The output can include:
