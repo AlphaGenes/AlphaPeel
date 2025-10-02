@@ -102,7 +102,7 @@ def compare_geno_hap(output, true, total_error=2):
 
     trues_id = sorted(trues.keys())
     outputs_id = sorted(outputs.keys())
-    # check the number of lines
+    # check the ids are the same
     assert trues_id == outputs_id
     number_error = 0
     # check the content
