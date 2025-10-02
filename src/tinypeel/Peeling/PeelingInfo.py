@@ -81,7 +81,7 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
             loci = getHetMidpoint(ind.genotypes)
             if loci is not None:
                 error = args.geno_error_prob
-                if args.x_chr and ind.sex == 0:
+                if peelingInfo.isXChr and ind.sex == 0:
                     peelingInfo.penetrance[ind.idn, :, loci] = np.array(
                         [error / 3, 1 - error, error / 3, error / 3], dtype=np.float32
                     )
@@ -91,7 +91,7 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
                     )
 
     if args.penetrance is not None:
-        if args.x_chr:
+        if peelingInfo.isXChr:
             print(
                 "Using an external penetrance file and the x_chr option is highly discouraged. Please do not use."
             )
