@@ -31,19 +31,19 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
     peelingInfo.segregationTensor_norm = ProbMath.generateSegregation(
         mu=mutation_rate, partial=True
     )  # Partial gives the normalizing constant.
-
-    peelingInfo.segregationTensorXY = ProbMath.generateSegregationXYChrom(
-        mu=mutation_rate
-    )
-    peelingInfo.segregationTensorXY_norm = ProbMath.generateSegregationXYChrom(
-        mu=mutation_rate, partial=True
-    )
-    peelingInfo.segregationTensorXX = ProbMath.generateSegregationXXChrom(
-        mu=mutation_rate
-    )
-    peelingInfo.segregationTensorXX_norm = ProbMath.generateSegregationXXChrom(
-        mu=mutation_rate, partial=True
-    )
+    if peelingInfo.isXChr:
+        peelingInfo.segregationTensorXY = ProbMath.generateSegregationXYChrom(
+            mu=mutation_rate
+        )
+        peelingInfo.segregationTensorXY_norm = ProbMath.generateSegregationXYChrom(
+            mu=mutation_rate, partial=True
+        )
+        peelingInfo.segregationTensorXX = ProbMath.generateSegregationXXChrom(
+            mu=mutation_rate
+        )
+        peelingInfo.segregationTensorXX_norm = ProbMath.generateSegregationXXChrom(
+            mu=mutation_rate, partial=True
+        )
 
     peelingInfo.genoError[:] = args.geno_error_prob
     peelingInfo.seqError[:] = args.seq_error_prob
