@@ -81,7 +81,7 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
             loci = getHetMidpoint(ind.genotypes)
             if loci is not None:
                 error = args.geno_error_prob
-                if peelingInfo.isXChr and ind.sex == 0:
+                if peelingInfo.isXChr and ind.sex == 0: # sex = 0 is male
                     peelingInfo.penetrance[ind.idn, :, loci] = np.array(
                         [error / 3, 1 - error, error / 3, error / 3], dtype=np.float32
                     )
