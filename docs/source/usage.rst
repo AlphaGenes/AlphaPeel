@@ -207,7 +207,7 @@ Example:
 Phenotype file 
 =============
 
-Phenotype files contain the input phenotypes for each individual. The first value in each line is the individual's id. The remaining values are the phenotypes of the individual for specific trait.
+Phenotype files contain the input phenotypes for each individual. The first value in each line is the individual's id. The remaining values are the phenotypes of the individual for specific trait, coded from 0. For example, a binary trait can be coded as 0 and 1, while a trait with three states can be coded as 0, 1, and 2. Remove any individuals with missing phenotypes from the file.
 
 Example:
 
@@ -276,16 +276,16 @@ Or
 Phenotype Penetrance File
 ===================================
 
-The phenotype penetrance file allows for user flexibility to include phenotype information. This file contains the conditional probability table for true phenotype given the true genotype. Each column represents the different phenotype states, and each row represents the genotype states.
+The phenotype penetrance file allows for user flexibility to include phenotype information. This file contains the conditional probability table for true phenotype given the true genotype. Each column represents the different phenotype states (order from 0 to total number of states), and each row represents the genotype states in order the aa, aA, Aa, AA. Below, e provide an example for a monogenic recessive, binary trait.
 
 Example:
 
 ::
 
-  1-e e
-  1-e e
-  1-e e
-  e   1-e
+  0.9 0.1
+  0.9 0.1
+  0.9 0.1
+  0.1 0.9
 
 Output file formats
 -------------------
