@@ -15,6 +15,21 @@ from ..tinyhouse import HaplotypeOperations
 
 
 def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
+    """Creates the peeling information object. It sets up the
+    genotype probabilities, the segregation tensors, and the transmission
+    rates. It also sets up the genotype status for each individual.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param args: argument container with configuration options for peeling
+    :type args: argparse.Namespace or similar object with attributes
+    :param createSeg: whether to create and store segregation probabilities, defaults to True
+    :type createSeg: bool, optional
+    :param phaseFounder: whether to phase genotyped founders using heterozygous loci, defaults to False
+    :type phaseFounder: bool, optional
+    :return: peelingInfo: a peeling information object containing all the necessary information for peeling
+    :rtype: jit_peelingInformation
+    """
     # NOTE: createSeg is added as an option to decrease memory usage during the single locus peeling steps.
     nLoci = pedigree.nLoci
 
@@ -59,6 +74,17 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
             sexChromFlag,
         )
 
+        if ind.phenotype is not None:
+            # If penetrance is yet updated by genotype inputs, use uniform distribution of 0.25 for all genotypes established in initialisation.
+            # TODO: Update for if multiple phenotypes in input or multiple loci in genotypes.
+            peelingInfo.penetrance[
+                ind.idn, :, :
+            ] = ProbMath.updateGenoProbsFromPhenotype(
+                peelingInfo.penetrance[ind.idn, :, :],
+                ind.phenotype,
+                pedigree.phenoPenetrance,
+            )
+
         # Set the genotyping/read status for each individual. This will be used for, e.g., estimating the minor allele frequency.
         if ind.genotypes is not None:
             setGenotypeStatusGenotypes(ind.idn, ind.genotypes, peelingInfo)
@@ -99,6 +125,15 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
 
 
 def setupTransmission(length, peelingInfo):
+    """Sets up the transmission rate for each locus based on the distance between paired neighbouring loci
+
+    :param length: Estimated recombination length of the chromosome in Morgans. Default = 1.00
+    :type length: float
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: None. The function updates the transmissionRate attribute of peelingInfo object in place
+    """
+    # Relative positions of the loci on a chromosome, scaled between 0 and 1.
     if peelingInfo.positions is None:
         localMap = np.linspace(0, 1, num=peelingInfo.nLoci, dtype=np.float32)
     else:
@@ -113,6 +148,17 @@ def setupTransmission(length, peelingInfo):
 
 @jit(nopython=True)
 def setGenotypeStatusGenotypes(idn, genotypes, peelingInfo):
+    """Sets the genotype status for each individual based on the genotypes provided.
+    It is used to determine if an individual is genotyped or not.
+
+    :param idn: Internal number for an individual in the pedigree.
+    :type idn: int
+    :param genotypes: observed genotypes for an individual collected via the geno_file input option.
+    :type genotypes: 1D numpy array of Int8 with length nLoci
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: None. The function updates the genotyped attribute of peelingInfo object in place
+    """
     nLoci = len(genotypes)
     if genotypes is not None:
         for i in range(nLoci):
@@ -123,6 +169,18 @@ def setGenotypeStatusGenotypes(idn, genotypes, peelingInfo):
 
 @jit(nopython=True)
 def setGenotypeStatusReads(idn, reads0, reads1, peelingInfo):
+    """Sets the genotype status for each individual based on the reads provided.
+
+    :param idn: Internal number for an individual in the pedigree
+    :type idn: int
+    :param reads0: the number of sequencing reads supporting the reference allele at each locus
+    :type reads0: 1D numpy array of int64 with length nLoci
+    :param reads1: the number of sequencing reads supporting the alternative allele at each locus
+    :type reads1: 1D numpy array of int64 with length nLoci
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: None. The function updates the genotyped attribute of peelingInfo object in place
+    """
     nLoci = len(reads0)
     if reads0 is not None and reads1 is not None:
         for i in range(nLoci):
@@ -132,8 +190,18 @@ def setGenotypeStatusReads(idn, reads0, reads1, peelingInfo):
 
 
 def addPenetranceFromExternalFile(pedigree, peelingInfo, fileName, args):
-    # This function allows external penetrance files to be read in and added to the gentoype probabilities for an individual.
+    """Allows external genotype penetrance files to be read in and added to the gentoype probabilities for an individual.
 
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param fileName: path to the external penetrance file
+    :type fileName: str
+    :param args: argument container with configuration options for peeling set up, including startsnp and stopsnp.
+    :type args: argparse.Namespace or similar object with attributes
+    :return: None. The function updates the penetrance attribute of peelingInfo object in place
+    """
     print("Reading in penetrance file:", fileName)
     with open(fileName) as f:
         e = 0
@@ -161,6 +229,13 @@ def addPenetranceFromExternalFile(pedigree, peelingInfo, fileName, args):
 
 @jit(nopython=True)
 def getHetMidpoint(geno):
+    """Finds the midpoint of the heterozygous loci in a genotype array.
+
+    :param geno: observed genotypes for an individual collected via user input.
+    :type geno: 1D numpy array of Int8 with length nLoci
+    :return: The index of the first heterozygous locus found, or None if no heterozygous loci are present.
+    :rtype: int or None
+    """
     nLoci = len(geno)
     midpoint = int(nLoci / 2)
     index = 0
@@ -189,9 +264,7 @@ spec["anterior"] = float32[:, :, :]
 spec["posterior"] = float32[:, :, :]
 spec["penetrance"] = float32[:, :, :]
 spec["segregation"] = optional(float32[:, :, :])
-spec["pointSeg"] = optional(
-    float32[:, :, :]
-)  # I think we don't use this any more. Potentially could be dropped.
+spec["pointSeg"] = optional(float32[:, :, :])
 
 # Family terms. Each will be nFam x 4 x nLoci
 spec["posteriorSire_minusFam"] = float32[:, :, :]
@@ -219,7 +292,25 @@ spec["iteration"] = int64
 
 @jitclass(spec)
 class jit_peelingInformation(object):
+    """Holds the peeling information for a given pedigree.
+
+
+    :param object: peeling information object
+    :type object: class:`jit_peelingInformation`
+    """
+
     def __init__(self, nInd, nFam, nLoci, createSeg=True):
+        """Initialize the peeling information object.
+
+        :param nInd: number of individuals in the pedigree
+        :type nInd: int
+        :param nFam: number of families in the pedigree
+        :type nFam: int
+        :param nLoci: number of loci in genotype input
+        :type nLoci: int
+        :param createSeg: whether to create and store segregation probabilities, defaults to True
+        :type createSeg: bool, optional
+        """
         self.iteration = 0
         self.nInd = nInd
         self.nFam = nFam
@@ -235,6 +326,11 @@ class jit_peelingInformation(object):
         self.segregationTensor_norm = None
 
     def construct(self, createSeg=True):
+        """Sets up the peeling information object.
+
+        :param createSeg: whether to create and store segregation probabilities, defaults to True
+        :type createSeg: bool, optional
+        """
         baseValue = 0.25
         self.sex = np.full(self.nInd, 0, dtype=np.int64)
 
@@ -281,6 +377,13 @@ class jit_peelingInformation(object):
         self.transmissionRate = np.full((self.nLoci - 1), 0, dtype=np.float32)
 
     def getGenoProbs(self, idn):
+        """Estimates the genotype probabilities for a given individual.
+
+        :param idn: Internal number for an individual in the pedigree.
+        :type idn: int
+        :return: genoProbs: the genotype probabilities for the individual
+        :rtype: 2D numpy array of float32 with shape 4 x nLoci
+        """
         genoProbs = (
             self.anterior[idn, :, :]
             * self.posterior[idn, :, :]
@@ -288,3 +391,27 @@ class jit_peelingInformation(object):
         )
         genoProbs = genoProbs / np.sum(genoProbs, 0)
         return genoProbs
+
+    def getPhenoProbs(self, idn, phenoPenetrance):
+        """Estimates the phenotype probabilities for a given individual.
+
+        :param idn: Internal number for an individual in the pedigree.
+        :type idn: int
+        :param phenoPenetrance: _description_
+        :type phenoPenetrance: _type_
+        :return: phenoProbs: the phenotype probabilities for the individual
+        :rtype: 2D numpy array of float32 with shape number of columns in phenoPenetrance x 1
+        """
+        genoProbs = self.getGenoProbs(idn)
+        rgPheno = len(phenoPenetrance[0, :])
+        i = 0
+        phenoProbs = np.zeros((rgPheno, 1), dtype=np.float32)
+        while i < rgPheno:
+            penetrance = np.zeros((4, 1), dtype=np.float32)
+            penetrance[:, 0] = phenoPenetrance[:, i]
+            tmp = genoProbs * penetrance
+            phenoProbs[i, 0] = np.sum(tmp)
+            i += 1
+
+        phenoProbs = phenoProbs / np.sum(phenoProbs, 0)
+        return phenoProbs

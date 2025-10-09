@@ -18,12 +18,16 @@ Input Arguments
                           Pedigree file(s) (see format below).
       -geno_file [GENOTYPES ...]
                           Genotype file(s) (see format below).
+      -pheno_file [PHENOTYPE ...]
+                          Phenotype file(s) (see format below).
       -seq_file [SEQFILE ...]
                           Sequence allele read count file(s) (see format below).
       -plink_file [BFILE ...]
                           Plink (binary) file(s).
       -alt_allele_prob_file [ALT_ALLELE_PROB_FILE...]
                           The alternative allele probabilities per metafounder(s). Default: 0.5 per marker.
+      -pheno_penetrance_file [PHENO_PENETRANCE_FILE ...]
+                          The penetrance file for the phenotypes.
       -start_snp START_SNP
                           The first marker to consider. The first marker is "1". Default: 1.
       -stop_snp STOP_SNP
@@ -69,6 +73,7 @@ Output Arguments
       -seg_prob             Flag to enable writing out the segregation probabilities.
       -phased_geno_prob     Flag to enable writing out the phased genotype probabilities.
       -geno_prob            Flag to enable writing out the genotype probabilities.
+      -pheno_prob          Flag to enable writing out the phenotype probabilities.
       -hap                  Flag to call and write out the haplotypes.
       -geno                 Flag to call and write out the genotypes.
       -geno_threshold [GENO_THRESHOLD ...]
@@ -108,6 +113,8 @@ Peeling arguments
 
     Peeling control arguments:
       -est_geno_error_prob  Flag to re-estimate the genotyping error rates after
+                            each peeling cycle.
+      -est_pheno_error_prob  Flag to re-estimate the phenotype error rates after
                             each peeling cycle.
       -est_seq_error_prob   Flag to re-estimate the sequencing error rates after
                             each peeling cycle.
@@ -197,6 +204,20 @@ Example:
   id3 2 0 2 0 
   id4 0 2 1 0
 
+Phenotype file 
+=============
+
+Phenotype files contain the input phenotypes for each individual. The first value in each line is the individual's id. The remaining values are the phenotypes of the individual for specific trait, coded from 0. For example, a binary trait can be coded as 0 and 1, while a trait with three states can be coded as 0, 1, and 2. Remove any individuals with missing phenotypes from the file.
+
+Example:
+
+::
+
+  id1 0 
+  id2 1 
+  id3 1 
+  id4 0
+
 Sequence allele read counts file
 ================================
 
@@ -251,6 +272,20 @@ Or
 
   MF_1 0.30 0.21 0.44 0.24
   MF_2 0.40 0.34 0.25 0.40
+
+Phenotype Penetrance File
+===================================
+
+The phenotype penetrance file allows for user flexibility to include phenotype information. This file contains the conditional probability table for true phenotype given the true genotype. Each column represents the different phenotype states (order from 0 to total number of states), and each row represents the genotype states in order the aa, aA, Aa, AA. Below, e provide an example for a monogenic recessive, binary trait.
+
+Example:
+
+::
+
+  0.9 0.1
+  0.9 0.1
+  0.9 0.1
+  0.1 0.9
 
 Output file formats
 -------------------
