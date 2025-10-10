@@ -389,8 +389,10 @@ def updatePhenoPenetrance(pedigree, peelingInfo):
     """
     # Credit to Kinghorn (2003) A SIMPLE METHOD TO DETECT A SINGLE GENE THAT DETERMINES ACATEGORICAL TRAIT WITH INCOMPLETE PENETRANCE
     rgPheno = len(pedigree.phenoPenetrance[0, :])  # Range of phenotype values
-    denominator =  np.full((4, pedigree.nLoci), 0, dtype = np.float32) # Sum of the genotypes across individuals with any phenotype data
-    #counts = np.full(rgPheno, 0, dtype=np.float32)
+    denominator = np.full(
+        (4, pedigree.nLoci), 0, dtype=np.float32
+    )  # Sum of the genotypes across individuals with any phenotype data
+    # counts = np.full(rgPheno, 0, dtype=np.float32)
     contributions = np.full((4, rgPheno), 0, dtype=np.float32)
 
     for ind in pedigree:
@@ -403,24 +405,25 @@ def updatePhenoPenetrance(pedigree, peelingInfo):
                 peelingInfo.getGenoProbs(ind.idn),
             )
 
-    #mask = counts > 0
-    #pedigree.phenoPenetrance[:, mask] = contributions[:, mask] / counts[mask]
-    
-    for pheno in range(rgPheno):
-        pedigree.phenoPenetrance[:, pheno] = contributions[:, pheno] / denominator[:,0]
+    # mask = counts > 0
+    # pedigree.phenoPenetrance[:, mask] = contributions[:, mask] / counts[mask]
 
-    
+    for pheno in range(rgPheno):
+        pedigree.phenoPenetrance[:, pheno] = contributions[:, pheno] / denominator[:, 0]
+
     # Normalize the contributions to get the penetrance matrix.
     pedigree.phenoPenetrance = pedigree.phenoPenetrance / np.sum(
         pedigree.phenoPenetrance, 1, keepdims=True
     )
-    
 
-def updatePhenoPenetrance_ind(denominator, contributions, rgPheno, phenotype, genoProbs):
+
+def updatePhenoPenetrance_ind(
+    denominator, contributions, rgPheno, phenotype, genoProbs
+):
     """Updates the phenotype penetrance matrix for an individual based on their phenotype and genotype probabilities.
 
-    :param denominator: 
-    :type denominator: 
+    :param denominator:
+    :type denominator:
     :param contributions: matrix of contributions for each phenotype and genotype state, initialized to 0
     :type contributions: 2D numpy array with shape nPhenotype categories x 4
     :param rgPheno: number of phenotype categories
@@ -433,7 +436,7 @@ def updatePhenoPenetrance_ind(denominator, contributions, rgPheno, phenotype, ge
     """
     # For now, assuming only single locus genotype input
     # Handles multiple phenotype record as another count
-    
+
     for pheno in phenotype:
         pheno = int(pheno)
         if 0 <= pheno < rgPheno:
