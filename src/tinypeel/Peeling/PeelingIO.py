@@ -202,7 +202,7 @@ def writeDosages(pedigree, genoProbFunc, isXChr, outputFile):
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             if isXChr and ind.sex == 0:
-                tmp = np.array([0, 1, 0, 1])
+                tmp = np.array([0, 1, 0, 0])
             else:
                 tmp = np.array([0, 1, 1, 2])
             matrix = np.dot(tmp, genoProbFunc(ind.idn))
