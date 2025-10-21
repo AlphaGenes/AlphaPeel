@@ -551,8 +551,7 @@ def collapsePointSeg(pointSeg, transmission):
         (P(seg))
         the segregation state ordering: pp, pm, mp, mm
     :type pointSeg: 2D numpy array of float32 with size 4 x nLoci
-    :param transmission: transmission function based on the distance
-        (possibly recombination rate in future)
+    :param transmission: transmission function based on the distance between adjacent loci
     :type transmission: 1D numpy array of float32 with size (nLoci - 1)
     :return: the probability of each segregation states of each locus of the current child
         after the implemtation of Baum-Welch algorithm

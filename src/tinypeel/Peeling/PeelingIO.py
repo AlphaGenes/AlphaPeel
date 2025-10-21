@@ -94,7 +94,6 @@ def writeOutParamaters(peelingInfo):
         args.out_file + ".rec_prob.txt", np.empty((1, 1)), fmt="%f"
     )  # not be realized, just as a placeholder
     # np.savetxt(args.out_file + ".trans", peelingInfo.transmissionRate, fmt = "%f")
-    # np.savetxt(args.out_file + ".alt_allele_prob.txt", peelingInfo.maf, fmt="%f") - remove?
 
 
 def writeOutAltAlleleProb(pedigree):

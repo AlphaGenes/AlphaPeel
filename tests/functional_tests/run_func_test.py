@@ -1051,7 +1051,7 @@ class TestClass:
                 self.command = "AlphaPeel "
 
             elif self.test_cases == "pheno_file_only":
-                # This will flag and error and exit the program
+                # This will flag an error and exit the program
                 self.generate_command()
                 exit_code = os.system(self.command)
                 # check if error message is in the output

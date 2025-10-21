@@ -276,7 +276,7 @@ Or
 Phenotype Penetrance File
 ===================================
 
-The phenotype penetrance file allows for user flexibility to include phenotype information. This file contains the conditional probability table for true phenotype given the true genotype. Each column represents the different phenotype states (order from 0 to total number of states), and each row represents the genotype states in order the aa, aA, Aa, AA. Below, e provide an example for a monogenic recessive, binary trait.
+The phenotype penetrance file allows for user flexibility to include phenotype information. This file contains the conditional probability table for true phenotype given the true genotype. Each column represents the different phenotype states (order from 0 to total number of states), and each row represents the genotype states in order the aa, aA, Aa, AA. Below, we provide an example for a monogenic recessive, binary trait.
 
 Example:
 

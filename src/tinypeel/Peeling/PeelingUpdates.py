@@ -130,7 +130,7 @@ def addIndividualToUpdate(d, p, LLp, LLpp):
     """Adds each available genotype data to first and second derivatives of the log likelihood.
 
     :param d: the penetrance term for genotyped individuals as genotype probabilities
-    :type d: 1D numpy array with length 4 (i.e [p(AA), p(Aa), p(aA), p(aa)])
+    :type d: 1D numpy array with length 4 (i.e [p(AA), p(aA), p(Aa), p(aa)])
     :param p: the current alternative allele frequency estimate
     :type p: float
     :param LLp: the first derivative of the log likelihood
@@ -388,7 +388,7 @@ def updatePhenoPenetrance(pedigree, peelingInfo):
     :return: None. The function updates the pedigree.phenoPenetrance attribute with the new phenotype penetrance matrix.
     """
     # Credit to Kinghorn (2003) A SIMPLE METHOD TO DETECT A SINGLE GENE THAT DETERMINES ACATEGORICAL TRAIT WITH INCOMPLETE PENETRANCE
-    rgPheno = len(pedigree.phenoPenetrance[0, :])  # Range of phenotype values
+    rgPheno = pedigree.phenoPenetrance.shape[1]  # Range of phenotype values
     denominator = np.full(
         (4, pedigree.nLoci), 0, dtype=np.float32
     )  # Sum of the genotypes across individuals with any phenotype data
@@ -422,8 +422,8 @@ def updatePhenoPenetrance_ind(
 ):
     """Updates the phenotype penetrance matrix for an individual based on their phenotype and genotype probabilities.
 
-    :param denominator:
-    :type denominator:
+    :param denominator: Sums the genotype probabilities across individuals with phenotype data, initialised to 0.
+    :type denominator: 2D numpy array with shape 4 x nLoci
     :param contributions: matrix of contributions for each phenotype and genotype state, initialized to 0
     :type contributions: 2D numpy array with shape nPhenotype categories x 4
     :param rgPheno: number of phenotype categories

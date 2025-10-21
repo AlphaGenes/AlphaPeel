@@ -397,21 +397,13 @@ class jit_peelingInformation(object):
 
         :param idn: Internal number for an individual in the pedigree.
         :type idn: int
-        :param phenoPenetrance: _description_
-        :type phenoPenetrance: _type_
+        :param phenoPenetrance: the phenotype penetrance for the give phenotype data
+        :type phenoPenetrance: 2D numpy array of float32 with shape 4 x number of columns in phenoPenetrance
         :return: phenoProbs: the phenotype probabilities for the individual
         :rtype: 2D numpy array of float32 with shape number of columns in phenoPenetrance x 1
         """
         genoProbs = self.getGenoProbs(idn)
-        rgPheno = len(phenoPenetrance[0, :])
-        i = 0
-        phenoProbs = np.zeros((rgPheno, 1), dtype=np.float32)
-        while i < rgPheno:
-            penetrance = np.zeros((4, 1), dtype=np.float32)
-            penetrance[:, 0] = phenoPenetrance[:, i]
-            tmp = genoProbs * penetrance
-            phenoProbs[i, 0] = np.sum(tmp)
-            i += 1
-
-        phenoProbs = phenoProbs / np.sum(phenoProbs, 0)
+        phenoProbs = np.sum(genoProbs * phenoPenetrance, axis=0)
+        phenoProbs /= np.sum(phenoProbs)
+        phenoProbs = phenoProbs.reshape(-1, 1)  # Convert to column vector
         return phenoProbs
