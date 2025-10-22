@@ -838,6 +838,16 @@ def main():
     if args.method == "multi" and args.segfile:
         print("Running in multi-locus mode, external segfile ignored")
 
+    # For now, only support a single phenotype (will remove in future)
+    if args.phenotype is not None and pedigree.nPheno > 1:
+        warnings.warn(
+            "Currently only a single phenotype is supported. Phenotype information will be ignored."
+        )
+        pedigree.phenoPenetrance = None
+        args.phenoPenetrance = None
+        for ind in pedigree:
+            ind.phenotype = None
+
     peelingInfo = PeelingInfo.createPeelingInfo(
         pedigree, args, phaseFounder=(not args.no_phase_founder)
     )
