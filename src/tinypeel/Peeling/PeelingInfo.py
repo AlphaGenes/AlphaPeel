@@ -403,7 +403,15 @@ class jit_peelingInformation(object):
         :rtype: 2D numpy array of float32 with shape number of columns in phenoPenetrance x 1
         """
         genoProbs = self.getGenoProbs(idn)
-        phenoProbs = np.sum(genoProbs * phenoPenetrance, axis=0)
-        phenoProbs /= np.sum(phenoProbs)
-        phenoProbs = phenoProbs.reshape(-1, 1)  # Convert to column vector
+        rgPheno = phenoPenetrance.shape[1]
+        i = 0
+        phenoProbs = np.zeros((rgPheno, 1), dtype=np.float32)
+        while i < rgPheno:
+            penetrance = np.zeros((4, 1), dtype=np.float32)
+            penetrance[:, 0] = phenoPenetrance[:, i]
+            tmp = genoProbs * penetrance
+            phenoProbs[i, 0] = np.sum(tmp)
+            i += 1
+
+        phenoProbs = phenoProbs / np.sum(phenoProbs, 0)
         return phenoProbs
