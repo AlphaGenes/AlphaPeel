@@ -907,6 +907,183 @@ class TestClass:
 
             self.command = "AlphaPeel "
 
+    def test_pheno(self):
+        """
+        Testing of the phenotype functionality in AlphaPeel
+        """
+        self.test_name = "test_pheno"
+        self.prepare_path()
+
+        self.input_files = ["geno_file", "ped_file"]
+        self.input_file_depend_on_test_cases = self.input_files
+        self.arguments = {
+            "method": "single",
+            "out_id_only": None,
+        }
+
+        for self.test_cases in [
+            "pheno_probs_no_penetrance",
+            "pheno_probs_with_penetrance",
+            "pheno_file_with_penetrance",
+            "repeat_pheno_record",
+            "multi_pheno_state",
+            "pheno_file_with_multi_loci_geno_file",
+            "pheno_file_only",
+        ]:
+            self.output_file_prefix = f"pheno.{self.test_cases}"
+
+            if self.test_cases == "pheno_probs_no_penetrance":
+                # This will give a warning and not print phenotype probabilities
+                self.arguments["pheno_prob"] = None
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_to_check = "pheno_prob"
+                # Check the pheno_prob file does not exist
+
+                test = os.path.exists(
+                    os.path.join(
+                        self.output_path,
+                        f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                    )
+                )
+
+                expect = False
+                assert test == expect
+
+                self.command = "AlphaPeel "
+
+            elif self.test_cases == "pheno_probs_with_penetrance":
+                # This will print phenotype probabilities
+                self.input_file_depend_on_test_cases.append("pheno_penetrance_file")
+
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_to_check = "pheno_prob"
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+                self.output = read_and_sort_file(self.output_file_path)
+                self.expected = read_and_sort_file(self.expected_file_path)
+                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_file.
+                assert self.output == self.expected
+
+                self.command = "AlphaPeel "
+
+            elif self.test_cases == "pheno_file_with_penetrance":
+                # This will update the dosage file from pheno data and print phenotype probabilities
+                self.input_file_depend_on_test_cases.append("pheno_file")
+
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_to_check = "pheno_prob"
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+                self.output = read_and_sort_file(self.output_file_path)
+                self.expected = read_and_sort_file(self.expected_file_path)
+                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_file.
+                assert self.output == self.expected
+
+                self.output_file_to_check = "dosage"
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+                self.output = read_and_sort_file(self.output_file_path)
+                self.expected = read_and_sort_file(self.expected_file_path)
+                # Compares the outputted dosage file to the expected based on inputted pheno_penetrance_file.
+                assert self.output == self.expected
+
+                self.command = "AlphaPeel "
+
+            elif self.test_cases == "repeat_pheno_record":
+                # This will update the dosage and pheno_prob file
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_to_check = "pheno_prob"
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+                self.output = read_and_sort_file(self.output_file_path)
+                self.expected = read_and_sort_file(self.expected_file_path)
+                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_file.
+                assert self.output == self.expected
+
+                self.output_file_to_check = "dosage"
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+                self.output = read_and_sort_file(self.output_file_path)
+                self.expected = read_and_sort_file(self.expected_file_path)
+                # Compares the outputted dosage file to the expected based on inputted pheno_penetrance_file.
+                assert self.output == self.expected
+
+                self.command = "AlphaPeel "
+
+            elif self.test_cases == "multi_pheno_state":
+                # This will update the dosage and pheno_prob file
+                self.generate_command()
+                print(self.command)
+                os.system(self.command)
+
+                self.output_file_to_check = "pheno_prob"
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+                self.output = read_and_sort_file(self.output_file_path)
+                self.expected = read_and_sort_file(self.expected_file_path)
+                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_file.
+                assert self.output == self.expected
+
+                self.command = "AlphaPeel "
+
+            elif self.test_cases == "pheno_file_with_multi_loci_geno_file":
+                # This will flag an error and exit the program (at the moment)
+                self.generate_command()
+                exit_code = os.system(self.command)
+                # check if error message is in the output
+                assert exit_code in [256, 512, 2]
+
+                self.input_file_depend_on_test_cases.pop(-2)
+
+                self.command = "AlphaPeel "
+
+            elif self.test_cases == "pheno_file_only":
+                # This will flag an error and exit the program
+                self.generate_command()
+                exit_code = os.system(self.command)
+                # check if error message is in the output
+                assert exit_code in [256, 512, 2]
+
+                self.command = "AlphaPeel "
+
     # TODO test_plink for PLINK
     #      a. binary PLINK output
     #      b. binary output + input
