@@ -79,7 +79,7 @@ def generate_command(
             command += f"-{file} {os.path.join(sim_path, f'metafounder_{file}.txt')} "
     elif x_chr:
         for file in input_file:
-            command +=  f"-{file} {os.path.join(sim_path, f'X_chr_{file}.txt')} "
+            command += f"-{file} {os.path.join(sim_path, f'X_chr_{file}.txt')} "
         command += "-x_chr "
     else:
         for file in input_file:
@@ -136,9 +136,7 @@ def get_ind_accu(output, real, nIndPerGen, n_row_per_ind, gen=None):
         return round(np.nanmean(accus), 3)
 
 
-def assess_peeling(
-    sim_path, get_params, output_path, name, method, metafounder, x_chr
-):
+def assess_peeling(sim_path, get_params, output_path, name, method, metafounder, x_chr):
     """
     Assess the performance of the peeling
     """
@@ -426,6 +424,4 @@ def test_accu(
 
     benchmark(os.system, command)
 
-    assess_peeling(
-        sim_path, get_params, output_path, name, method, metafounder, x_chr
-    )
+    assess_peeling(sim_path, get_params, output_path, name, method, metafounder, x_chr)

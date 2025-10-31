@@ -1,7 +1,6 @@
 from numba import jit
 import numpy as np
 
-from ..tinyhouse import InputOutput
 from ..tinyhouse import ProbMath
 
 from . import PeelingInfo
@@ -175,7 +174,7 @@ def updatePenetrance(pedigree, peelingInfo, args):
         print(
             "Updating error rates and minor allele frequencies for X chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
-    phaseFounder=(not args.no_phase_founder)
+    phaseFounder = not args.no_phase_founder
     for ind in pedigree:
         XChrMaleFlag = (
             peelingInfo.isXChr and ind.sex == 0
@@ -189,11 +188,7 @@ def updatePenetrance(pedigree, peelingInfo, args):
             XChrMaleFlag,
         )
 
-        if (
-            ind.isGenotypedFounder()
-            and phaseFounder
-            and ind.genotypes is not None
-        ):
+        if ind.isGenotypedFounder() and phaseFounder and ind.genotypes is not None:
             loci = PeelingInfo.getHetMidpoint(ind.genotypes)
             if loci is not None:
                 error = peelingInfo.genoError[loci]
