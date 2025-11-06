@@ -259,11 +259,7 @@ def updatePenetrance(pedigree, peelingInfo, args):
                 pedigree.phenoPenetrance,
             )
 
-        if (
-            ind.isGenotypedFounder()
-            and (not InputOutput.args.no_phase_founder)
-            and ind.genotypes is not None
-        ):
+        if ind.isGenotypedFounder() and phaseFounder and ind.genotypes is not None:
             loci = PeelingInfo.getHetMidpoint(ind.genotypes)
             if loci is not None:
                 error = peelingInfo.genoError[loci]
