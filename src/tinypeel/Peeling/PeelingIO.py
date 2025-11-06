@@ -4,6 +4,22 @@ from ..tinyhouse import InputOutput
 
 
 def readInSeg(pedigree, fileName, start=None, stop=None):
+    """Reads in a segregation file and returns segregation probabilities.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param fileName: path to the external penetrance file
+    :type fileName: str
+    :param start: starting locus/marker, defaults to None
+    :type start: int, optional
+    :param stop: final locus/marker, defaults to None
+    :type stop: int, optional
+    :raises ValueError: If the length of the segregation line does not match the expected length.
+    :raises ValueError: If the length of the line subsection does not match the expected length.
+    :raises ValueError: If the individual in the segregation file is not found in the pedigree.
+    :return: segregation probabilities for each locus and individual in the pedigree
+    :rtype: 3D numpy array of float32 with shape nIndividuals x 4 x nLoci
+    """
     print("Reading in seg file:", fileName)
     if start is None:
         start = 0
@@ -64,6 +80,12 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
 
 
 def writeOutParamaters(peelingInfo):
+    """Writes out the geno error rate, seq error rate, and recombination probabilities.
+
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: None. Writes to files specified in the InputOutput.args.
+    """
     args = InputOutput.args
 
     np.savetxt(args.out_file + ".geno_error_prob.txt", peelingInfo.genoError, fmt="%f")
@@ -72,10 +94,15 @@ def writeOutParamaters(peelingInfo):
         args.out_file + ".rec_prob.txt", np.empty((1, 1)), fmt="%f"
     )  # not be realized, just as a placeholder
     # np.savetxt(args.out_file + ".trans", peelingInfo.transmissionRate, fmt = "%f")
-    # np.savetxt(args.out_file + ".alt_allele_prob.txt", peelingInfo.maf, fmt="%f")
 
 
 def writeOutAltAlleleProb(pedigree):
+    """Writes out the alternative allele probabilities for each locus and metafounder in the pedigree.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :return: None. Writes to a file specified in the InputOutput.args.
+    """
     args = InputOutput.args
 
     # Custom sorting key to extract numeric part of metafounder keys if it's an integer
@@ -101,7 +128,36 @@ def writeOutAltAlleleProb(pedigree):
     )
 
 
+def writePhenoPenetrance(pedigree):
+    """Writes out the phenotype penetrance for each individual in the pedigree.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :return: None. Writes to a file specified in the InputOutput.args.
+    """
+    args = InputOutput.args
+    np.savetxt(
+        args.out_file + ".pheno_penetrance.txt", pedigree.phenoPenetrance, fmt="%.2f"
+    )
+
+
 def writeGenotypes(pedigree, genoProbFunc, isXChr):
+    """Writes out the genotypes for each individual. Format depends on user input and arguments.
+    The output can include:
+    - Dosages
+    - Phased genotype probabilities
+    - Genotype probabilities
+    - Called genotypes (based on user inputted threshold or default 1/3)
+    - Called haplotypes (based on user inputted threshold or default 1/2)
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param genoProbFunc: function to get genotype probabilities for an individual
+    :type genoProbFunc: function
+    :param isXChr: flag whether inputted genotypes are X chromosome
+    :type isXChr: bool
+    :return: None. Writes to files specified in the InputOutput.args.
+    """
     args = InputOutput.args
     if not args.no_dosage:
         writeDosages(pedigree, genoProbFunc, isXChr, args.out_file + ".dosage.txt")
@@ -164,6 +220,16 @@ def writeGenotypes(pedigree, genoProbFunc, isXChr):
 
 
 def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
+    """Writes the phased genotype probabilities to a file.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param genoProbFunc: function to get genotype probabilities for an individual
+    :type genoProbFunc: function
+    :param outputFile: name of output file to write to
+    :type outputFile: str
+    :return: None. Writes to the specified output file.
+    """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
@@ -175,6 +241,16 @@ def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
 
 
 def writeGenoProbs(pedigree, genoProbFunc, outputFile):
+    """Writes out the non phased genotype probabilities to file.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param genoProbFunc: function to get genotype probabilities for an individual
+    :type genoProbFunc: function
+    :param outputFile: name of output file to write to
+    :type outputFile: str
+    :return: None. Writes to the specified output file.
+    """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
@@ -198,7 +274,39 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
                     )
 
 
+def writePhenoProbs(pedigree, phenoProbFunc):
+    """Writes out the phenotype probabilities to file.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param genoProbFunc: function to get genotype probabilities for an individual
+    :type genoProbFunc: function
+    :return: None. Writes to the specified output file.
+    """
+    args = InputOutput.args
+    with open(args.out_file + ".pheno_prob.txt", "w+") as f:
+        for idx, ind in pedigree.writeOrder():
+            matrix = phenoProbFunc(ind.idn, pedigree.phenoPenetrance)
+            f.write("\n")
+            for i in range(matrix.shape[0]):
+                f.write(
+                    ind.idx + " " + " ".join(map("{:.4f}".format, matrix[i, :])) + "\n"
+                )
+
+
 def writeDosages(pedigree, genoProbFunc, isXChr, outputFile):
+    """Writes out the allele dosages to file.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param genoProbFunc: function to get genotype probabilities for an individual
+    :type genoProbFunc: function
+    :param isXChr: flag whether inputted genotypes are X chromosome
+    :type isXChr: bool
+    :param outputFile: name of output file to write to
+    :type outputFile: str
+    :return: None. Writes to the specified output file.
+    """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             if isXChr and ind.sex == 0:
@@ -210,6 +318,20 @@ def writeDosages(pedigree, genoProbFunc, isXChr, outputFile):
 
 
 def writeCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
+    """Writes out the called genotypes to file.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param genoProbFunc: function to get genotype probabilities for an individual
+    :type genoProbFunc: function
+    :param isXChr: flag whether inputted genotypes are X chromosome
+    :type isXChr: bool
+    :param outputFile: name of output file to write to
+    :type outputFile: str
+    :param thresh: threshold for calling genotypes, defaults to 1/3
+    :type thresh: float
+    :return: None. Writes to the specified output file.
+    """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
@@ -230,6 +352,18 @@ def writeCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
 
 
 def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
+    """Writes out the called haplotypes to file.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param genoProbFunc: function to get genotype probabilities for an individual
+    :type genoProbFunc: function
+    :param outputFile: name of output file to write to
+    :type outputFile: str
+    :param thresh: threshold for calling genotypes, defaults to 1/3
+    :type thresh: float
+    :return: None. Writes to the specified output file.
+    """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
@@ -254,6 +388,20 @@ def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
 
 
 def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
+    """Writes out the called genotypes to file in binary format.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param genoProbFunc: function to get genotype probabilities for an individual
+    :type genoProbFunc: function
+    :param isXChr: flag whether inputted genotypes are X chromosome
+    :type isXChr: bool
+    :param outputFile: name of output file to write to
+    :type outputFile: str
+    :param thresh: threshold for calling genotypes, defaults to 1/3
+    :type thresh: float
+    :return: None. Writes to the specified output file.
+    """
     for idx, ind in pedigree.writeOrder():
         matrix = genoProbFunc(ind.idn)
         matrixCollapsedHets = np.array(
@@ -267,7 +415,30 @@ def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thres
 
 
 @jit(nopython=True)
+def doubleIfNotMissing(calledGenotypes):
+    """Doubles the called genotype, used for (female) sex chromosomes.
+
+    :param calledGenotypes: array of called genotypes
+    :type calledGenotypes: 2D numpy array of float32 with shape 3 x nLoci
+    :return: None. Modifies the calledGenotypes in place.
+    """
+    nLoci = len(calledGenotypes)
+    for i in range(nLoci):
+        if calledGenotypes[i] == 1:
+            calledGenotypes[i] = 2
+
+
+@jit(nopython=True)
 def setMissing(calledGenotypes, matrix, thresh):
+    """Sets the called genotypes to missing if the probability is below the threshold.
+
+    :param calledGenotypes: array of called genotypes
+    :type calledGenotypes: 2D numpy array of float32 with shape 3 x nLoci
+    :param matrix: genotype probability matrix
+    :type matrix: 2D numpy array of float32 with shape 3 x nLoci
+    :param thresh: threshold for calling genotypes, defaults to 1/3
+    :type thresh: float
+    """
     nLoci = len(calledGenotypes)
     for i in range(nLoci):
         if matrix[calledGenotypes[i], i] <= thresh:
@@ -275,6 +446,15 @@ def setMissing(calledGenotypes, matrix, thresh):
 
 
 def fullOutput(pedigree, peelingInfo, args):
+    """Writes out the full output of the peeling process (for testing purposes).
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container.
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param args: argument container with configuration options for peeling
+    :type args: argparse.Namespace or similar object with attributes
+    """
     InputOutput.writeIdnIndexedMatrix(
         pedigree, peelingInfo.penetrance, args.out_file + ".penetrance"
     )
