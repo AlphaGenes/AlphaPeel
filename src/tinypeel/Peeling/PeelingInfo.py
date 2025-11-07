@@ -36,18 +36,29 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
     peelingInfo = jit_peelingInformation(
         nInd=pedigree.maxIdn, nFam=pedigree.maxFam, nLoci=nLoci, createSeg=createSeg
     )
-    peelingInfo.isSexChrom = args.sex_chrom
+    peelingInfo.isXChr = args.x_chr
     # Information about the peeling positions are handled elsewhere.
     peelingInfo.positions = None
 
+    mutation_rate = args.mutation_rate
     # Generate the segregation tensors.
-    peelingInfo.segregationTensor = ProbMath.generateSegregation(e=1e-06)
+    peelingInfo.segregationTensor = ProbMath.generateSegregation(mu=mutation_rate)
     peelingInfo.segregationTensor_norm = ProbMath.generateSegregation(
-        e=1e-06, partial=True
+        mu=mutation_rate, partial=True
     )  # Partial gives the normalizing constant.
-
-    peelingInfo.segregationTensorXY = ProbMath.generateSegregationXYChrom(e=1e-06)
-    peelingInfo.segregationTensorXX = ProbMath.generateSegregationXXChrom(e=1e-06)
+    if peelingInfo.isXChr:
+        peelingInfo.segregationTensorXY = ProbMath.generateSegregationXYChrom(
+            mu=mutation_rate
+        )
+        peelingInfo.segregationTensorXY_norm = ProbMath.generateSegregationXYChrom(
+            mu=mutation_rate, partial=True
+        )
+        peelingInfo.segregationTensorXX = ProbMath.generateSegregationXXChrom(
+            mu=mutation_rate
+        )
+        peelingInfo.segregationTensorXX_norm = ProbMath.generateSegregationXXChrom(
+            mu=mutation_rate, partial=True
+        )
 
     peelingInfo.genoError[:] = args.geno_error_prob
     peelingInfo.seqError[:] = args.seq_error_prob
@@ -61,9 +72,9 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
         if ind.genotypes is not None and ind.haplotypes is not None:
             HaplotypeOperations.ind_fillInGenotypesFromPhase(ind)
 
-        sexChromFlag = (
-            peelingInfo.isSexChrom and ind.sex == 0
-        )  # This is the sex chromosome and the individual is male.
+        XChrMaleFlag = (
+            peelingInfo.isXChr and ind.sex == 0
+        )  # This is the X chromosome and the individual is male.
 
         peelingInfo.penetrance[ind.idn, :, :] = ProbMath.getGenotypeProbabilities(
             peelingInfo.nLoci,
@@ -71,7 +82,7 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
             ind.reads,
             peelingInfo.genoError,
             peelingInfo.seqError,
-            sexChromFlag,
+            XChrMaleFlag,
         )
 
         if ind.phenotype is not None:
@@ -95,15 +106,16 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
         if ind.isGenotypedFounder() and phaseFounder and ind.genotypes is not None:
             loci = getHetMidpoint(ind.genotypes)
             if loci is not None:
-                e = args.geno_error_prob
-                peelingInfo.penetrance[ind.idn, :, loci] = np.array(
-                    [e / 3, e / 3, 1 - e, e / 3], dtype=np.float32
-                )
+                error = args.geno_error_prob
+                if (not peelingInfo.isXChr) or (ind.sex != 0):  # sex = 0 is male
+                    peelingInfo.penetrance[ind.idn, :, loci] = np.array(
+                        [error / 3, error / 3, 1 - error, error / 3], dtype=np.float32
+                    )
 
     if args.penetrance is not None:
-        if args.sex_chrom:
+        if peelingInfo.isXChr:
             print(
-                "Using an external penetrance file and the sex_chrom option is highly discouraged. Please do not use."
+                "Using an external penetrance file and the x_chr option is highly discouraged. Please do not use."
             )
 
         if args.est_geno_error_prob:
@@ -255,7 +267,7 @@ spec["nInd"] = int64
 spec["nFam"] = int64
 spec["nLoci"] = int64
 
-spec["isSexChrom"] = boolean
+spec["isXChr"] = boolean
 spec["sex"] = int64[:]
 spec["genotyped"] = boolean[:, :]  # Maybe this should be removed?
 
@@ -279,6 +291,8 @@ spec["segregationTensor_norm"] = optional(
 )  # Note: This one is a bit smaller.
 spec["segregationTensorXX"] = optional(float32[:, :, :, :])
 spec["segregationTensorXY"] = optional(float32[:, :, :, :])
+spec["segregationTensorXX_norm"] = optional(float32[:, :, :])
+spec["segregationTensorXY_norm"] = optional(float32[:, :, :])
 
 # Marker specific rates:
 spec["genoError"] = optional(float32[:])
@@ -316,7 +330,7 @@ class jit_peelingInformation(object):
         self.nFam = nFam
         self.nLoci = nLoci
 
-        self.isSexChrom = False
+        self.isXChr = False
 
         self.construct(createSeg)
 
@@ -324,6 +338,11 @@ class jit_peelingInformation(object):
         self.positions = None
         self.segregationTensor = None
         self.segregationTensor_norm = None
+
+        self.segregationTensorXY = None
+        self.segregationTensorXY_norm = None
+        self.segregationTensorXX = None
+        self.segregationTensorXX_norm = None
 
     def construct(self, createSeg=True):
         """Sets up the peeling information object.

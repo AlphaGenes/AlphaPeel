@@ -376,6 +376,13 @@ def get_probability_options():
         type=float,
         help="Sequencing error rate. Default: 0.001.",
     )
+    parse_dictionary["mutation_rate"] = lambda parser: parser.add_argument(
+        "-mutation_rate",
+        default=1e-8,
+        required=False,
+        type=float,
+        help="mutation rate. Default: 1e-8.",
+    )
 
     return parse_dictionary
 
@@ -735,7 +742,7 @@ def getArgs():
     InputOutput.add_arguments_from_dictionary(
         peeling_parser,
         get_probability_options(),
-        options=["geno_error_prob", "seq_error_prob"],
+        options=["geno_error_prob", "seq_error_prob", "mutation_rate"],
     )
 
     peeling_control_parser = parser.add_argument_group("Peeling control arguments")
@@ -776,10 +783,10 @@ def getArgs():
         help="A flag phase a heterozygous allele in one of the founders (if such an allele can be found).",
     )
     peeling_control_parser.add_argument(
-        "-sex_chrom",
+        "-x_chr",
         action="store_true",
         required=False,
-        help="A flag to indicate that input data is for a sex chromosome. Sex needs to be given in the pedigree file. This is currently an experimental option.",
+        help="A flag to indicate that input data is for a sex chromosome. Sex needs to be given in the pedigree file.",
     )
 
     singleLocus_parser = parser.add_argument_group("Hybrid peeling arguments")
@@ -860,7 +867,7 @@ def main():
     PeelingIO.writeGenotypes(
         pedigree,
         genoProbFunc=peelingInfo.getGenoProbs,
-        isSexChrom=peelingInfo.isSexChrom,
+        isXChr=peelingInfo.isXChr,
     )
     if not args.no_param:
         PeelingIO.writeOutParamaters(peelingInfo)

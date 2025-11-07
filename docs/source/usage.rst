@@ -129,25 +129,26 @@ Peeling arguments
                             for each metafounder after each peeling cycle.
       -no_phase_founder     A flag phase a heterozygous allele in one of the
                             founders (if such an allele can be found).
-      -sex_chrom            A flag to indicate that input data is for a sex chromosome. Sex needs to
-                            be given in the pedigree file. This is currently an
-                            experimental option.
-
+      -x_chr            A flag to indicate that input data is for the X chromosome.
+                            
     Genotype probability arguments:
       -geno_error_prob GENO_ERROR_PROB
                             Genotyping error rate. [Default 0.0001]
       -seq_error_prob SEQ_ERROR_PROB
                             Sequencing error rate. [Default 0.001]
-
+      -mutation_rate MUTATION_RATE
+                            mutation rate. [Default 1e-8]
 ``-method`` controls whether the program is run in "single-locus" or "multi-locus" model. Single locus mode does not use linkage information to perform imputation. It is fast, but not very accurate. Multi-locus mode runs multi-locus iterative peeling which uses linkage information to increase accuracy and calculate segregation values.
 
 For hybrid peeling, where a large amount (millions of segregating sites) of sequence allele read counts needs to be imputed, first run the program in multi-locus mode to generate a segregation file, and then run the program in single-locus mode with a known segregation file.
 
-The ``-geno_error_prob``, ``-seq_error_prob`` and ``-rec_length`` arguments control some of the model parameters used in the model. ``-seq_error_prob`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
+The ``-geno_error_prob``, ``-seq_error_prob``, ``-mutation_rate`` and ``-rec_length`` arguments control some of the model parameters used in the model. ``-seq_error_prob`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
 
 The ``-est_geno_error_prob`` and ``-est_seq_error_prob`` options estimate the genotyping error rate and the sequencing error rate based on miss-match between observed and inferred states. This option is generally not necessary and can increase runtime. ``-est_alt_allele_prob`` estimates the alternative allele frequency for the base population before peeling using all available genotypes. This option can be useful if there are a large number of non-genotyped founders. ``-update_alt_allele_prob`` re-estimates the alternative allele frequencies per metafounder after each peeling cycle using the inferred genotype probabilities of the founders. 
 
 For a pedigree with multiple metafounders, the user has three options: (1) use ``-update_alt_allele_prob`` only, (2) use ``est_alt_allele_prob`` and ``-update_alt_allele_prob``, or (3) input estimates of the alternative allele frequencies for each metafounder via the ``-alt_allele_prob_file`` with or without ``-update_alt_allele_prob``.
+
+When ``-x_chrom`` is used, there are two requirements for input files: (1) The pedigree file must include sex information in the fourth column (0 indicates male and 1 indicates female). See the Pedigree File Format section for an example. (2) Male's genotype must be coded as {0,1}. See the Genotype file Format section for an example. Note: This option currently only considers the regions of the X chromosome excluding the pseudo-autosomal regions (PARs).
 
 Hybrid peeling arguments 
 ------------------------
@@ -192,6 +193,16 @@ or
   id3 id1 id2
   id4 id1 id2
 
+When working with X chromosome use this format - add sex information in the fourth column (0 indicates male and 1 indicates female):
+
+::
+
+  id1 0 0 0 
+  id2 0 0 1
+  id3 id1 id2 0
+  id4 id1 id2 1
+
+
 Genotype file 
 =============
 
@@ -204,6 +215,14 @@ Example:
   id1 0 2 9 0 
   id2 1 1 1 1 
   id3 2 0 2 0 
+  id4 0 2 1 0
+
+When working with X chromosome, male's genotype must be coded as {0,1}:
+::
+
+  id1 0 1 9 0 
+  id2 1 1 1 1 
+  id3 1 0 1 0 
   id4 0 2 1 0
 
 Phenotype file 
