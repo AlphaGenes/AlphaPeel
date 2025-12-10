@@ -13,7 +13,7 @@ library(AlphaSimR)
 generateGenoErr <- function(geno, error,sex) {
   nLoci <- ncol(geno)
   for (ind in 1:nInd){
-    sex_ind=sex[ind]
+    sex_ind=sex[ind] # 0 male
     for (locus in 1:nLoci){
       if (geno[ind, locus] != 9 && rbinom(n = 1, size = 1, prob = error) == 1) {
         if (sex_ind == 1){        
@@ -41,7 +41,7 @@ generateGenoErr <- function(geno, error,sex) {
 # Function to determine sex based on SexLocus
 finalizePop = function(pop, ...){
   # Determine if an individual is genetically a male
-  isMale = pullMarkerGeno(pop=pop, markers="SexLocus", simParam=SP)
+  isMale = pullMarkerGeno(pop=pop, markers="SD", simParam=SP)
   
   # Using c() to convert from matrix to vector
   pop@sex = c(ifelse(isMale, "M", "F"))
@@ -65,13 +65,12 @@ source(file = url)
 # seqError -> the error rate of sequecing 
 # nSegMap -> nSegMap -> subset of SNP to seg map file (the first nSegMap sites)
 
-#setwd("/Users/s2587593/Experinment/AlphaPeel_develop/simulation_sexchromsome")
+#setwd("/Users/s2587593/Experinment/git_repository/AlphaPeel/tests/accuracy_tests/sim_for_alphapeel_accu_test")
 parameters <- read.table("../simulation_parameters.txt")
 nparams <- nrow(parameters)
 for (parameter in (1:nparams)) {
   eval(parse(text = paste0(parameters$V1[parameter], "<-", parameters$V2[parameter])))
 }
-
 nIndPerGen <- nInd / nGen
 
 nLociAllPerChr <- floor(nLociAll / nChr)
@@ -80,43 +79,59 @@ nLociLDPerChr <- nLociLD / nChr
 
 # ----- SimParam and base population -----
 # Chr + 1 is for assign sex 
-founderGenomes <- runMacs(nInd = nIndPerGen, nChr = nChr+1, segSites = c(nLociAllPerChr,1))
+X <- runMacs2(nInd = nIndPerGen, nChr = nChr, segSites = nLociAllPerChr,genLen=0.8)
+X_names = paste0("X_", 1:X@nLoci)
 
+X_haplo = pullSegSiteHaplo(X)
+colnames(X_haplo) = X_names
+X_haplo[seq(2,nIndPerGen,by=2),] = 0
+
+X_map = getGenMap(X)
+X_map$id = X_names
+X_map$chr = "XY"
+X_map$pos = X_map$pos
+
+# SD
 # Create haplotype matrix for sex deterimination
 # male genotype = 1, female genotype = 0
-haplo = matrix(c(rep(c(0,1), nIndPerGen/2), rep(0, nIndPerGen)), ncol=1)
-founderGenomes = addSegSite(founderGenomes, "SexLocus", chr=nChr+1, mapPos=0, haplo=haplo)
+SD_haplo = matrix(c(rep(c(0,1), nIndPerGen/2), rep(0, nIndPerGen)), ncol=1)
+colnames(SD_haplo) = "SD"
 
-SP <- SimParam$new(founderGenomes)
-SP$setSexes("yes_rand")
+SD_map = data.frame(
+  id = "SD",
+  chr = "XY",
+  pos = 0.8
+)
+
+XY = importHaplo(
+  haplo = cbind(X_haplo, SD_haplo),
+  genMap = rbind(X_map, SD_map)
+)
+
+SP <- SimParam$new(XY)
+SP$setSexes("yes_sys")
 SP$setTrackPed(TRUE)
 SP$setTrackRec(TRUE)
-SP$addSnpChip(nSnpPerChr = c(nLociHDPerChr,0), name = "HD")
+SP$addSnpChipByName(X_names, name = "HD")
 
 # Create LD chip
 by <- nLociHDPerChr / nLociLDPerChr
 tmp <- seq(from = by / 2, to = nLociHDPerChr, by = by)
-markersLD <- c(outer(X = 1:nChr, Y = tmp, FUN = paste, sep = "_"))
-tmp <- c(outer(X = 1:nChr, Y = 1:nLociHDPerChr, FUN = paste, sep = "_"))
-markersHD_without_LD <- tmp[!tmp %in% markersLD]
+markersLD <- X_names[tmp]
+markersHD_without_LD <- X_names[!X_names %in% markersLD]
 # SP$addSnpChipByName(markers = markersLD, name = "LD") --> we will subset HD later for some individuals
 
 # ----- Recombination events ------
-genMap_male <- SP$maleMap
-n_chr <- length(genMap_male)
-for (chr in names(genMap_male)){
-  for (loci in names(genMap_male[[chr]])){
-    genMap_male[[chr]][[loci]] <- 0
-  }
-}
-SP$switchMaleMap(genMap_male)
+genMap = getGenMap(XY)
+genMap[genMap$id %in% X_names, "pos"] = 0.8
+SP$switchMaleMap(genMap)
 
 # Set the custom function for finalizePop
 SP$finalizePop = finalizePop
 
 # ----- built founder population -----
 
-basePop <- newPop(founderGenomes)
+basePop <- newPop(XY)
 
 # ----- Generate individuals across generations -----
 
@@ -143,20 +158,13 @@ pedigree <- pedigree[, c("id", "father", "mother")]
 pedigree[,c("sex")]<-sex
 
 # ----- Haplotypes ----
-
 haplotypes <- pullSnpHaplo(pop = allPop, snpChip = "HD")
 # flip maternal and paternal haplotype (AlphaSimR puts maternal first, AlphaPeel paternal)
 for (ind in 1:nInd) {
   maternal <- haplotypes[ind * 2 - 1, ]
-  if (sex[[ind]]==0){
-    haplotypes[ind * 2 - 1, ] <- 0
-  }else{
-    haplotypes[ind * 2 - 1, ] <- haplotypes[ind * 2, ]
-  }
-  
+  haplotypes[ind * 2 - 1, ] <- haplotypes[ind * 2, ]
   haplotypes[ind * 2, ] <- maternal
 }
-
 # ----- Phased genotypes probability------
 
 phasedGenotypes <- matrix(data = 0, nrow = nInd * 4, ncol = nLociAll + 1)
@@ -164,9 +172,17 @@ for (ind in (1:nInd)) {
   for (locus in (1:nLociAll)) {
     currentGeno <- haplotypes[((ind - 1) * 2 + 1):(ind * 2), locus]
     if (all(currentGeno == c(0, 0)) == TRUE) {
-      currentPhasedGeno <- c(1, 0, 0, 0)
+      if (sex[[ind]] == 0){
+        currentPhasedGeno <- c(0.5, 0, 0.5, 0)
+      }else{
+        currentPhasedGeno <- c(1, 0, 0, 0)
+      }
     } else if (all(currentGeno == c(0, 1)) == TRUE) {
-      currentPhasedGeno<- c(0, 1, 0, 0)
+      if (sex[[ind]] == 0){
+      currentPhasedGeno<- c(0, 0.5, 0, 0.5)
+      }else{
+        currentPhasedGeno <- c(0, 1, 0, 0)
+      }
     } else if (all(currentGeno == c(1, 0)) == TRUE) {
       currentPhasedGeno <- c(0, 0, 1, 0)
     } else {
@@ -200,18 +216,13 @@ for (ind in (1:nInd)) {
 # ----- Genotypes -----
 
 genotypes <- pullSnpGeno(pop = allPop, snpChip = "HD")
-for (ind in (1:nInd)) {
-  for (locus in (1:nLociAll)) {
-    genotypes[ind, locus] <- sum(haplotypes[((ind - 1) * 2 + 1):(ind * 2), locus])
-  }
-}
 genotypesObs <- genotypes
 for (ind in 1:nInd) {
   if (!ind %in% Parents) {
     genotypesObs[ind, markersHD_without_LD] <- 9
   }
 }
-genotypesObs_w_error <- generateGenoErr(geno = genotypesObs, error = genoError,sex = sex)
+genotypesObs_w_error <- generateGenoErr(geno = genotypesObs, error = genoError,sex)
 
 # ----- Realised allele frequency in the base population -----
 
@@ -306,12 +317,17 @@ for (ind in (nIndPerGen + 1):nInd) {
   paternalPattern <- matrix(0, nrow = 4, ncol = nLociAll)
   for (comb in (1:nPaternalComb)) {
     start <- indRecHist[[2]][comb, 2]
+    if (sex[ind]==0) {
+      pattern <- c(1, 1, 0, 0)
+    }
+else{
     if (indRecHist[[2]][comb, 1] == 1) {
       # paternal haplotype is inherited from the individual's grandmaternal
       pattern <- c(0, 0, 1, 1)
     } else {
       # paternal haplotype is inherited from the individual's grandpaternal
       pattern <- c(1, 1, 0, 0)
+    }
     }
     paternalPattern[1:4, start:nLociAll] <- 
       matrix(data = rep(pattern, times = nLociAll - start + 1),
