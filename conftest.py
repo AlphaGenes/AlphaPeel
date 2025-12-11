@@ -78,6 +78,12 @@ def pytest_terminal_summary(terminalreporter):
         "metafounder_dosage",
         "metafounder_geno_prob",
         "metafounder_phased_geno_prob",
+        "x_chr_dosage",
+        "x_chr_geno_0.3333333333333333",
+        "x_chr_hap_0.5",
+        "x_chr_geno_prob",
+        "x_chr_phased_geno_prob",
+        "x_chr_seg_prob",
     ]
     columns = (
         "Test Name",
