@@ -65,7 +65,8 @@ source(file = url)
 # seqError -> the error rate of sequecing 
 # nSegMap -> nSegMap -> subset of SNP to seg map file (the first nSegMap sites)
 
-#setwd("/Users/s2587593/Experinment/git_repository/AlphaPeel/tests/accuracy_tests/sim_for_alphapeel_accu_test")
+#setwd("/Users/s2587593/Experinment/AlphaPeel_develop/simulation_sexchromsome")
+
 parameters <- read.table("../simulation_parameters.txt")
 nparams <- nrow(parameters)
 for (parameter in (1:nparams)) {
@@ -76,7 +77,6 @@ nIndPerGen <- nInd / nGen
 nLociAllPerChr <- floor(nLociAll / nChr)
 nLociHDPerChr <- nLociHD / nChr
 nLociLDPerChr <- nLociLD / nChr
-
 # ----- SimParam and base population -----
 # Chr + 1 is for assign sex 
 X <- runMacs2(nInd = nIndPerGen, nChr = nChr, segSites = nLociAllPerChr,genLen=0.8)
@@ -200,9 +200,18 @@ for (ind in (1:nInd)) {
   for (locus in (1:nLociAll)) {
     currentGeno <- haplotypes[((ind - 1) * 2 + 1):(ind * 2), locus]
     if (all(currentGeno == c(0, 0)) == TRUE) {
-      currentUnphasedGeno <- c(1, 0, 0)
+      if (sex[[ind]] == 0){
+        currentUnphasedGeno <- c(0.5, 0.5, 0)
+      }else{
+        currentUnphasedGeno <- c(1, 0, 0)
+      }
+      
     } else if (all(currentGeno == c(0, 1)) == TRUE) {
-      currentUnphasedGeno<- c(0, 1, 0)
+      if (sex[[ind]] == 0){
+        currentUnphasedGeno <- c(0, 0.5, 0.5)
+      }else{
+        currentUnphasedGeno <- c(0, 1, 0)
+      }
     } else if (all(currentGeno == c(1, 0)) == TRUE) {
       currentUnphasedGeno <- c(0, 1, 0)
     } else {
