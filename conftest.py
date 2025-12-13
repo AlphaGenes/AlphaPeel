@@ -133,7 +133,8 @@ def pytest_terminal_summary(terminalreporter):
             lambda x: x["Test Name"],
             filter(
                 lambda x: x["File Name"] == file_types[0]
-                or x["File Name"] == file_types[6] or x["File Name"] == file_types[9],
+                or x["File Name"] == file_types[6]
+                or x["File Name"] == file_types[9],
                 mkr_accu,
             ),
         )
