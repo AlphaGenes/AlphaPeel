@@ -17,19 +17,21 @@ def get_params():
 
     return params
 
+
 def file_name_match(file_name, target_file_type):
     """Judge the file type match, considering floating point precision issue"""
     try:
-        parts1 = file_name.rsplit('_', 1)
-        parts2 = target_file_type.rsplit('_', 1)
+        parts1 = file_name.rsplit("_", 1)
+        parts2 = target_file_type.rsplit("_", 1)
         if len(parts1) == 2 and len(parts2) == 2 and parts1[0] == parts2[0]:
             num1 = float(parts1[1])
             num2 = float(parts2[1])
             return abs(num1 - num2) < 1e-4
     except (ValueError, IndexError):
         pass
-    
+
     return file_name == target_file_type
+
 
 def pytest_configure(config):
     """
