@@ -17,6 +17,19 @@ def get_params():
 
     return params
 
+def file_name_match(file_name, target_file_type):
+    """Judge the file type match, considering floating point precision issue"""
+    try:
+        parts1 = file_name.rsplit('_', 1)
+        parts2 = target_file_type.rsplit('_', 1)
+        if len(parts1) == 2 and len(parts2) == 2 and parts1[0] == parts2[0]:
+            num1 = float(parts1[1])
+            num2 = float(parts2[1])
+            return abs(num1 - num2) < 1e-4
+    except (ValueError, IndexError):
+        pass
+    
+    return file_name == target_file_type
 
 def pytest_configure(config):
     """
@@ -117,28 +130,18 @@ def pytest_terminal_summary(terminalreporter):
     for file_type in file_types:
         mkr_accu_file[file_type] = list(
             filter(
-                lambda x: x["File Name"] == file_type,
+                lambda x: file_name_match(x["File Name"], file_type),
                 mkr_accu,
             )
         )
         ind_accu_file[file_type] = list(
             filter(
-                lambda x: x["File Name"] == file_type,
+                lambda x: file_name_match(x["File Name"], file_type),
                 ind_accu,
             )
         )
 
-    test_names = list(
-        map(
-            lambda x: x["Test Name"],
-            filter(
-                lambda x: x["File Name"] == file_types[0]
-                or x["File Name"] == file_types[6]
-                or x["File Name"] == file_types[9],
-                mkr_accu,
-            ),
-        )
-    )
+    test_names = list(set(x["Test Name"] for x in mkr_accu))
     test_nums = {}
     count = 0
     for test_name in test_names:
