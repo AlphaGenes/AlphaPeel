@@ -1,12 +1,12 @@
 Introduction
 ~~~~~~~~~~~~
 
-|Software| is program to call, impute, and phase genotypes using a pedigree in potentially very large livestock populations. A complete description of the methods is given in Whalen et al. (2018; http://dx.doi.org/10.1186/s12711-018-0438-2).
+|Software| is program to call, impute, and phase genotypes using a pedigree in potentially very large livestock populations.
 
 Availability
 ------------
 
-|Software| is available as open-source from the `Github AlphaPeel <https://github.com/AlphaGenes/AlphaPeel>`_ website and can be easily installed using ``pip install AlphaPeel``.
+|Software| is available as open-source from `Github <https://github.com/AlphaGenes/AlphaPeel>`_ website and can be easily installed using ``pip install AlphaPeel`` (the latest release).
 
 Please report any issues at `<https://github.com/AlphaGenes/AlphaPeel/issues>`_.
 
