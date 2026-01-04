@@ -576,8 +576,11 @@ class TestClass:
             "default",
             "alt_allele_prob_file_single",
             "alt_allele_prob_file_multiple",
+            "multiple_metafounder_individual",
             "update_alt_allele_prob_single",
             "update_alt_allele_prob_multiple",
+            "update_alt_allele_prob_multiple_individual",
+            "one_metafounder_individual",
             "both",
             "incorrect_pedigree",
             "default_metafounder",
@@ -594,11 +597,18 @@ class TestClass:
             #                                   for a single metafounder
             #           alt_allele_prob_file_multiple: Test the input option alt_allele_prob_file
             #                                     for multiple metafounders
-            #           update_alt_allele_prob_single: Test the option alt_allele_prob_method
+            #           multiple_metafounder_individual: Test case when an individual has multiple metafounders
+            #                                       assigned and whether the average alternative allele
+            #                                       probabilities are being used correctly
+            #           update_alt_allele_prob_single: Test the option update_alt_allele_prob
             #                                       for a single metafounder
-            #           update_alt_allele_prob_multiple: Test the option alt_allele_prob_method
+            #           update_alt_allele_prob_multiple: Test the option update_alt_allele_prob
             #                                         for multiple metafounders
-            #           both: Test the case when both options are used,
+            #           update_alt_allele_prob_multiple_individual: Test case when an individual has multiple metafounders
+            #                                       assigned and whether the average alternative allele
+            #                                       probabilities are being updated correctly with update_alt_allele_prob
+            #           one_metafounder_individual: Test case when an individual has one metafounder. This will trigger an error
+            #           both: Test the case when both alt_allele_prob_file and update_alt_allele_prob options are used,
             #                 whether the inputted alternative allele probabilities are used as
             #                 a starting point for alternative allele probabilities estimation
             #           incorrect_pedigree: Test case when a metafounder is written incorrectly as
@@ -683,7 +693,22 @@ class TestClass:
                 self.expected = read_and_sort_file(self.expected_file_path)
                 # Compares the outputted dosage file to the expected based on inputted alt_allele_prob file.
                 assert self.output == self.expected
+            elif self.test_cases == "multiple_metafounder_individual":
+                self.generate_command()
+                os.system(self.command)
 
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+
+                self.output = read_and_sort_file(self.output_file_path, decimal_place=1)
+                self.expected = read_and_sort_file(self.expected_file_path)
+                # Compares the outputted dosage file to the expected based on inputted alt_allele_prob file
+                assert self.output == self.expected
                 # self.input_files.pop(-1)
                 self.input_file_depend_on_test_cases.pop(-1)
 
@@ -731,6 +756,32 @@ class TestClass:
                 )
                 # Compares alt_allele_prob output with expected when estimated by AlphaPeel for multiple metafounders
                 assert self.output == self.expected
+            elif self.test_cases == "update_alt_allele_prob_multiple_individual":
+                self.generate_command()
+                os.system(self.command)
+
+                self.output_file_path = os.path.join(
+                    self.output_path,
+                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+                )
+                self.expected_file_path = os.path.join(
+                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+                )
+
+                self.output, MF = read_and_sort_file(
+                    self.output_file_path, test_alt_allele_prob=True
+                )
+                self.expected, MF = read_and_sort_file(
+                    self.expected_file_path, test_alt_allele_prob=True
+                )
+                # Compares alt_allele_prob output with expected when estimated by AlphaPeel for multiple metafounders per individual
+                assert self.output == self.expected
+            elif self.test_cases == "one_metafounder_individual":
+                self.generate_command()
+                exit_code = os.system(self.command)
+
+                # check if error message is in the output
+                assert exit_code in [512, 2]
 
             elif self.test_cases == "both":
                 self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
@@ -889,7 +940,6 @@ class TestClass:
                 )
 
                 # Check that the metafounders are in the correct order in the output
-                print(MF)
                 assert MF == [
                     "MF_1",
                     "MF_2",

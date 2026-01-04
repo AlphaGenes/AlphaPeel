@@ -165,30 +165,44 @@ def updateMafAfterPeeling(pedigree, peelingInfo):
     :return: None. The function updates the pedigree.AAP attribute with the new alternative allele frequencies.
     """
     MF = list(pedigree.AAP.keys())
-    for mfx in MF:
-        AAP = pedigree.AAP[mfx]
-        sumOfGenotypes = np.full((4, peelingInfo.nLoci), 0, dtype=np.float32)
-        n = 0
-        for ind in pedigree:
-            if ind.MetaFounder == mfx and ind.isFounder():
-                ind_genotype = peelingInfo.getGenoProbs(ind.idn)
-                sumOfGenotypes += ind_genotype
-                n += 1
-        for i in range(peelingInfo.nLoci):
-            marker_Aa = sumOfGenotypes[1, i]
-            marker_aA = sumOfGenotypes[2, i]
-            marker_AA = sumOfGenotypes[3, i]
-            AAP[i] = (0.5 * (marker_Aa + marker_aA) + marker_AA) / n
-            if AAP[i] < 0.01:
-                AAP[i] = 0.01
-            elif AAP[i] > 0.99:
-                AAP[i] = 0.99
+    indMF = {k: 0 for k in MF}
+    AAP = {k: np.zeros(peelingInfo.nLoci, dtype=np.float32) for k in MF}
+    for ind in pedigree:
+        if ind.MetaFounder is not None and ind.isFounder():
+            ind_genotype = peelingInfo.getGenoProbs(ind.idn)
+            if len(ind.MetaFounder) == 2:
+                AAP[ind.MetaFounder[0]] += 0.5 * ind_genotype[3, :] + ind_genotype[2, :]
+                AAP[ind.MetaFounder[1]] += 0.5 * ind_genotype[3, :] + ind_genotype[1, :]
+                indMF[ind.MetaFounder[0]] += 1
+                indMF[ind.MetaFounder[1]] += 1
+            else:
+                AAP[ind.MetaFounder[0]] += (
+                    0.5 * (ind_genotype[2, :] + ind_genotype[1, :]) + ind_genotype[3, :]
+                )
+                indMF[ind.MetaFounder[0]] += 1
 
-        mafGeno = ProbMath.getGenotypesFromMaf(AAP)
-        for ind in pedigree:
-            if ind.MetaFounder == mfx and ind.isFounder():
-                peelingInfo.anterior[ind.idn, :, :] = mafGeno
-        pedigree.AAP[mfx] = AAP.astype(np.float32)
+    for mfx in MF:
+        for i in range(peelingInfo.nLoci):
+            AAP[mfx][i] = AAP[mfx][i] / indMF[mfx]
+            if AAP[mfx][i] < 0.01:
+                AAP[mfx][i] = 0.01
+            elif AAP[mfx][i] > 0.99:
+                AAP[mfx][i] = 0.99
+        pedigree.AAP[mfx] = AAP[mfx].astype(np.float32)
+
+    for ind in pedigree:
+        if ind.MetaFounder is not None and ind.isFounder():
+            AAP = {
+                k: np.zeros(peelingInfo.nLoci, dtype=np.float32)
+                for k in ind.MetaFounder
+            }
+            for mfx in ind.MetaFounder:
+                AAP[mfx] = pedigree.AAP[mfx]
+            if len(ind.MetaFounder) == 2:
+                mafGeno = ProbMath.getGenotypesFromMultiMaf(AAP)
+            else:
+                mafGeno = ProbMath.getGenotypesFromMaf(AAP[mfx])
+            peelingInfo.anterior[ind.idn, :, :] = mafGeno
 
 
 # Commenting out the following code. This was used to do updates via grid search.
