@@ -6,7 +6,7 @@ getMarkerCorrelations = function(mat, true) {
   cors = sapply(1:ncol(true), function(ii) {
     cor(true[, ii], mat[, ii], use = "pair")
   })
-  return(mean(cors, na.rm = TRUE))
+  return(mean(cors, na.rm = T))
 }
 
 assessPeeling = function(filePrefix) {
