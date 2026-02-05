@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "AlphaPeel"
-version = "1.1.3"
+version = "1.3.0"
 authors = [
   { name="Andrew Whalen", email="awhalen@roslin.ed.ac.uk" },
 ]
@@ -29,7 +29,9 @@ AlphaPeel = "tinypeel.tinypeel:main"
 
 [project.urls]
 "Homepage" = "https://github.com/AlphaGenes/AlphaPeel"
+"Documentation" = "https://alphapeel.readthedocs.io/en/latest/"
 "Bug Tracker" = "https://github.com/AlphaGenes/AlphaPeel/issues"
+"Changelog" = "https://alphapeel.readthedocs.io/en/latest/changelog.html"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
