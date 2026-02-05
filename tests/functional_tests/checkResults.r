@@ -221,14 +221,14 @@ if(test == "7c") {
 
 
 if(test == "8") {
-    no_dosages = all(checkForFiles("test8/outputs/no_dosages") == c(F,T, T, T, T, F))
+    no_dosage = all(checkForFiles("test8/outputs/no_dosage") == c(F,T, T, T, T, F))
     no_seg = all(checkForFiles("test8/outputs/no_seg") == c(T, F, T, T, T, F))
     no_params = all(checkForFiles("test8/outputs/no_params") == c(T, T, F, F, F, F))
     haps = all(checkForFiles("test8/outputs/haps") == c(T, T, T, T, T, T))
 
     success = TRUE
-    if(!no_dosages){
-        print("Test 8: no_dosages failed")
+    if(!no_dosage){
+        print("Test 8: no_dosage failed")
         success = FALSE
     }
     if(!no_seg){

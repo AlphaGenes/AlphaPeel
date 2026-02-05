@@ -1,10 +1,9 @@
 import numpy as np
-from numba import jit, float32, int32, int64, optional
-from numba.experimental import jitclass
+import warnings
 
 from .tinyhouse import Pedigree
+from .tinyhouse import InputOutput
 from .tinyhouse import ProbMath
-from .tinyhouse import InputOutput 
 
 from .Peeling import Peeling
 from .Peeling import PeelingIO
@@ -15,33 +14,129 @@ import concurrent.futures
 from itertools import repeat
 import argparse
 
-def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode = False):
-    #Right now maf _only_ uses the penetrance so can be estimated once.
-    if args.estmaf: PeelingUpdates.updateMaf(pedigree, peelingInfo)
 
-    for i in range(args.ncycles):
+def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
+    """Sets up and runs each of the peeling cycles (default is 5).
+    The set up includes:
+    - saving the alternative allele probabilities for each metafounder
+        - either with default of 0.5 or the -alt_allele_prob_file option input.
+        - using the est_alt_allele_prob option to estimate the alternative allele frequency.
+    - user warnings if metafounder is not in pedigree, or est_alt_allele_prob is used with -alt_allele_prob_file.
+    Running the peeling cycles includes:
+    - peeling down and up for each generation
+    - collecting iterations
+    - updating alternative allele frequencies for each metafounder, genotyping error rate, and sequencing error rate if the options are selected.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param args: argument container with configuration options for peeling
+    :type args: argparse.Namespace or similar object with attributes
+    :param singleLocusMode: whether method is single locus or not, defaults to False
+    :type singleLocusMode: bool, optional
+    :return: None. The function modifies the peelingInfo and pedigree object in place
+    """
+    # Right now maf _only_ uses the penetrance so can be estimated once.
+    if args.alt_allele_prob_file is not None:
+        mf_pedigree = []
+        for ind in pedigree:
+            if ind.isFounder() and ind.MetaFounder is not None:
+                mfx = ind.MetaFounder
+                if mfx not in mf_pedigree:
+                    mf_pedigree.append(mfx)
+                if pedigree.AAP.get(mfx) is None:
+                    pedigree.AAP[mfx] = np.full(
+                        peelingInfo.nLoci, 0.5, dtype=np.float32
+                    )
+                else:
+                    AAP = pedigree.AAP[mfx]
+                    for i in range(peelingInfo.nLoci):
+                        if AAP[i] < 0.01:
+                            AAP[i] = 0.01
+                        elif AAP[i] > 0.99:
+                            AAP[i] = 0.99
+                    pedigree.AAP[mfx] = AAP.astype(np.float32)
+                aaf = pedigree.AAP[mfx]
+                aafGeno = ProbMath.getGenotypesFromMaf(aaf)
+                peelingInfo.anterior[ind.idn, :, :] = aafGeno
+        mf_input = pedigree.AAP.copy()
+        # removal of any metafounders not in pedigree
+        for mfx in mf_input:
+            if mfx not in mf_pedigree:
+                del pedigree.AAP[mfx]
+                warnings.warn(
+                    f"{mfx} is not in the pedigree. The alternative allele probability for {mfx} has been ignored."
+                )
+    else:
+        for ind in pedigree:
+            if ind.MetaFounder is not None:
+                mfx = ind.MetaFounder
+                if pedigree.AAP.get(mfx) is None:
+                    pedigree.AAP[mfx] = np.full(
+                        peelingInfo.nLoci, 0.5, dtype=np.float32
+                    )
+    if args.est_alt_allele_prob:
+        if args.alt_allele_prob_file is not None and len(pedigree.AAP) > 1:
+            warnings.warn(
+                "-est_alt_allele_prob will overwrite any differences between metafounders. To avoid this, please use -update_alt_allele_prob instead"
+            )
+        PeelingUpdates.updateMaf(pedigree, peelingInfo)
+    for i in range(args.n_cycle):
         print("Cycle ", i)
-        peelingCycle(pedigree, peelingInfo, args = args, singleLocusMode = singleLocusMode)
+        peelingCycle(pedigree, peelingInfo, args=args, singleLocusMode=singleLocusMode)
         peelingInfo.iteration += 1
-        
-        # esttransitions is been disabled.
-        # if args.esttransitions: 
-        #     print("Estimating the transmission rate is currently a disabled option")
-            # PeelingUpdates.updateSeg(peelingInfo) #Option currently disabled.
-            
-        if args.esterrors: 
-            PeelingUpdates.updatePenetrance(pedigree, peelingInfo)
 
-def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
+        # esttransitions is been disabled.
+        # if args.esttransitions:
+        #     print("Estimating the transmission rate is currently a disabled option")
+        # PeelingUpdates.updateSeg(peelingInfo) #Option currently disabled.
+        if args.est_geno_error_prob or args.est_seq_error_prob:
+            PeelingUpdates.updatePenetrance(pedigree, peelingInfo, args)
+        if args.update_pheno_penetrance:
+            if args.phenoPenetrance is None or args.phenotype is None:
+                warnings.warn(
+                    "Both -pheno_penetrance_file and -pheno_file are required to update the phenotype penetrance. Skipping update."
+                )
+            else:
+                print("Updating Phenotype Penetrance")
+                PeelingUpdates.updatePhenoPenetrance(pedigree, peelingInfo)
+        if args.update_alt_allele_prob:
+            print("Updating Alternative Allele Frequencies")
+            PeelingUpdates.updateMafAfterPeeling(pedigree, peelingInfo)
+
+
+def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
+    """Runs a single peeling cycle.
+    Starts with peeling down, then peeling up.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param args: argument container with configuration options for peeling
+    :type args: argparse.Namespace or similar object with attributes
+    :param singleLocusMode: whether method is single locus or not, defaults to False
+    :type singleLocusMode: bool, optional
+    :return: None. The function modifies the peelingInfo and pedigree object in place
+    """
     nWorkers = args.maxthreads
-    
+
     for index, generation in enumerate(pedigree.generations):
         print("Peeling Down, Generation", index)
         jit_families = [family.toJit() for family in generation.families]
 
         if args.maxthreads > 1:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=nWorkers) as executor:
-                 results = executor.map(Peeling.peel, jit_families, repeat(Peeling.PEEL_DOWN), repeat(peelingInfo), repeat(singleLocusMode))
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=nWorkers
+            ) as executor:
+                executor.map(
+                    Peeling.peel,
+                    jit_families,
+                    repeat(Peeling.PEEL_DOWN),
+                    repeat(peelingInfo),
+                    repeat(singleLocusMode),
+                )
         else:
             for family in jit_families:
                 Peeling.peel(family, Peeling.PEEL_DOWN, peelingInfo, singleLocusMode)
@@ -51,8 +146,16 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
         jit_families = [family.toJit() for family in generation.families]
 
         if args.maxthreads > 1:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=nWorkers) as executor:
-                 results = executor.map(Peeling.peel, jit_families, repeat(Peeling.PEEL_UP), repeat(peelingInfo), repeat(singleLocusMode))
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=nWorkers
+            ) as executor:
+                executor.map(
+                    Peeling.peel,
+                    jit_families,
+                    repeat(Peeling.PEEL_UP),
+                    repeat(peelingInfo),
+                    repeat(singleLocusMode),
+                )
         else:
             for family in jit_families:
                 Peeling.peel(family, Peeling.PEEL_UP, peelingInfo, singleLocusMode)
@@ -64,15 +167,28 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode = False) :
             dams.add(family.dam)
         updatePosterior(pedigree, peelingInfo, sires, dams)
 
+
 # updatePosterior updates the posterior term for a specific set of sires and dams.
-# The updateSire and updateDam functions perform the updates for a specific sire 
+# The updateSire and updateDam functions perform the updates for a specific sire
 # and specific dam by including all of the information from all of their families.
-# This update is currently not multithreaded. It is also currently not ideal -- 
-# right now the posterior term is updated for all of the sires/dams no matter 
+# This update is currently not multithreaded. It is also currently not ideal --
+# right now the posterior term is updated for all of the sires/dams no matter
 # whether or not they have been changed since the last update.
 
-def updatePosterior(pedigree, peelingInfo, sires, dams) :
 
+def updatePosterior(pedigree, peelingInfo, sires, dams):
+    """Updates the posterior term for a specific set of sires and dams.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param sires: collection of sires to update
+    :type sires: set of class:`tinyhouse.Pedigree.Individual`
+    :param dams: collection of dams to update
+    :type dams: set of class:`tinyhouse.Pedigree.Individual`
+    :return: None. The function modifies the peelingInfo object in place
+    """
     # if pedigree.mapSireToFamilies is None or pedigree.mapDamToFamilies is None:
     #     pedigree.setupFamilyMap()
 
@@ -83,180 +199,697 @@ def updatePosterior(pedigree, peelingInfo, sires, dams) :
         updateDam(dam, peelingInfo)
 
 
-def updateSire(sire, peelingInfo) :
+def updateSire(sire, peelingInfo):
+    """Updates the posterior term for a specific sire.
 
+    :param sire: the sire to update
+    :type sire: class: `tinyhouse.Pedigree.Individual`
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: None. The function modifies the peelingInfo object in place
+    """
     famList = [fam.idn for fam in sire.families]
     sire = sire.idn
-    peelingInfo.posterior[sire,:,:] = 0
+    peelingInfo.posterior[sire, :, :] = 0
     for famId in famList:
-        log_update = np.log(peelingInfo.posteriorSire_new[famId,:,:])
-        peelingInfo.posterior[sire,:,:] += log_update
-        peelingInfo.posteriorSire_minusFam[famId,:,:] = -log_update
-
-    for famId in famList:
-        peelingInfo.posteriorSire_minusFam[famId,:,:] += peelingInfo.posterior[sire,:,:]
-
-    #Rescale values.
-    peelingInfo.posterior[sire,:,:] = Peeling.expNorm1D(peelingInfo.posterior[sire,:,:])
-    peelingInfo.posterior[sire,:,:] /= np.sum(peelingInfo.posterior[sire,:,:], 0)
+        log_update = np.log(peelingInfo.posteriorSire_new[famId, :, :])
+        peelingInfo.posterior[sire, :, :] += log_update
+        peelingInfo.posteriorSire_minusFam[famId, :, :] = -log_update
 
     for famId in famList:
-        peelingInfo.posteriorSire_minusFam[famId,:,:] = Peeling.expNorm1D(peelingInfo.posteriorSire_minusFam[famId,:,:])
-        peelingInfo.posteriorSire_minusFam[famId,:,:]  /= np.sum(peelingInfo.posteriorSire_minusFam[famId,:,:], 0)
-        
-def updateDam(dam, peelingInfo) :
+        peelingInfo.posteriorSire_minusFam[famId, :, :] += peelingInfo.posterior[
+            sire, :, :
+        ]
 
+    # Rescale values.
+    peelingInfo.posterior[sire, :, :] = Peeling.expNorm1D(
+        peelingInfo.posterior[sire, :, :]
+    )
+    peelingInfo.posterior[sire, :, :] /= np.sum(peelingInfo.posterior[sire, :, :], 0)
+
+    for famId in famList:
+        peelingInfo.posteriorSire_minusFam[famId, :, :] = Peeling.expNorm1D(
+            peelingInfo.posteriorSire_minusFam[famId, :, :]
+        )
+        peelingInfo.posteriorSire_minusFam[famId, :, :] /= np.sum(
+            peelingInfo.posteriorSire_minusFam[famId, :, :], 0
+        )
+
+
+def updateDam(dam, peelingInfo):
+    """Updates the posterior term for a specific dam.
+
+    :param dam: the dam to update
+    :type dam: class: `tinyhouse.Pedigree.Individual`
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :return: None. The function modifies the peelingInfo object in place
+    """
     famList = [fam.idn for fam in dam.families]
     dam = dam.idn
-    peelingInfo.posterior[dam,:,:] = 0
+    peelingInfo.posterior[dam, :, :] = 0
     for famId in famList:
-        log_update = np.log(peelingInfo.posteriorDam_new[famId,:,:])
-        peelingInfo.posterior[dam,:,:] += log_update
-        peelingInfo.posteriorDam_minusFam[famId,:,:] = -log_update
+        log_update = np.log(peelingInfo.posteriorDam_new[famId, :, :])
+        peelingInfo.posterior[dam, :, :] += log_update
+        peelingInfo.posteriorDam_minusFam[famId, :, :] = -log_update
 
     for famId in famList:
-        peelingInfo.posteriorDam_minusFam[famId,:,:] += peelingInfo.posterior[dam,:,:]
+        peelingInfo.posteriorDam_minusFam[famId, :, :] += peelingInfo.posterior[
+            dam, :, :
+        ]
 
-    peelingInfo.posterior[dam,:,:] = Peeling.expNorm1D(peelingInfo.posterior[dam,:,:])
-    peelingInfo.posterior[dam,:,:] /= np.sum(peelingInfo.posterior[dam,:,:], 0)
+    peelingInfo.posterior[dam, :, :] = Peeling.expNorm1D(
+        peelingInfo.posterior[dam, :, :]
+    )
+    peelingInfo.posterior[dam, :, :] /= np.sum(peelingInfo.posterior[dam, :, :], 0)
     for famId in famList:
-        peelingInfo.posteriorDam_minusFam[famId,:,:] = Peeling.expNorm1D(peelingInfo.posteriorDam_minusFam[famId,:,:])
-        peelingInfo.posteriorDam_minusFam[famId,:,:]  /= np.sum(peelingInfo.posteriorDam_minusFam[famId,:,:], 0)
+        peelingInfo.posteriorDam_minusFam[famId, :, :] = Peeling.expNorm1D(
+            peelingInfo.posteriorDam_minusFam[famId, :, :]
+        )
+        peelingInfo.posteriorDam_minusFam[famId, :, :] /= np.sum(
+            peelingInfo.posteriorDam_minusFam[famId, :, :], 0
+        )
+
 
 def getLociAndDistance(snpMap, segMap):
+    """Takes the snpMap and segMap and returns the loci and distance for each snp.
+
+    :param snpMap: matrix for the position of the SNPs across and on the chromosome.
+    :type snpMap: 1D numpy array with length of nLoci
+    :param segMap: matrix for the position of the segregation markers across and on the chromosome.
+    :type segMap: 1D numpy array with length of nLoci
+    :return: loci and distance for each SNP
+    :rtype: tuple of (loci, distance)
+    """
     nSnp = len(snpMap)
-    distance = np.full(nSnp, 0, dtype = np.float32)
-    loci = np.full((nSnp, 2), 0, dtype = np.int64)
+    distance = np.full(nSnp, 0, dtype=np.float32)
+    loci = np.full((nSnp, 2), 0, dtype=np.int64)
 
     # Assume snp map and segMap are sorted.
     segIndex = 0
-    for i in range(nSnp) :
+    for i in range(nSnp):
         pos = snpMap[i]
         # Move along the segMap until we reach a point where we are either at the end of the map, or where the next seg marker occurs after the position in the genotype file.
         # This assumes sorting pretty heavily. Alternative would be to find the neighboring positions in the seg file for each marker in the genotype file.
-        while segIndex < (len(segMap)-1) and segMap[segIndex + 1] < pos : 
+        while segIndex < (len(segMap) - 1) and segMap[segIndex + 1] < pos:
             segIndex += 1
-        
+
         # Now that positions are known, choose the neighboring markers and the distance to those markers.
         # First two if statements handle the begining and ends of the chromosome.
-        if segIndex == 0 and segMap[segIndex] > pos :
+        if segIndex == 0 and segMap[segIndex] > pos:
             loci[i, :] = (segIndex, segIndex)
             distance[i] = 0
-        elif segIndex == (len(segMap)-1) and segMap[segIndex] <= pos :
+        elif segIndex == (len(segMap) - 1) and segMap[segIndex] <= pos:
             loci[i, :] = (segIndex, segIndex)
             distance[i] = 0
         else:
-            loci[i,:] = (segIndex, segIndex + 1)
-            gap = segMap[segIndex+1] - segMap[segIndex] 
-            distance[i] = 1.0 - (pos - segMap[segIndex])/gap #At distance 0, only use segIndex. At distance 1, use segIndex + 1.
+            loci[i, :] = (segIndex, segIndex + 1)
+            gap = segMap[segIndex + 1] - segMap[segIndex]
+            distance[i] = (
+                1.0 - (pos - segMap[segIndex]) / gap
+            )  # At distance 0, only use segIndex. At distance 1, use segIndex + 1.
     return (loci, distance)
 
 
 def generateSingleLocusSegregation(peelingInfo, pedigree, args):
-    segInfo = None
+    """Generates the segregation probabilities for each locus in the peelingInfo object.
+        If the -seg_file option is used,
+        - collects the segregation file,
+        - reads in the SNP and segregation map files,
+        - calculates the loci and distance from each SNP
+        - adjust loci indices to align with segregation file
+        - interpolates the segregation probabilities based on the distance and segregation probabilities at the two neighbouring markers.
+        Otherwise, the segregation probabilities are set to 0.25.
+
+    :param peelingInfo: Peeling information container
+    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param args: argument container with configuration options for peeling
+    :type args: argparse.Namespace or similar object with attributes
+    :return: None. The function modifies the peelingInfo object in place
+    """
     if args.segfile is not None:
         # This just gets the locations in the map files.
-        snpMap = np.array(InputOutput.readMapFile(args.mapfile, args.startsnp, args.stopsnp)[2])
-        segMap = np.array(InputOutput.readMapFile(args.segmapfile)[2])
+        snpMap = peelingInfo.positions
+        segMap = np.array(InputOutput.readMapFile(args.seg_map_file)[2])
 
         loci, distance = getLociAndDistance(snpMap, segMap)
         start = np.min(loci)
-        stop = np.max(loci) 
-        
-        seg = InputOutput.readInSeg(pedigree, args.segfile, start = start, stop = stop)
-        loci -= start # Re-align to seg file.
+        stop = np.max(loci)
+
+        seg = InputOutput.readInSeg(pedigree, args.seg_file, start=start, stop=stop)
+        loci -= start  # Re-align to seg file.
         for i in range(len(distance)):
-            segLoc0 = loci[i,0]
-            segLoc1 = loci[i,1]
-            peelingInfo.segregation[:,:,i] = distance[i]*seg[:,:,segLoc0] + (1-distance[i])*seg[:,:,segLoc1]
+            segLoc0 = loci[i, 0]
+            segLoc1 = loci[i, 1]
+            peelingInfo.segregation[:, :, i] = (
+                distance[i] * seg[:, :, segLoc0]
+                + (1 - distance[i]) * seg[:, :, segLoc1]
+            )
 
     else:
-        peelingInfo.segregation[:,:,:] = .25
+        peelingInfo.segregation[:, :, :] = 0.25
 
 
-### ACTUAL PROGRAM BELOW
+def get_probability_options():
+    """Collects potential user inputs for genotype error rate and sequencing error rate,
+    otherwise the default is 0.0001 and 0.01 respectively.
+
+    :return: A dictionary with the options for the genotype and sequencing error rates.
+    :rtype: dict
+    """
+    parse_dictionary = dict()
+    parse_dictionary["geno_error_prob"] = lambda parser: parser.add_argument(
+        "-geno_error_prob",
+        default=0.0001,
+        required=False,
+        type=float,
+        help="Genotyping error rate. Default: 0.0001.",
+    )
+    parse_dictionary["seq_error_prob"] = lambda parser: parser.add_argument(
+        "-seq_error_prob",
+        default=0.001,
+        required=False,
+        type=float,
+        help="Sequencing error rate. Default: 0.001.",
+    )
+    parse_dictionary["mutation_rate"] = lambda parser: parser.add_argument(
+        "-mutation_rate",
+        default=1e-8,
+        required=False,
+        type=float,
+        help="mutation rate. Default: 1e-8.",
+    )
+
+    return parse_dictionary
 
 
-def getArgs() :
-    parser = argparse.ArgumentParser(description='')
+def get_input_options():
+    """Collects the input options of the program as a dictionary. The options are:
+    -plink_file: bfile
+    -geno_file: genotypes
+    -pheno_file: phenotype
+    -reference: reference
+    -seq_file: seqfile
+    -ped_file: pedigree
+    -hap_file: phasefile
+    -alt_allele_prob_file: alt_allele_prob_file
+    -start_snp: startsnp
+    -stop_snp: stopsnp
+    -main_metafounder: main_metafounder
+    -seed: seed (for debugging)
+
+    :return: the options for the input files and parameters.
+    :rtype: dict
+    """
+    parse_dictionary = dict()
+    parse_dictionary["bfile"] = lambda parser: parser.add_argument(
+        "-plink_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="plink (binary) file(s).",
+    )
+    parse_dictionary["genotypes"] = lambda parser: parser.add_argument(
+        "-geno_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="Genotype file(s) in AlphaGenes format.",
+    )
+    parse_dictionary["phenotype"] = lambda parser: parser.add_argument(
+        "-pheno_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="Phenotype file(s) in AlphaGenes format.",
+    )
+    parse_dictionary["reference"] = lambda parser: parser.add_argument(
+        "-reference",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="A haplotype reference panel in AlphaGenes format.",
+    )
+    parse_dictionary["seqfile"] = lambda parser: parser.add_argument(
+        "-seq_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="Sequence allele read count file(s).",
+    )
+    parse_dictionary["pedigree"] = lambda parser: parser.add_argument(
+        "-ped_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="Pedigree file(s) in AlphaGenes format.",
+    )
+    parse_dictionary["phasefile"] = lambda parser: parser.add_argument(
+        "-hap_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="A haplotype file in AlphaGenes format.",
+    )
+    parse_dictionary["alt_allele_prob_file"] = lambda parser: parser.add_argument(
+        "-alt_allele_prob_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="The alternative allele probabilities per metafounder(s). Default: 0.5 per marker",
+    )
+    parse_dictionary["pheno_penetrance_file"] = lambda parser: parser.add_argument(
+        "-pheno_penetrance_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="The penetrance file for the phenotypes.",
+    )
+    parse_dictionary["startsnp"] = lambda parser: parser.add_argument(
+        "-start_snp",
+        default=None,
+        required=False,
+        type=int,
+        help="The first marker to consider. The first marker in the file is marker '1'. Default: 1.",
+    )
+    parse_dictionary["stopsnp"] = lambda parser: parser.add_argument(
+        "-stop_snp",
+        default=None,
+        required=False,
+        type=int,
+        help="The last marker to consider. Default: all markers considered.",
+    )
+    parse_dictionary["main_metafounder"] = lambda parser: parser.add_argument(
+        "-main_metafounder",
+        default="MF_1",
+        required=False,
+        type=str,
+        help="The metafounder to use where parents are unknown with input 0. Default: MF_1.",
+    )
+    parse_dictionary["seed"] = lambda parser: parser.add_argument(
+        "-seed",
+        default=None,
+        required=False,
+        type=int,
+        help="A random seed to use for debugging.",
+    )
+
+    return parse_dictionary
+
+
+def get_output_options():
+    """Collects the optional output options of the program as a dictionary. The options are:
+    -out_id_order: writekey (write in the same order as pedigree input)
+    -out_id_only: onlykeyed (only include individuals from the pedigree input)
+    -iothreads: iothreads
+
+    :return: the options for the output files and parameters.
+    :rtype: dict
+    """
+    parse_dictionary = dict()
+
+    parse_dictionary["writekey"] = lambda parser: parser.add_argument(
+        "-out_id_order",
+        default="id",
+        required=False,
+        type=str,
+        help='Determines the order in which individuals are ordered in the output file based on their order in the corresponding input file. Individuals not in the input file are placed at the end of the file and sorted in alphanumeric order. These inividuals can be surpressed with the "-out_id_only" option. Options: id, pedigree, genotypes, sequence, segregation. Defualt: id.',
+    )
+    parse_dictionary["onlykeyed"] = lambda parser: parser.add_argument(
+        "-out_id_only",
+        action="store_true",
+        required=False,
+        help='Flag to surpress the individuals who are not present in the file used with -out_id_order. Also surpresses "dummy" individuals.',
+    )
+    parse_dictionary["iothreads"] = lambda parser: parser.add_argument(
+        "-n_io_thread",
+        default=1,
+        required=False,
+        type=int,
+        help="Number of threads to use for io. Default: 1.",
+    )
+
+    return parse_dictionary
+
+
+def get_multithread_options():
+    """Collects the optional multithread options of the program as a dictionary. The options are:
+    -n_io_thread: iothreads
+    -n_thread: maxthreads
+
+    :return: the options for the multithreading parameters.
+    :rtype: dict
+    """
+    parse_dictionary = dict()
+    parse_dictionary["iothreads"] = lambda parser: parser.add_argument(
+        "-n_io_thread",
+        default=1,
+        required=False,
+        type=int,
+        help="Number of threads to use for input and output. Default: 1.",
+    )
+    parse_dictionary["maxthreads"] = lambda parser: parser.add_argument(
+        "-n_thread",
+        default=1,
+        required=False,
+        type=int,
+        help="Maximum number of threads to use for analysis. Default: 1.",
+    )
+    return parse_dictionary
+
+
+# ACTUAL PROGRAM BELOW
+
+
+def getArgs():
+    """Presents and collects the arguments from the command line.
+
+    :return: the user input arguments for the AlphaPeel program
+    :rtype: argparse.Namespace
+    """
+    parser = argparse.ArgumentParser(description="")
     core_parser = parser.add_argument_group("Core arguments")
-    core_parser.add_argument('-out', required=True, type=str, help='The output file prefix.')
-   
+    core_parser.add_argument(
+        "-out_file", required=True, type=str, help="The output file prefix."
+    )
+
     core_peeling_parser = parser.add_argument_group("Mandatory peeling arguments")
-    core_peeling_parser.add_argument('-runtype', default=None, required=False, type=str, help='Program run type. Either "single" or "multi".')
+    core_peeling_parser.add_argument(
+        "-method",
+        default=None,
+        required=False,
+        type=str,
+        help='Program run type. Either "single" or "multi".',
+    )
 
     # Input options
     input_parser = parser.add_argument_group("Input Options")
-    InputOutput.add_arguments_from_dictionary(input_parser, InputOutput.get_input_options(), options = ["bfile", "genotypes", "phasefile", "seqfile", "pedigree", "startsnp", "stopsnp"]) 
+    InputOutput.add_arguments_from_dictionary(
+        input_parser,
+        get_input_options(),
+        options=[
+            "bfile",
+            "genotypes",
+            "phenotype",
+            "phasefile",
+            "seqfile",
+            "pedigree",
+            "alt_allele_prob_file",
+            "pheno_penetrance_file",
+            "startsnp",
+            "stopsnp",
+            "main_metafounder",
+        ],
+    )
+    input_parser.add_argument(
+        "-map_file",
+        default=None,
+        required=False,
+        type=str,
+        help="A map file for all loci.",
+    )
 
     # Output options
     output_parser = parser.add_argument_group("Output Options")
 
-    output_parser.add_argument('-no_dosages', action='store_true', required=False, help='Flag to suppress the dosage files.')
-    output_parser.add_argument('-no_seg', action='store_true', required=False, help='Flag to suppress the segregation files (e.g. when running for chip imputation and not hybrid peeling).')
-    output_parser.add_argument('-no_params', action='store_true', required=False, help='Flag to suppress writing the parameter files.')
+    output_parser.add_argument(
+        "-no_dosage",
+        action="store_true",
+        required=False,
+        help="Flag to suppress the output of the dosage file.",
+    )
+    output_parser.add_argument(
+        "-seg_prob",
+        action="store_true",
+        required=False,
+        help="Flag to enable writing out the segregation probabilities.",
+    )
+    output_parser.add_argument(
+        "-no_param",
+        action="store_true",
+        required=False,
+        help="Flag to suppress writing the model parameter files.",
+    )
+    output_parser.add_argument(
+        "-alt_allele_prob",
+        action="store_true",
+        required=False,
+        help="Flag to write out the alternative allele frequencies for each metafounder.",
+    )
+    output_parser.add_argument(
+        "-pheno_penetrance",
+        action="store_true",
+        required=False,
+        help="Flag to write out the phenotype penetrance file.",
+    )
+    output_parser.add_argument(
+        "-geno_prob",
+        action="store_true",
+        required=False,
+        help="Flag to enable writing out the genotype probabilities.",
+    )
+    output_parser.add_argument(
+        "-pheno_prob",
+        action="store_true",
+        required=False,
+        help="Flag to enable writing out the phenotype probabilities.",
+    )
+    output_parser.add_argument(
+        "-phased_geno_prob",
+        action="store_true",
+        required=False,
+        help="Flag to enable writing out the phased genotype probabilities.",
+    )
+    output_parser.add_argument(
+        "-geno_threshold",
+        default=None,
+        required=False,
+        type=float,
+        nargs="*",
+        help="Genotype calling threshold(s). Multiple space separated values allowed.\
+        Value less than 1/3 will be replaced by 1/3.",
+    )
+    output_parser.add_argument(
+        "-hap_threshold",
+        default=None,
+        required=False,
+        type=float,
+        nargs="*",
+        help="Haplotype calling threshold(s). Multiple space separated values allowed.\
+        Value less than 1/2 will be replaced by 1/2.",
+    )
+    output_parser.add_argument(
+        "-geno",
+        action="store_true",
+        required=False,
+        help="Flag to call and write out the genotypes. If the ``-geno_threshold`` parameter is not provided, the default genotype calling threshold is set to 1/3.",
+    )
+    output_parser.add_argument(
+        "-binary_call_file",
+        action="store_true",
+        required=False,
+        help="Flag to write out the called genotype files as a binary plink output [Not yet implemented].",
+    )
+    output_parser.add_argument(
+        "-hap",
+        action="store_true",
+        required=False,
+        help="Flag to call and write out the haplotypes. If the ``-hap_threshold`` parameter is not provided, the default haplotype calling threshold is set to 1/2.",
+    )
 
-    output_parser.add_argument('-haps', action='store_true', required=False, help='Flag to enable writing out the genotype probabilities.')
-    output_parser.add_argument('-calling_threshold', default=None, required=False, type=float, nargs="*", help='Genotype calling threshold(s). Multiple space separated values allowed. Use. .3 for best guess genotype.')
-    output_parser.add_argument('-binary_call_files', action='store_true', required=False, help='Flag to write out the called genotype files as a binary plink output [Not yet implemented].')
-    output_parser.add_argument('-call_phase', action='store_true', required=False, help='Flag to call the phase as well as the genotypes.')
-    
-    InputOutput.add_arguments_from_dictionary(output_parser, InputOutput.get_output_options(), options = ["writekey", "onlykeyed"]) 
-
+    InputOutput.add_arguments_from_dictionary(
+        output_parser,
+        get_output_options(),
+        options=["writekey", "onlykeyed"],
+    )
 
     # Multithreading
     multithread_parser = parser.add_argument_group("Multithreading Options")
-    InputOutput.add_arguments_from_dictionary(multithread_parser, InputOutput.get_multithread_options(), options = ["iothreads", "maxthreads"]) 
-
+    InputOutput.add_arguments_from_dictionary(
+        multithread_parser,
+        get_multithread_options(),
+        options=["iothreads", "maxthreads"],
+    )
 
     peeling_parser = parser.add_argument_group("Optional peeling arguments")
-    peeling_parser.add_argument('-ncycles',default=5, required=False, type=int, help='Number of peeling cycles. Default: 5.')
-    peeling_parser.add_argument('-length', default=1.0, required=False, type=float, help='Estimated length of the chromosome in Morgans. [Default 1.00]')
-    peeling_parser.add_argument('-penetrance',   default=None, required=False, type=str, nargs="*", help=argparse.SUPPRESS) #help='An optional external penetrance file. This will overwrite the default penetrance values.')
-    InputOutput.add_arguments_from_dictionary(peeling_parser, InputOutput.get_probability_options(), options = ["error", "seqerror"]) 
-
+    peeling_parser.add_argument(
+        "-n_cycle",
+        default=5,
+        required=False,
+        type=int,
+        help="Number of peeling cycles. Default: 5.",
+    )
+    peeling_parser.add_argument(
+        "-rec_length",
+        default=1.0,
+        required=False,
+        type=float,
+        help="Estimated recombination length of the chromosome in Morgans. [Default 1.00]",
+    )
+    peeling_parser.add_argument(
+        "-penetrance",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help=argparse.SUPPRESS,  # This argument will not appear in the help message, but is still available to use.
+    )  # help='An optional external penetrance file. This will overwrite the default penetrance values.')
+    InputOutput.add_arguments_from_dictionary(
+        peeling_parser,
+        get_probability_options(),
+        options=["geno_error_prob", "seq_error_prob", "mutation_rate"],
+    )
 
     peeling_control_parser = parser.add_argument_group("Peeling control arguments")
-    peeling_control_parser.add_argument('-esterrors', action='store_true', required=False, help='Flag to re-estimate the genotyping error rates after each peeling cycle.')
-    peeling_control_parser.add_argument('-estmaf', action='store_true', required=False, help='Flag to re-estimate the minor allele frequency after each peeling cycle.')
-    peeling_control_parser.add_argument('-nophasefounders', action='store_true', required=False, help='A flag phase a heterozygous allele in one of the founders (if such an allele can be found).')
-    peeling_control_parser.add_argument('-sexchrom', action='store_true', required=False, help='A flag to that this is a sex chromosome. Sex needs to be given in the pedigree file. This is currently an experimental option.')
-
+    peeling_control_parser.add_argument(
+        "-est_geno_error_prob",
+        action="store_true",
+        required=False,
+        help="Flag to re-estimate the genotyping error rates after each peeling cycle.",
+    )
+    peeling_control_parser.add_argument(
+        "-est_seq_error_prob",
+        action="store_true",
+        required=False,
+        help="Flag to re-estimate the sequencing error rates after each peeling cycle.",
+    )
+    peeling_control_parser.add_argument(
+        "-est_alt_allele_prob",
+        action="store_true",
+        required=False,
+        help="Flag to estimate the alternative allele frequency using all observed genotypes prior to peeling.",
+    )
+    peeling_control_parser.add_argument(
+        "-update_alt_allele_prob",
+        action="store_true",
+        required=False,
+        help="Flag to re-estimate the alternative allele frequencies for each metafounder after each peeling cycle.",
+    )
+    peeling_control_parser.add_argument(
+        "-update_pheno_penetrance",
+        action="store_true",
+        required=False,
+        help="Flag to re-estimate the phenotype penetrance after each peeling cycle.",
+    )
+    peeling_control_parser.add_argument(
+        "-no_phase_founder",
+        action="store_true",
+        required=False,
+        help="A flag phase a heterozygous allele in one of the founders (if such an allele can be found).",
+    )
+    peeling_control_parser.add_argument(
+        "-x_chr",
+        action="store_true",
+        required=False,
+        help="A flag to indicate that input data is for a sex chromosome. Sex needs to be given in the pedigree file.",
+    )
 
     singleLocus_parser = parser.add_argument_group("Hybrid peeling arguments")
-    singleLocus_parser.add_argument('-mapfile',default=None, required=False, type=str, help='a map file for genotype data.')
-    singleLocus_parser.add_argument('-segmapfile',default=None, required=False, type=str, help='a map file for the segregation estimates for hybrid peeling.')
-    singleLocus_parser.add_argument('-segfile',default=None, required=False, type=str, help='A segregation file for hybrid peeling.')
+    singleLocus_parser.add_argument(
+        "-seg_map_file",
+        default=None,
+        required=False,
+        type=str,
+        help="A map file for loci in the segregation probabilities file in hybrid peeling.",
+    )
+    singleLocus_parser.add_argument(
+        "-seg_file",
+        default=None,
+        required=False,
+        type=str,
+        help="A segregation file for hybrid peeling.",
+    )
     # singleLocus_parser.add_argument('-blocksize',default=100, required=False, type=int, help='The number of markers to impute at once. This changes the memory requirements of the program.')
-
-
-
 
     return InputOutput.parseArgs("AlphaPeel", parser)
 
 
-
-
-
-def main() :
+def main():
+    """Main function for the AlphaPeel program. This function collects the arguments from the command line and runs the peeling algorithm."""
     args = getArgs()
-    pedigree = Pedigree.Pedigree() 
+    if args.start_snp:
+        args.start_snp -= 1
+    if args.stop_snp:
+        args.stop_snp -= 1
+    args.bfile = args.plink_file
+    args.genotypes = args.geno_file
+    args.phenotype = args.pheno_file
+    args.phenoPenetrance = args.pheno_penetrance_file
+    args.phasefile = args.hap_file
+    args.seqfile = args.seq_file
+    args.pedigree = args.ped_file
+    args.startsnp = args.start_snp
+    args.stopsnp = args.stop_snp
+    args.writekey = args.out_id_order
+    args.onlykeyed = args.out_id_only
+    args.iothreads = args.n_io_thread
+    args.maxthreads = args.n_thread
+    args.segfile = args.seg_file
+
+    pedigree = Pedigree.Pedigree()
     InputOutput.readInPedigreeFromInputs(pedigree, args)
 
-    singleLocusMode = args.runtype == "single"
-    if args.runtype == "multi" and args.segfile :
+    singleLocusMode = args.method == "single"
+    if args.method == "multi" and args.segfile:
         print("Running in multi-locus mode, external segfile ignored")
 
-    peelingInfo = PeelingInfo.createPeelingInfo(pedigree, args, phaseFounder = (not args.nophasefounders))
+    # For now, only support a single phenotype (will remove in future)
+    if args.phenotype is not None and pedigree.nPheno > 1:
+        warnings.warn(
+            "Currently only a single phenotype is supported. Phenotype information will be ignored."
+        )
+        pedigree.phenoPenetrance = None
+        args.phenoPenetrance = None
+        for ind in pedigree:
+            ind.phenotype = None
+
+    peelingInfo = PeelingInfo.createPeelingInfo(
+        pedigree, args, phaseFounder=(not args.no_phase_founder)
+    )
 
     if singleLocusMode:
         print("Generating seg estimates")
         generateSingleLocusSegregation(peelingInfo, pedigree, args)
-    runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode = singleLocusMode)
+    runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=singleLocusMode)
 
-    PeelingIO.writeGenotypes(pedigree, genoProbFunc = peelingInfo.getGenoProbs)
-    if not args.no_params: PeelingIO.writeOutParamaters(peelingInfo)
-    if not singleLocusMode and not args.no_seg: InputOutput.writeIdnIndexedMatrix(pedigree, peelingInfo.segregation, args.out + ".seg")
+    PeelingIO.writeGenotypes(
+        pedigree,
+        genoProbFunc=peelingInfo.getGenoProbs,
+        isXChr=peelingInfo.isXChr,
+    )
+    if not args.no_param:
+        PeelingIO.writeOutParamaters(peelingInfo)
+    if args.alt_allele_prob:
+        PeelingIO.writeOutAltAlleleProb(pedigree)
+    if args.pheno_prob:
+        if args.phenoPenetrance is None:
+            warnings.warn(
+                "Phenotype probabilities are not available. Please provide a penetrance file with -pheno_penetrance_file. -pheno_prob will be ignored."
+            )
+        else:
+            PeelingIO.writePhenoProbs(pedigree, phenoProbFunc=peelingInfo.getPhenoProbs)
+    if args.pheno_penetrance:
+        if pedigree.phenoPenetrance is None:
+            warnings.warn(
+                "Phenotype penetrance is not available. Please provide a penetrance file with -pheno_penetrance_file. -pheno_penetrance will be ignored."
+            )
+        else:
+            PeelingIO.writePhenoPenetrance(pedigree)
+    if not singleLocusMode and args.seg_prob:
+        InputOutput.writeIdnIndexedMatrix(
+            pedigree, peelingInfo.segregation, args.out_file + ".seg_prob.txt"
+        )
 
 
 if __name__ == "__main__":
