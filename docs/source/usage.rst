@@ -7,7 +7,9 @@ Usage
 Program options
 ===============
 
-|Software| takes in several command line arguments to control the program's behaviour. To view a list of arguments, run |Software| without any command line arguments, i.e. ``AlphaPeel`` or ``AlphaPeel -h``. 
+|Software| takes in several command line arguments to control the program's behaviour.
+To view a list of arguments, run |Software| without any command line arguments,
+that is, ``AlphaPeel`` or ``AlphaPeel -h``.
 
 Input arguments
 ---------------
@@ -35,19 +37,26 @@ Input arguments
                           The last marker to consider. Default: all markers considered.
       -main_metafounder MAIN_METAFOUNDER
                           The metafounder to use where parents are unknown with input "0". Default: MF_1.
-      -map_file MAP_FILE  
+      -map_file MAP_FILE
                           A map file for all loci.
 
 
-|Software| requires a pedigree file (``-ped_file``) and one or more genomic data files to run the analysis.
+|Software| requires a pedigree file (``-ped_file``) and
+one or more genomic data files to run the analysis.
 
-|Software| supports the following genomic data files: genotype files in the AlphaGenes format (``-geno_file``), sequence allele read in the AlphaGenes format (``-seq_file``), and binary Plink files (``-plink_file``). Use of binary Plink files requires the package ``alphaplinkpython``, which  can be installed via ``pip``, but is only stable for Linux. There are known issues with this package, so we do not advocate its use at the moment.
+|Software| supports the following genomic data files:
+genotype files in the AlphaGenes format (``-geno_file``),
+sequence allele read in the AlphaGenes format (``-seq_file``), and
+binary Plink files (``-plink_file``).
+Use of binary Plink files requires the package ``alphaplinkpython``,
+which  can be installed via ``pip``, but is only stable for Linux.
+There are known issues with this package, so we do not advocate its use at the moment.
 
 Use the ``-start_snp`` and ``-stop_snp`` to run the analysis only on a subset of markers.
 
 The input options in the form of ``[xxx ...]`` can take in more than one input file separated by space.
 
-Output arguments 
+Output arguments
 ----------------
 
 ::
@@ -68,7 +77,6 @@ Output arguments
                             individuals.
       -n_io_thread N_IO_THREAD
                             Number of threads to use for input/output. Default: 1.
-
 
     Peeling output options:
       -no_dosage            Flag to suppress the dosage files.
@@ -91,24 +99,40 @@ Output arguments
       -binary_call_file    Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
-By default |Software| produces a dosage file and two model parameter files (genotype error rate and recombination rate). Creation of these files can be suppressed with the ``-no_dosage``, and ``-no_param`` options. |Software| can also write out the alternative allele frequencies per metafounder (*.alt_allele_prob.txt*) with ``-alt_allele_prob`` argument, the phased genotype probability file (*.phased_geno_prob.txt*) with the ``-phased_geno_prob`` argument and the segregation probability file (*.seg_prob.txt*) with the ``-seg_prob`` argument.
+By default |Software| produces a dosage file and
+two model parameter files (genotype error rate and recombination rate).
+Creation of these files can be suppressed with the ``-no_dosage``, and ``-no_param`` options.
+|Software| can also write out
+the alternative allele frequencies per metafounder (*.alt_allele_prob.txt*) with ``-alt_allele_prob`` argument,
+the phased genotype probability file (*.phased_geno_prob.txt*) with the ``-phased_geno_prob`` argument, and
+the segregation probability file (*.seg_prob.txt*) with the ``-seg_prob`` argument.
 
-The ``-geno_threshold`` and ``-hap_threshold`` arguments respectively control which genotypes and haplotypes are called. A threshold of 0.9 will give calls only if the probability mass for one genotype (or haplotype) is higher than 0.9. Using a higher-value will increase the accuracy of called genotypes (or haplotypes), but will result in fewer called genotypes (or haplotypes). Since there are three genotypes states and two haplotype states, "best-guess" genotypes and haplotypes are respectively called with a threshold less than ``1/3`` and ``1/2``.
+The ``-geno_threshold`` and ``-hap_threshold`` arguments respectively control which genotypes and haplotypes are called.
+A threshold of 0.9 will give calls only if the probability mass for one genotype (or haplotype) is higher than 0.9.
+Using a higher-value will increase the accuracy of called genotypes (or haplotypes),
+but will result in fewer called genotypes (or haplotypes).
+Since there are three genotypes states and two haplotype states,
+"best-guess" genotypes and haplotypes are respectively called with a threshold less than ``1/3`` and ``1/2``.
 
 ``-binary_call_file`` option can be used to change the output to a plink binary format.
 
-The order in which individuals are output can be changed by using the ``out_id_order`` option. This option changes the order in which individuals are written out to the order in which they were observed in the corresponding file. The ```-out_id_only`` option suppresses the output of dummy individuals (not recommended for hybrid peeling).
+The order in which individuals are output can be changed by using the ``out_id_order`` option.
+This option changes the order in which individuals are written out
+in the order in which they were observed in the corresponding file.
+The ```-out_id_only`` option suppresses the output of dummy individuals (not recommended for hybrid peeling).
 
-The argument ``-n_io_thread`` controls the number of threads/processes used by |Software|. |Software| uses additional threads to parse and format input and output files. Setting this option to a value greater than 1 is only recommended for very large files (i.e. >10,000 individuals).
+The argument ``-n_io_thread`` controls the number of threads/processes used by |Software|.
+|Software| uses additional threads to parse and format input and output files.
+Setting this option to a value greater than 1 is only recommended for very large files (i.e. >10,000 individuals).
 
-Peeling arguments 
-------------------
+Peeling arguments
+-----------------
 
 ::
 
     Mandatory peeling arguments:
       -method METHOD        Program run type. Either "single" or "multi".
-    
+
     Optional peeling arguments:
       -n_cycle N_CYCLE    Number of peeling cycles. Default: 5.
       -n_thread N_THREAD
@@ -134,7 +158,7 @@ Peeling arguments
       -no_phase_founder     A flag phase a heterozygous allele in one of the
                             founders (if such an allele can be found).
       -x_chr            A flag to indicate that input data is for the X chromosome.
-                            
+
     Genotype probability arguments:
       -geno_error_prob GENO_ERROR_PROB
                             Genotyping error rate. [Default 0.0001]
@@ -143,19 +167,47 @@ Peeling arguments
       -mutation_rate MUTATION_RATE
                             mutation rate. [Default 1e-8]
 
-``-method`` controls whether the program is run in "single-locus" or "multi-locus" model. Single locus mode does not use linkage information to perform imputation. It is fast, but not very accurate. Multi-locus mode runs multi-locus iterative peeling which uses linkage information to increase accuracy and calculate segregation values.
+``-method`` controls whether the program is run in "single-locus" or "multi-locus" model.
+Single locus mode does not use linkage information to perform imputation.
+It is fast, but not very accurate.
+Multi-locus mode runs iterative peeling across loci and uses linkage information
+to increase accuracy and calculate segregation values.
 
-For hybrid peeling, where a large amount (millions of segregating sites) of sequence allele read counts needs to be imputed, first run the program in multi-locus mode to generate a segregation file, and then run the program in single-locus mode with a known segregation file.
+For hybrid peeling, where a large amount (millions of segregating sites)
+of sequence allele read counts needs to be imputed,
+first run the program in multi-locus mode to generate a segregation file,
+and then run the program in single-locus mode with a known segregation file.
 
-The ``-geno_error_prob``, ``-seq_error_prob``, ``-mutation_rate`` and ``-rec_length`` arguments control some of the model parameters used in the model. ``-seq_error_prob`` must not be zero. |Software| is robust to deviations in genotyping error rate and sequencing error rate so it is not recommended to use these options unless large deviations from the default are known. Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
+The ``-geno_error_prob``, ``-seq_error_prob``, ``-mutation_rate`` and ``-rec_length`` arguments
+control some of the model parameters used in the model.
+``-seq_error_prob`` must not be zero.
+|Software| is robust to deviations in genotyping error rate and sequencing error rate,
+so it is not recommended to use these options unless large deviations from the default are known.
+Changing the ``-length`` argument to match the genetic map length can increase accuracy in some situations.
 
-The ``-est_geno_error_prob`` and ``-est_seq_error_prob`` options estimate the genotyping error rate and the sequencing error rate based on miss-match between observed and inferred states. This option is generally not necessary and can increase runtime. ``-est_alt_allele_prob`` estimates the alternative allele frequency for the base population before peeling using all available genotypes. This option can be useful if there are a large number of non-genotyped founders. ``-update_alt_allele_prob`` re-estimates the alternative allele frequencies per metafounder after each peeling cycle using the inferred genotype probabilities of the founders. 
+The ``-est_geno_error_prob`` and ``-est_seq_error_prob`` options estimate
+the genotyping error rate and the sequencing error rate based on miss-match between observed and inferred states.
+This option is generally not necessary and can increase runtime.
+``-est_alt_allele_prob`` estimates the alternative allele frequency for the base population before peeling using all available genotypes.
+This option can be useful if there are a large number of non-genotyped founders.
+``-update_alt_allele_prob`` re-estimates the alternative allele frequencies per metafounder
+after each peeling cycle using the inferred genotype probabilities of the founders.
 
-For a pedigree with multiple metafounders, the user has three options: (1) use ``-update_alt_allele_prob`` only, (2) use ``est_alt_allele_prob`` and ``-update_alt_allele_prob``, or (3) input estimates of the alternative allele frequencies for each metafounder via the ``-alt_allele_prob_file`` with or without ``-update_alt_allele_prob``.
+For a pedigree with multiple metafounders, the user has three options:
+(1) use ``-update_alt_allele_prob`` only,
+(2) use ``est_alt_allele_prob`` and ``-update_alt_allele_prob``, or
+(3) input estimates of the alternative allele frequencies for each metafounder
+via the ``-alt_allele_prob_file`` with or without ``-update_alt_allele_prob``.
 
-When ``-x_chrom`` is used, there are two requirements for input files: (1) The pedigree file must include sex information in the fourth column (0 indicates male and 1 indicates female). See the Pedigree File Format section for an example. (2) Male's genotype must be coded as {0,1}. See the Genotype file Format section for an example. Note: This option currently only considers the regions of the X chromosome excluding the pseudo-autosomal regions (PARs).
+When ``-x_chr`` is used, there are two requirements for input files:
+(1) The pedigree file must include sex information in the fourth column.
+See the Pedigree file format section for an example.
+(2) Male's and female's genotype must be coded differently.
+See the Genotype file format section for an example.
+Note: This option currently only considers the regions of the X chromosome
+excluding the pseudo-autosomal regions (PARs).
 
-Hybrid peeling arguments 
+Hybrid peeling arguments
 ------------------------
 
 ::
@@ -165,7 +217,11 @@ Hybrid peeling arguments
       -seg_map_file SEG_MAP_FILE
                             A map file for loci in the segregation probabilities file in hybrid peeling.
 
-In order to run hybrid peeling the user needs to supply a ``-map_file`` which gives the genetic positions for the SNPs in the sequence allele read counts data supplied, a ``-seg_map_file`` which gives the genetic position for the SNPs in the segregation file, and a ``-seg_file`` which gives the segregation values generated via multi-locus iterative peeling. These arguments are not required for running in multi-locus mode.
+In order to run hybrid peeling the user needs to supply a ``-map_file``,
+which gives the genetic positions for the SNPs in the sequence allele read counts data supplied,
+a ``-seg_map_file`` which gives the genetic position for the SNPs in the segregation file, and
+a ``-seg_file`` which gives the segregation values generated via multi-locus iterative peeling.
+These arguments are not required for running in multi-locus mode.
 
 ============
 File formats
@@ -177,7 +233,15 @@ Input file formats
 Pedigree file
 =============
 
-Each line of a pedigree file has three values, the individual's id, their father's id, and their mother's id. "0" represents an unknown id. Individuals with one unknown parent get internally assigned a dummy/unknown parent. Hence all individuals have both or none parents known. Individuals with two unknown parents are considered as founders and are internally allocated to a metafounder (unknown parent group) ``"MF_1"`` (or defined by the user through ``-main_metafounder``). Users can provide additional metafounders as shown below - these must start with ``"MF_"``.
+Each line of a pedigree file has three values,
+the individual's id, their father's id, and their mother's id.
+"0" represents an unknown id.
+Individuals with one unknown parent get internally assigned a dummy/unknown parent.
+Hence all individuals have both or none parents known.
+Individuals with two unknown parents are considered as founders and
+are internally allocated to a metafounder (unknown parent group)
+``"MF_1"`` (or defined by the user through ``-main_metafounder``).
+Users can provide additional metafounders as shown below - these must start with ``"MF_"``.
 
 Example:
 
@@ -197,56 +261,69 @@ or
   id3 id1 id2
   id4 id1 id2
 
-When working with X chromosome use this format - add sex information in the fourth column (0 indicates male and 1 indicates female):
+When working with X chromosome,
+provide sex information in the fourth column (0 indicates male and 1 indicates female):
 
 ::
 
-  id1 0 0 0 
+  id1 0 0 0
   id2 0 0 1
   id3 id1 id2 0
   id4 id1 id2 1
 
-
-Genotype file 
+Genotype file
 =============
 
-Genotype files contain the input genotypes for each individual. The first value in each line is the individual's id. The remaining values are the genotypes of the individual at each locus, either 0, 1, or 2 (or 9 if missing). The following examples gives the genotypes for four individuals genotyped on four markers each.
+Genotype files contain the input genotypes for each individual.
+The first value in each line is the individual's id.
+The remaining values are the genotypes of the individual at each locus,
+either 0, 1, or 2 (or 9 if missing).
+The following examples gives the genotypes for four individuals genotyped on four markers each.
 
 Example:
 
 ::
 
-  id1 0 2 9 0 
-  id2 1 1 1 1 
-  id3 2 0 2 0 
+  id1 0 2 9 0
+  id2 1 1 1 1
+  id3 2 0 2 0
   id4 0 2 1 0
 
-When working with X chromosome, male's genotype must be coded as {0,1}:
+When working with X chromosome,
+male's genotype must be coded as 0 or 1,
+while female's genotypes are coded as 0, 1, or 2:
 ::
 
-  id1 0 1 9 0 
-  id2 1 1 1 1 
-  id3 1 0 1 0 
+  id1 0 1 9 0
+  id2 1 1 1 1
+  id3 1 0 1 0
   id4 0 2 1 0
 
-Phenotype file 
+Phenotype file
 ==============
 
-Phenotype files contain the input phenotypes for each individual. The first value in each line is the individual's id. The remaining values are the phenotypes of the individual for specific trait, coded from 0. For example, a binary trait can be coded as 0 and 1, while a trait with three states can be coded as 0, 1, and 2. Remove any individuals with missing phenotypes from the file.
+Phenotype files contain the input phenotypes for each individual.
+The first value in each line is the individual's id.
+The remaining values are the phenotypes of the individual for specific trait, coded from 0 onwards.
+For example, a binary trait can be coded as 0 and 1,
+while a trait with three states would be coded as 0, 1, and 2.
+Only provide individuals with known phenotypes in the file.
 
 Example:
 
 ::
 
-  id1 0 
-  id2 1 
-  id3 1 
+  id1 0
+  id2 1
+  id3 1
   id4 0
 
 Sequence allele read counts file
 ================================
 
-The sequence allele read counts file has two lines for each individual. The first line gives the individual's id and read counts for the reference allele. The second line gives the individual's id and allele read counts for the alternative allele.
+The sequence allele read counts file has two lines for each individual.
+The first line gives the individual's id and read counts for the reference allele.
+The second line gives the individual's id and allele read counts for the alternative allele.
 
 Example:
 
@@ -264,12 +341,16 @@ Example:
 Binary plink file
 =================
 
-Binary Plink files are supported using the package ``AlphaPlinkPython``. The pedigree supplied by the *.fam* file will be used if a pedigree file is not supplied. Otherwise, the pedigree file will be used and the *.fam* file will be ignored.
+Binary Plink files are supported using the package ``AlphaPlinkPython``.
+The pedigree supplied by the *.fam* file will be used if a pedigree file is not supplied.
+Otherwise, the pedigree file will be used and the *.fam* file will be ignored.
 
-Map file 
+Map file
 ========
 
-The map file gives the chromosome number, the marker name, and the base pair position for each marker in two columns. Only markers on one chromosome should be provided! 
+The map file gives the chromosome number, the marker name, and
+the base pair position for each marker in two columns.
+Only markers on one chromosome should be provided!
 
 Example:
 
@@ -283,7 +364,13 @@ Example:
 Alternative allele probability file
 ===================================
 
-The alternative allele probability file allows for user-defined population alternative allele frequencies. This file contains the metafounder group denoted MF_x, where x is by default "1" but see ``-main_metafounder``, followed by alternative allele frequencies for all the markers. In case of multiple metafounders, provide multiple rows in the file. The default starting alternative allele frequencies are 0.5 for each marker. If you don't have information for some markers, provide 0.5 for these in the file.
+The alternative allele probability file allows for user-defined population alternative allele frequencies.
+This file contains the metafounder group denoted MF_x,
+where x is by default "1" but see ``-main_metafounder``,
+followed by alternative allele frequencies for all the markers.
+In case of multiple metafounders, provide multiple rows in the file.
+The default starting alternative allele frequencies are 0.5 for each marker.
+If you don't have information for some markers, provide 0.5 for these in the file.
 
 Example:
 
@@ -301,7 +388,11 @@ Or
 Phenotype penetrance file
 =========================
 
-The phenotype penetrance file allows for user flexibility to include phenotype information. This file contains the conditional probability table for true phenotype given the true genotype. Each column represents the different phenotype states (order from 0 to total number of states), and each row represents the genotype states in order the aa, aA, Aa, AA. Below, we provide an example for a monogenic recessive, binary trait.
+The phenotype penetrance file allows for user flexibility to include phenotype information.
+This file contains the conditional probability table for true phenotype given the true genotype.
+Each column represents the different phenotype states (order from 0 to total number of states), and
+each row represents the genotype states in order the aa, aA, Aa, AA.
+Below, we provide an example for a monogenic recessive, binary trait.
 
 Example:
 
@@ -318,7 +409,10 @@ Output file formats
 Phase file
 ==========
 
-The phase file gives the phased haplotypes (either 0 or 1) for each individual in two lines. For individuals where we can determine the haplotype of origin, the first line will provide information on the paternal haplotype, and the second line will provide information on the maternal haplotype.
+The phase file gives the phased haplotypes (either 0 or 1) for each individual in two lines.
+For individuals where we can determine the haplotype of origin,
+the first line will provide information on the paternal haplotype, and
+the second line will provide information on the maternal haplotype.
 
 Example:
 
@@ -329,14 +423,18 @@ Example:
   id2 1 1 1 0
   id2 0 0 0 1
   id3 1 0 1 0
-  id3 1 0 1 0 
+  id3 1 0 1 0
   id4 0 1 0 0
   id4 0 1 1 0
 
 Genotype probability file
 =========================
 
-The haplotype file (*.phased_geno_prob.txt*) provides the (phased) allele probabilities for each locus. There are four lines per individual containing the allele probability for the (aa, aA, Aa, AA) alleles where the paternal allele is listed first, and where *a* is the reference (or major) allele and *A* is the alternative (or minor) allele.
+The haplotype file (*.phased_geno_prob.txt*) provides
+the (phased) allele probabilities for each locus.
+There are four lines per individual containing the allele probability for
+the (aa, aA, Aa, AA) alleles where the paternal allele is listed first, and
+where *a* is the reference (or major) allele and *A* is the alternative (or minor) allele.
 
 Example:
 
@@ -362,7 +460,11 @@ Example:
 Dosage file
 ===========
 
-The dosage file gives the expected allele dosage for the alternative (or minor) allele for each individual. The first value in each line is the individual ID. The remaining values are the allele dosages at each loci. These values will be between 0 and 2.
+The dosage file gives the expected allele dosage for
+the alternative (or minor) allele for each individual.
+The first value in each line is the individual ID.
+The remaining values are the allele dosages at each loci.
+These values will be between 0 and 2.
 
 Example:
 
@@ -376,7 +478,8 @@ Example:
 Segregation file
 ================
 
-The segregation file gives the joint probability of each pattern of inheritance. There are four lines for each individual representing the probability of inheriting: 
+The segregation file gives the joint probability of each pattern of inheritance.
+There are four lines for each individual representing the probability of inheriting:
 
   1. the grand **paternal** allele from the father and the grand **paternal** allele from the mother
   2. the grand **paternal** allele from the father and the grand **maternal** allele from the mother
@@ -407,7 +510,14 @@ Example:
 Model parameter files
 =====================
 
-|Software| outputs four model parameter files: *.alt_allele_prob.txt*, *.seq_error_prob.txt*, *.geno_error_prob.txt*, *.rec_prob.txt*. These give the alternative allele frequency, sequencing error rates, genotyping error rates and the recombination rates used. In the *.alt_allele_prob.txt*, there is a column per metafounder with an alternative allele frequency for each marker. Here, all values will range from 0.01 to 0.99. The other three files contain a single column with an entry for each marker. By default, |Software| will output *.seq_error_prob.txt*, *.geno_error_prob.txt* and *.rec_prob.txt*. The *.alt_allele_prob.txt* will only be outputted with the argument ``-alt_allele_prob``.
+|Software| outputs four model parameter files:
+*.alt_allele_prob.txt*, *.seq_error_prob.txt*, *.geno_error_prob.txt*, *.rec_prob.txt*.
+These give the alternative allele frequency, sequencing error rates, genotyping error rates and the recombination rates used.
+In the *.alt_allele_prob.txt*, there is a column per metafounder with an alternative allele frequency for each marker.
+Here, all values will range from 0.01 to 0.99.
+The other three files contain a single column with an entry for each marker.
+By default, |Software| will output *.seq_error_prob.txt*, *.geno_error_prob.txt* and *.rec_prob.txt*.
+The *.alt_allele_prob.txt* will only be outputted with the argument ``-alt_allele_prob``.
 
 Example ``.alt_allele_prob.txt`` file for two metafounders and four loci:
 
@@ -418,6 +528,5 @@ Example ``.alt_allele_prob.txt`` file for two metafounders and four loci:
   0.195520  0.219890
   0.733061  0.509849
   0.145847  0.090000
-
 
 .. |Software| replace:: AlphaPeel
