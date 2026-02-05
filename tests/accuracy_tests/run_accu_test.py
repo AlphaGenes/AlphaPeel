@@ -192,7 +192,7 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder,
         else:
             print(f"File: {file}")
 
-        Marker_accu = [str(get_marker_accu(new_file[:, 1:], true_file[:, 1:]))]
+        Marker_accu = [str(get_marker_accu(new_file[:, :], true_file[:, :]))]
         for gen in range(nGen):
             Marker_accu.append(
                 str(
@@ -214,7 +214,7 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder,
         print("Marker_accuracies", " ".join(Marker_accu))
 
         Ind_accu = [
-            str(get_ind_accu(new_file[:, 1:], true_file[:, 1:], nIndPerGen, None))
+            str(get_ind_accu(new_file[:, :], true_file[:, :], nIndPerGen, None))
         ]
         for gen in range(nGen):
             Ind_accu.append(

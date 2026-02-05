@@ -258,7 +258,7 @@ for (ind in (nIndPerGen + 1):nInd) {
 
 # ----- Realised recombination rate -----
 
-rec_count <- matrix(data = 0, nrow = nLociAll, ncol = 1)
+rec_count <- matrix(data = 0, nrow = nLociAll - 1, ncol = 1)
 for (ind in ((nIndPerGen + 1):nInd)) {
   for (chr in (1:nChr)) {
     indRecHist <- recHist[[ind]][[chr]]

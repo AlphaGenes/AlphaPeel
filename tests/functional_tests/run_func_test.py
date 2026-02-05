@@ -126,7 +126,6 @@ def compare_geno_hap(output, true, total_error=2):
 
 class TestClass:
     path = os.path.join("tests", "functional_tests")
-    command = "AlphaPeel "
     test_cases = None
     input_file_depend_on_test_cases = None
 
@@ -154,6 +153,8 @@ class TestClass:
         """
         generate the command for the test
         """
+        self.command = "AlphaPeel "
+
         for file in self.input_files:
             if (
                 (self.test_cases is not None)
@@ -1140,6 +1141,72 @@ class TestClass:
                 assert exit_code in [256, 512, 2]
 
                 self.command = "AlphaPeel "
+
+    def test_map_input(self):
+        """
+        Run the test for the input map file
+        """
+        self.test_name = "test_map_input"
+        self.prepare_path()
+
+        self.arguments = {"method": "multi"}
+        self.output_file_to_check = "dosage"
+
+        # without map file input
+        self.input_files = ["geno_file", "ped_file"]
+        self.output_file_prefix = "map_input.no_map_file"
+
+        self.generate_command()
+        os.system(self.command)
+
+        self.output_file_path = os.path.join(
+            self.output_path,
+            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+        )
+
+        self.first_output = read_and_sort_file(self.output_file_path)
+
+        # with map file input
+        self.input_files.append("map_file")
+        self.output_file_prefix = "map_input.with_map_file"
+
+        self.generate_command()
+        os.system(self.command)
+
+        self.output_file_path = os.path.join(
+            self.output_path,
+            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+        )
+
+        self.second_output = read_and_sort_file(self.output_file_path)
+
+        # the two outputs should match
+        assert self.first_output == self.second_output
+
+    def test_prev_bug(self):
+        """
+        Run the test for the previous bug described in tinyhouse#165
+        """
+        self.test_name = "test_prev_bug"
+        self.prepare_path()
+
+        self.input_files = ["ped_file", "geno_file"]
+        self.arguments = {"method": "multi"}
+
+        self.output_file_prefix = "prev_bug"
+        self.output_file_to_check = "dosage"
+
+        self.generate_command()
+        os.system(self.command)
+
+        self.output_file_path = os.path.join(
+            self.output_path,
+            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+        )
+
+        self.output = read_and_sort_file(self.output_file_path)
+
+        assert round(float(self.output[1][1])) == 2
 
     # TODO test_plink for PLINK
     #      a. binary PLINK output

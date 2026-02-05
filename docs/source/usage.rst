@@ -1,3 +1,4 @@
+.. _usage:
 -----
 Usage
 -----
@@ -8,7 +9,7 @@ Program options
 
 |Software| takes in several command line arguments to control the program's behaviour. To view a list of arguments, run |Software| without any command line arguments, i.e. ``AlphaPeel`` or ``AlphaPeel -h``. 
 
-Input Arguments
+Input arguments
 ---------------
 
 ::
@@ -34,6 +35,9 @@ Input Arguments
                           The last marker to consider. Default: all markers considered.
       -main_metafounder MAIN_METAFOUNDER
                           The metafounder to use where parents are unknown with input "0". Default: MF_1.
+      -map_file MAP_FILE  
+                          A map file for all loci.
+
 
 |Software| requires a pedigree file (``-ped_file``) and one or more genomic data files to run the analysis.
 
@@ -43,7 +47,7 @@ Use the ``-start_snp`` and ``-stop_snp`` to run the analysis only on a subset of
 
 The input options in the form of ``[xxx ...]`` can take in more than one input file separated by space.
 
-Output Arguments 
+Output arguments 
 ----------------
 
 ::
@@ -138,6 +142,7 @@ Peeling arguments
                             Sequencing error rate. [Default 0.001]
       -mutation_rate MUTATION_RATE
                             mutation rate. [Default 1e-8]
+
 ``-method`` controls whether the program is run in "single-locus" or "multi-locus" model. Single locus mode does not use linkage information to perform imputation. It is fast, but not very accurate. Multi-locus mode runs multi-locus iterative peeling which uses linkage information to increase accuracy and calculate segregation values.
 
 For hybrid peeling, where a large amount (millions of segregating sites) of sequence allele read counts needs to be imputed, first run the program in multi-locus mode to generate a segregation file, and then run the program in single-locus mode with a known segregation file.
@@ -158,8 +163,7 @@ Hybrid peeling arguments
     Single locus arguments:
       -seg_file SEG_FILE    A segregation probabilities file for hybrid peeling.
       -seg_map_file SEG_MAP_FILE
-                            A map file for loci in the segregation probabilities file.
-      -map_file MAP_FILE    A map file for all loci in hybrid peeling.
+                            A map file for loci in the segregation probabilities file in hybrid peeling.
 
 In order to run hybrid peeling the user needs to supply a ``-map_file`` which gives the genetic positions for the SNPs in the sequence allele read counts data supplied, a ``-seg_map_file`` which gives the genetic position for the SNPs in the segregation file, and a ``-seg_file`` which gives the segregation values generated via multi-locus iterative peeling. These arguments are not required for running in multi-locus mode.
 
@@ -226,7 +230,7 @@ When working with X chromosome, male's genotype must be coded as {0,1}:
   id4 0 2 1 0
 
 Phenotype file 
-=============
+==============
 
 Phenotype files contain the input phenotypes for each individual. The first value in each line is the individual's id. The remaining values are the phenotypes of the individual for specific trait, coded from 0. For example, a binary trait can be coded as 0 and 1, while a trait with three states can be coded as 0, 1, and 2. Remove any individuals with missing phenotypes from the file.
 
@@ -276,7 +280,7 @@ Example:
   1 snp_c 65429279
   1 snp_d 107421759
 
-Alternative Allele Probability File
+Alternative allele probability file
 ===================================
 
 The alternative allele probability file allows for user-defined population alternative allele frequencies. This file contains the metafounder group denoted MF_x, where x is by default "1" but see ``-main_metafounder``, followed by alternative allele frequencies for all the markers. In case of multiple metafounders, provide multiple rows in the file. The default starting alternative allele frequencies are 0.5 for each marker. If you don't have information for some markers, provide 0.5 for these in the file.
@@ -294,8 +298,8 @@ Or
   MF_1 0.30 0.21 0.44 0.24
   MF_2 0.40 0.34 0.25 0.40
 
-Phenotype Penetrance File
-===================================
+Phenotype penetrance file
+=========================
 
 The phenotype penetrance file allows for user flexibility to include phenotype information. This file contains the conditional probability table for true phenotype given the true genotype. Each column represents the different phenotype states (order from 0 to total number of states), and each row represents the genotype states in order the aa, aA, Aa, AA. Below, we provide an example for a monogenic recessive, binary trait.
 

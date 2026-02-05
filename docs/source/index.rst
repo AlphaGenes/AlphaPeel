@@ -16,7 +16,9 @@ AlphaPeel
    introduction
    get_started
    usage
+   algorithm
    contribute
+   changelog
    
 .. highlight:: none
 
