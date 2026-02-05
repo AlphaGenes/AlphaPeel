@@ -146,6 +146,8 @@ because this last command will add all changes files to your commit,
 including temporary files that might not belong in the repository.
 Are you aware of `.gitignore file <https://git-scm.com/docs/gitignore>`_?
 
+In the `git add` line above, don't use `git add .` because this last command will add all changes files to your commit, including temporary files that might not belong in the repository. Are you aware of <https://git-scm.com/docs/gitignore>_?
+
 Update submodules?
 ------------------
 
@@ -247,3 +249,4 @@ The above will trigger workflow actions to publish the package on PyPI and docum
 
   * `PyPI <https://pypi.org/project/AlphaPeel>`_
   * `Read the Docs <https://alphapeel.readthedocs.io/en/stable/index.html>`_
+
