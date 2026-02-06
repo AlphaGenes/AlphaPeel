@@ -85,7 +85,7 @@ Output arguments
       -seg_prob             Flag to enable writing out the segregation probabilities.
       -phased_geno_prob     Flag to enable writing out the phased genotype probabilities.
       -geno_prob            Flag to enable writing out the genotype probabilities.
-      -pheno_prob          Flag to enable writing out the phenotype probabilities.
+      -pheno_prob           Flag to enable writing out the phenotype probabilities.
       -hap                  Flag to call and write out the haplotypes.
                             If the ``-hap_threshold`` parameter is not provided, the default haplotype calling threshold is set to 1/2.
       -geno                 Flag to call and write out the genotypes.
@@ -96,7 +96,7 @@ Output arguments
       -hap_threshold [HAP_THRESHOLD ...]
                             Haplotype calling threshold(s). Multiple space separated values allowed.
                             Value less than 1/2 will be replaced by 1/2.
-      -binary_call_file    Flag to write out the called genotype files as a
+      -binary_call_file     Flag to write out the called genotype files as a
                             binary plink output [Not yet implemented].
 
 By default |Software| produces a dosage file and
