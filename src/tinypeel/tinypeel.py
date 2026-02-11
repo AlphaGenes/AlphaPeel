@@ -42,24 +42,29 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
         mf_pedigree = []
         for ind in pedigree:
             if ind.isFounder() and ind.MetaFounder is not None:
-                mfx = ind.MetaFounder
-                if mfx not in mf_pedigree:
-                    mf_pedigree.append(mfx)
-                if pedigree.AAP.get(mfx) is None:
-                    pedigree.AAP[mfx] = np.full(
-                        peelingInfo.nLoci, 0.5, dtype=np.float32
-                    )
+                AAP = {
+                    k: np.zeros(peelingInfo.nLoci, dtype=np.float32)
+                    for k in ind.MetaFounder
+                }
+                for mfx in ind.MetaFounder:
+                    if mfx not in mf_pedigree:
+                        mf_pedigree.append(mfx)
+                        if pedigree.AAP.get(mfx) is None:
+                            pedigree.AAP[mfx] = np.full(
+                                peelingInfo.nLoci, 0.5, dtype=np.float32
+                            )
+                        else:
+                            for i in range(peelingInfo.nLoci):
+                                if pedigree.AAP[mfx][i] < 0.01:
+                                    pedigree.AAP[mfx][i] = 0.01
+                                elif pedigree.AAP[mfx][i] > 0.99:
+                                    pedigree.AAP[mfx][i] = 0.99
+                    AAP[mfx] = pedigree.AAP[mfx]
+                if len(ind.MetaFounder) == 2:
+                    mafGeno = ProbMath.getGenotypesFromMultiMaf(AAP)
                 else:
-                    AAP = pedigree.AAP[mfx]
-                    for i in range(peelingInfo.nLoci):
-                        if AAP[i] < 0.01:
-                            AAP[i] = 0.01
-                        elif AAP[i] > 0.99:
-                            AAP[i] = 0.99
-                    pedigree.AAP[mfx] = AAP.astype(np.float32)
-                aaf = pedigree.AAP[mfx]
-                aafGeno = ProbMath.getGenotypesFromMaf(aaf)
-                peelingInfo.anterior[ind.idn, :, :] = aafGeno
+                    mafGeno = ProbMath.getGenotypesFromMaf(AAP[mfx])
+                peelingInfo.anterior[ind.idn, :, :] = mafGeno
         mf_input = pedigree.AAP.copy()
         # removal of any metafounders not in pedigree
         for mfx in mf_input:
@@ -71,11 +76,11 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     else:
         for ind in pedigree:
             if ind.MetaFounder is not None:
-                mfx = ind.MetaFounder
-                if pedigree.AAP.get(mfx) is None:
-                    pedigree.AAP[mfx] = np.full(
-                        peelingInfo.nLoci, 0.5, dtype=np.float32
-                    )
+                for mfx in ind.MetaFounder:
+                    if pedigree.AAP.get(mfx) is None:
+                        pedigree.AAP[mfx] = np.full(
+                            peelingInfo.nLoci, 0.5, dtype=np.float32
+                        )
     if args.est_alt_allele_prob:
         if args.alt_allele_prob_file is not None and len(pedigree.AAP) > 1:
             warnings.warn(
