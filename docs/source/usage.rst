@@ -58,9 +58,9 @@ Input options
                           Metafounder name for unknown parents
                           (:ref:`see format details <ped_file_format>`).
                           Default: MF_1.
-      TODO: how is rec length used?
       -rec_length REC_LENGTH
-                          Recombination length of the chromosome in Morgans.
+                          Recombination length of the chromosome in Morgans
+                          (see :ref:`map file <map_file_format>`).
                           Default: 1.00.
       TODO: rename mutation_rate to mut_prob
       -mutation_rate MUTATION_RATE
@@ -546,10 +546,10 @@ The file should include all loci present in other files.
 Each line of a *map* file has three values,
 the chromosome number,
 the locus name, and
-the base-pair position.
+the physical position (in base-pairs).
 Only loci on one chromosome should be provided!
 
-TODO: mention somewhere how we convert base-pair positions to genetic positions (Morgans) and interaction? with -rec_length
+TODO: mention here how we convert physical positions to genetic positions (Morgans) and interaction? with -rec_length
 
 Example with four SNP loci on chromosome 1:
 
