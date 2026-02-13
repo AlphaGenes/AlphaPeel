@@ -9,7 +9,7 @@ Maintenance
 -----------
 
 * Updated the documentation to clarify inputs, outputs, and parameters
-  (:pr:`208`, :user:`gregorgorjanc`, :user:`RosCraddock` :user:`XingerTang`).
+  (:pr:`219`, :user:`gregorgorjanc`).
 
 [1.3.0] - 2026-02-05
 ====================
