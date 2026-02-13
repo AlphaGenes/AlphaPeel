@@ -58,11 +58,11 @@ Input options
                           Metafounder name for unknown parents
                           (:ref:`see format details <ped_file_format>`).
                           Default: MF_1.
-TODO: how is rec length used?
+      TODO: how is rec length used?
       -rec_length REC_LENGTH
                           Recombination length of the chromosome in Morgans.
                           Default: 1.00.
-TODO: rename mutation_rate to mut_prob
+      TODO: rename mutation_rate to mut_prob
       -mutation_rate MUTATION_RATE
                           Mutation :ref:`probability <prob_freq_rate>`.
                           Default: 1e-8.
@@ -122,11 +122,11 @@ phenotype penetrance probability through a file (``-pheno_penetrance_prob_file``
 
 .. note::
 
-The accuracy of |Software| results has been shown
-to be quite robust to deviations in most of the model parameters,
-so it might not be needed to change or estimate them from the input data;
-at least unless large deviations from the defaults are known or expected.
-Having said this, do explore what works best for your data and your aims!
+    The accuracy of |Software| results has been shown
+    to be quite robust to deviations in most of the model parameters,
+    so it might not be needed to change or estimate them from the input data;
+    at least unless large deviations from the defaults are known or expected.
+    Having said this, do explore what works best for your data and your aims!
 
 .. _prob_freq_rate:
 
@@ -222,7 +222,7 @@ Peeling methods
                             Default: multi.
 
     Single-locus options for the second stage of hybrid peeling:
-      -seg_file SEG_FILE    Segregation probabilities file.
+      -seg_file SEG_FILE    :ref:`Segregation probabilities file <seg_prob_file_format>`.
       -seg_map_file SEG_MAP_FILE
                             Map file for loci in the segregation probabilities file.
 
@@ -264,28 +264,28 @@ Peeling parameters
                             Default: 1.
 
     Estimation of model parameters:
-TODO: rename to est_start_alt_allele_prob
+      TODO: rename to est_start_alt_allele_prob
       -est_alt_allele_prob  Estimate starting alternative allele probabilities using
                             all inputted genomic data prior to peeling.
-TODO: rename to est_alt_allele_prob
+      TODO: rename to est_alt_allele_prob
       -update_alt_allele_prob
                             Estimate :ref:`alternative allele probabilities <alt_allele_prob_file_format>`
                             for each metafounder after each peeling cycle.
-TODO: -est_rec_prob is not recognised
-      -est_rec_prob         Estimate :ref:`recombination probabilities <rec_prob_file_format_output>`
+      TODO: -est_rec_prob is not recognised
+      -est_rec_prob         Estimate :ref:`recombination probabilities <rec_prob_file_format>`
                             after each peeling cycle.
-TODO: no_phase_founder is not documented - talking to Ros she noticed that
+      TODO: no_phase_founder is not documented - talking to Ros she noticed that
       the default behaviour is to phase heterozygous genotypes in founders
       in some way (TODO: what way - she noticed it is not driven by data possibly?!)
       and this flag suppresses this behaviour.
       -no_phase_founder     Phase a heterozygous allele in one of the
                             founders (if such an allele can be found).
-      -est_geno_error_prob  Estimate :ref:`genotype error probability <geno_error_prob_file_format_output>`
+      -est_geno_error_prob  Estimate :ref:`genotype error probability <geno_error_prob_file_format>`
                             after each peeling cycle.
-      -est_seq_error_prob   Estimate :ref:`sequence error probability <seq_error_prob_file_format_output>`
+      -est_seq_error_prob   Estimate :ref:`sequence error probability <seq_error_prob_file_format>`
                             after each peeling cycle.
       -est_pheno_penetrance_prob
-                            Estimate :ref:`phenotype penetrance probabilities <pheno_error_prob_file_format_output>`
+                            Estimate :ref:`phenotype penetrance probabilities <pheno_penetrance_prob_file_format>`
                             after each peeling cycle.
 
 Computational effort and speed of |Software| can be controlled with
@@ -565,7 +565,6 @@ Example with four SNP loci on chromosome 1:
   1 snp_c 65429279
   1 snp_d 107421759
 
-TODO: how does seg_file look like?
 TODO: how does seg_map_file look like?
 
 .. _output_file_formats:
@@ -643,7 +642,7 @@ Example with four individuals and four loci:
   id1 0.7912 0.0000 0.0000 1.0000
   id1 0.2088 0.2179 0.5274 0.0000
   id1 0.0000 0.7820 0.4725 0.0000
-TODO: remove the empty lines in the output files?
+  TODO: remove the empty lines in the output files?
   id2 0.0000 0.0000 0.0000 0.0001
   id2 1.0000 1.0000 1.0000 0.9999
   id2 0.0000 0.0000 0.0000 0.0000
@@ -677,7 +676,7 @@ Example with four individuals and four loci:
   id1 0.1044 0.1090 0.2637 0.0000
   id1 0.1044 0.1090 0.2637 0.0000
   id1 0.0000 0.7820 0.4725 0.0000
-TODO: remove the empty lines in the output files?
+  TODO: remove the empty lines in the output files?
   id2 0.0000 0.0000 0.0000 0.0001
   id2 0.3764 0.6611 0.0000 0.9628
   id2 0.6236 0.3388 1.0000 0.0371
@@ -795,7 +794,7 @@ Example with four individuals and two phenotype states for a binary trait:
 
   id1 0.9000
   id1 0.1000
-TODO: remove the empty lines in the output files?
+  TODO: remove the empty lines in the output files?
   id2 0.9000
   id2 0.1000
 
@@ -820,7 +819,9 @@ TODO: by row or by col? We think we will do it such that
       So, the task is to use this text below and modify it
       accordingly and then merge the two alt allele prob file format
       section below into one. Ros will lead on this with code
-      and documentation.
+      and documentation. The conclusion from looking across all the files
+      was that we will have loci by rows here and most of The
+      model parameter files.
 
 This file has one line with
 *alternative allele probabilities* for each metafounder.
@@ -846,13 +847,14 @@ Example with two metafounders and four loci:
   MF_2 0.40 0.34 0.25 0.40
 
 TODO: See the above duplicate section
+
 Alternative allele probability file
 ===================================
 
 The ``.alt_allele_prob.txt`` file TODO
 
 TODO: is this the same as the input version? Review with Ros
-      :ref:`here <alt_allele_prob_file_format_input>`.
+      :ref:`here <alt_allele_prob_file_format>`.
       Hmm, we should transpose one of these!?
       Best to make all of the inputs & outputs consistent - row-wise or column-wise!
 
@@ -866,7 +868,7 @@ Example with two metafounders and four loci:
   0.733061  0.509849
   0.145847  0.090000
 
-.. _rec_prob_file_format_output:
+.. _rec_prob_file_format:
 
 Recombination probability file
 ==============================
@@ -879,9 +881,10 @@ Example with four loci:
 
 ::
   0.0000
+
 TODO: -est_rec_prob is not recognised - once it is, fill the example
 
-.. _geno_error_prob_file_format_output:
+.. _geno_error_prob_file_format:
 
 Genotype error probability file
 ===============================
@@ -898,7 +901,7 @@ Example with four loci:
   0.000100
   0.000100
 
-.. _seq_error_prob_file_format_output:
+.. _seq_error_prob_file_format:
 
 Sequence error probability file
 ===============================
