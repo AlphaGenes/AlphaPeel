@@ -553,6 +553,9 @@ Example with four SNP loci on chromosome 1:
 TODO: how does seg_file look like?
 TODO: how does seg_map_file look like?
 
+TODO: move/merge with Parameter file formats section
+      update links to alt_allele_prob_file_format
+
 .. _alt_allele_prob_file_format:
 
 Alternative allele probability file
@@ -580,6 +583,9 @@ Example with two metafounders and four loci:
 
   MF_1 0.30 0.21 0.44 0.24
   MF_2 0.40 0.34 0.25 0.40
+
+TODO: move/merge with Parameter file formats section
+      update links to pheno_penetrance_prob_file_format_input
 
 .. _pheno_penetrance_prob_file_format_input:
 
@@ -844,6 +850,9 @@ TODO: remove the empty lines in the output files?
   id4 0.1000
 
 .. _alt_allele_prob_file_format_output:
+
+Parameter file formats
+----------------------
 
 Alternative allele probability file
 ===================================
