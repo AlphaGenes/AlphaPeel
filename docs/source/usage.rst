@@ -73,10 +73,10 @@ TODO: rename mutation_rate to mut_prob
                           Sequence error :ref:`probability <prob_freq_rate>`.
                           Must not be 0.
                           Default: 0.001.
-TODO: rename to pheno_penetrance_prob_file
-      -pheno_penetrance_file [PHENO_PENETRANCE_FILE ...]
+      -pheno_penetrance_prob_file
+                          [PHENO_PENETRANCE_PROB_FILE ...]
                           Phenotype penetrance :ref:`probability <prob_freq_rate>` file
-                          (:ref:`see format details <pheno_penetrance_prob_file_format_input>`).
+                          (:ref:`see format details <pheno_penetrance_prob_file_format>`).
 
 |Software| requires a pedigree file (``-ped_file``) and
 one or more genomic data files to run the analysis.
@@ -91,8 +91,7 @@ When ``-x_chr`` is used the :ref:`pedigree file <ped_file_format>` and
 Follow the links to respective file formats for more details.
 
 |Software| also supports phenotype files (``-pheno_file``) and
-TODO: rename to pheno_penetrance_prob_file
-corresponding phenotype penetrance files (``-pheno_penetrance_file``).
+corresponding phenotype penetrance files (``-pheno_penetrance_prob_file``).
 Both must be provided for work with phenotypes.
 
 The input options in the form of ``-opt [XYZ ...]``
@@ -117,8 +116,7 @@ TODO: rename mutation_rate to mut_prob
 mutation rate (``-mutation_rate``),
 genotype error probability (``-geno_error_prob``),
 sequence error probability (``-seq_error_prob``), and
-TODO: rename to pheno_penetrance_prob_file
-phenotype penetrance probability through a file (``-pheno_penetrance_file``).
+phenotype penetrance probability through a file (``-pheno_penetrance_prob_file``).
 
 .. _robust_parameters:
 
@@ -266,26 +264,28 @@ Peeling parameters
                             Default: 1.
 
     Estimation of model parameters:
-TODO: review this text with Ros
-TODO: rename to est_init_alt_allele_prob
-      -est_alt_allele_prob  Estimate initial alternative allele probabilities using
-                            all observed genotypes prior to peeling.
+TODO: rename to est_start_alt_allele_prob
+      -est_alt_allele_prob  Estimate starting alternative allele probabilities using
+                            all inputted genomic data prior to peeling.
 TODO: rename to est_alt_allele_prob
       -update_alt_allele_prob
-                            Estimate :ref:`alternative allele probabilities <alt_allele_prob_file_format_output>`
+                            Estimate :ref:`alternative allele probabilities <alt_allele_prob_file_format>`
                             for each metafounder after each peeling cycle.
 TODO: -est_rec_prob is not recognised
       -est_rec_prob         Estimate :ref:`recombination probabilities <rec_prob_file_format_output>`
                             after each peeling cycle.
-TODO: no_phase_founder is not documented
+TODO: no_phase_founder is not documented - talking to Ros she noticed that
+      the default behaviour is to phase heterozygous genotypes in founders
+      in some way (TODO: what way - she noticed it is not driven by data possibly?!)
+      and this flag suppresses this behaviour.
       -no_phase_founder     Phase a heterozygous allele in one of the
                             founders (if such an allele can be found).
       -est_geno_error_prob  Estimate :ref:`genotype error probability <geno_error_prob_file_format_output>`
                             after each peeling cycle.
       -est_seq_error_prob   Estimate :ref:`sequence error probability <seq_error_prob_file_format_output>`
                             after each peeling cycle.
-TODO: rename this to est_pheno_penetrance_prob
-      -est_pheno_error_prob Estimate :ref:`phenotype penetrance probabilities <pheno_error_prob_file_format_output>`
+      -est_pheno_penetrance_prob
+                            Estimate :ref:`phenotype penetrance probabilities <pheno_error_prob_file_format_output>`
                             after each peeling cycle.
 
 Computational effort and speed of |Software| can be controlled with
@@ -310,6 +310,7 @@ This process usually increases running times and
 might require additional peeling cycles to converge.
 The estimates are based on inferred states of the modelled events and
 their match/mismatch between observed and inferred states.
+
 Alternative allele probabilities in the founders are estimated
 (using ``-est_alt_allele_prob``)
 as half of the mean of estimated :ref:`allele dosage <dosage_file_format>`
@@ -317,20 +318,34 @@ in the founders (potentially grouped into multiple populations via
 metafounders).
 The estimates are constrained to be between 0.01 and 0.99
 to avoid TODO: discuss with Evie how to word this.
-This estimation can be initiated with an estimate from observed genomic data
-(using ``-est_init_alt_allele_prob``) or with the default value of 0.5.
+This estimation can be initiated with an estimate from inputted genomic data
+(using ``-est_init_alt_allele_prob``).
+This option uses Newton optimisation, which also requires starting values.
+These starting values are by default 0.5,
+but can also be provided by the user using ``-alt_allele_prob_file``.
+Note that this estimation is not taking the pedigree structure into account,
+so it is a naive population estimate and does not pertain to founders of the pedigree
+and ignores metafounders.
+
+For a pedigree with multiple metafounders,
+the user has three options to obtain metafounder-specific alternative allele probabilities:
+TODO: rename est_alt_allele_prob to est_start_alt_allele_prob
+TODO: rename to update_alt_allele_prob to est_alt_allele_prob
+(1) use the default starting value of 0.5 for all loci and
+``-update_alt_allele_prob``,
+(2) use ``-est_alt_allele_prob`` to get more informed starting value and
+``-update_alt_allele_prob``, or
+(3) provide starting values using ``-alt_allele_prob_file`` and
+then potentially ``-update_alt_allele_prob`` from the inputted genomic data.
+
+TODO: Say something about -est_rec_prob
+
+TODO: no_phase_founder is not documented / see above
+
 Error probabilities (using ``-est_geno_error_prob`` and ``-est_seq_error_prob``)
 are estimated as the proportion of mismatches between observed and inferred states.
 
-TODO: revise with Ros
-For a pedigree with multiple metafounders,
-the user has three options:
-(1) use ``-update_alt_allele_prob`` only,
-(2) use ``-est_alt_allele_prob`` and ``-update_alt_allele_prob``, or
-(3) provide estimates of the alternative allele probabilities (for each metafounder)
-via the ``-alt_allele_prob_file`` with or without ``-update_alt_allele_prob``.
-
-TODO: no_phase_founder is not documented
+TODO: Say something about penetrance probabilities estimation
 
 .. _file_formats:
 
@@ -553,67 +568,6 @@ Example with four SNP loci on chromosome 1:
 TODO: how does seg_file look like?
 TODO: how does seg_map_file look like?
 
-TODO: move/merge with Parameter file formats section
-      update links to alt_allele_prob_file_format
-
-.. _alt_allele_prob_file_format:
-
-Alternative allele probability file
-===================================
-
-This file has one line with
-*alternative allele probabilities* for each metafounder.
-It provides a way to include known information on allele probabilities
-in the pedigree founders (base population).
-The file should include all metafounders present in pedigrees.
-The first value in each line is the metafounder's ID.
-The remaining values are alternative allele probabilities for all loci.
-The default alternative allele probabilities are 0.5 for each locus.
-If you do not have information for some loci, provide 0.5 for those loci.
-
-Example with one metafounder and four loci:
-
-::
-
-  MF_1 0.30 0.21 0.44 0.24
-
-Example with two metafounders and four loci:
-
-::
-
-  MF_1 0.30 0.21 0.44 0.24
-  MF_2 0.40 0.34 0.25 0.40
-
-TODO: move/merge with Parameter file formats section
-      update links to pheno_penetrance_prob_file_format_input
-
-.. _pheno_penetrance_prob_file_format_input:
-
-Phenotype penetrance probability file
-=====================================
-
-This file has one line with
-*phenotype penetrance probabilities* for each distinct genotype impacting a phenotype.
-It provides a way to include known relationship between genotypes and phenotypes.
-The file should include all phenotypes present in phenotype files
-(current phenotype functionality works only with one locus and one trait).
-Specifically, one line contains conditional probabilities of
-possible phenotypes for each true *phased genotype*,
-including phenotyping errors or other deviations.
-Each column represents a different phenotype state
-(ordered from ``0`` to the total number of states), and
-each row represents the :ref:`phased genotypes <zero_one_two_etc>`
-(``aa``, ``aA``, ``Aa``, and ``AA``).
-
-Example for a monogenic recessive binary trait:
-
-::
-
-  0.9 0.1
-  0.9 0.1
-  0.9 0.1
-  0.1 0.9
-
 .. _output_file_formats:
 
 Output file formats
@@ -796,6 +750,8 @@ The symbols above mean the following:
 ``m`` *maternal* allele, and
 ``-`` the allele that was not inherited.
 
+TODO: Do we need a diagram for this maybe even show the 4 cases so we bring home the message!?
+
 The first value in each line is the individual ID.
 The remaining values are segregation probabilities at each locus.
 
@@ -849,11 +805,47 @@ TODO: remove the empty lines in the output files?
   id4 0.9000
   id4 0.1000
 
-.. _alt_allele_prob_file_format_output:
+.. _param_file_format:
 
 Parameter file formats
 ----------------------
 
+.. _alt_allele_prob_file_format:
+
+Alternative allele probability file
+===================================
+
+TODO: by row or by col? We think we will do it such that
+      metafounders are in columns and loci are in rows.
+      So, the task is to use this text below and modify it
+      accordingly and then merge the two alt allele prob file format
+      section below into one. Ros will lead on this with code
+      and documentation.
+
+This file has one line with
+*alternative allele probabilities* for each metafounder.
+It provides a way to include known information on allele probabilities
+in the pedigree founders (base population).
+The file should include all metafounders present in pedigrees.
+The first value in each line is the metafounder's ID.
+The remaining values are alternative allele probabilities for all loci.
+The default alternative allele probabilities are 0.5 for each locus.
+If you do not have information for some loci, provide 0.5 for those loci.
+
+Example with one metafounder and four loci:
+
+::
+
+  MF_1 0.30 0.21 0.44 0.24
+
+Example with two metafounders and four loci:
+
+::
+
+  MF_1 0.30 0.21 0.44 0.24
+  MF_2 0.40 0.34 0.25 0.40
+
+TODO: See the above duplicate section
 Alternative allele probability file
 ===================================
 
@@ -923,11 +915,29 @@ Example with four loci:
   0.000362
   0.000100
 
-.. _pheno_penetrance_prob_file_format_output:
+.. _pheno_penetrance_prob_file_format:
 
 Phenotype penetrance probability file
 =====================================
 
-The ``.pheno_penetrance_prob.txt`` file TODO
+This file has one line with
+*phenotype penetrance probabilities* for each distinct genotype impacting a phenotype.
+It provides a way to include known relationship between genotypes and phenotypes.
+The file should include all phenotypes present in phenotype files
+(current phenotype functionality works only with one locus and one trait).
+Specifically, one line contains conditional probabilities of
+possible phenotypes for each true *phased genotype*,
+including phenotyping errors or other deviations.
+Each column represents a different phenotype state
+(ordered from ``0`` to the total number of states), and
+each row represents the :ref:`phased genotypes <zero_one_two_etc>`
+(``aa``, ``aA``, ``Aa``, and ``AA``).
 
-TODO: Check if identical to the :ref:`input version <pheno_penetrance_prob_file_format_input>`?`
+Example for a monogenic recessive binary trait:
+
+::
+
+  0.9 0.1
+  0.9 0.1
+  0.9 0.1
+  0.1 0.9
