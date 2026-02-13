@@ -340,7 +340,7 @@ TODO: no_phase_founder is not documented / see above
 Error probabilities (using ``-est_geno_error_prob`` and ``-est_seq_error_prob``)
 are estimated as the proportion of mismatches between observed and inferred states.
 
-TODO: Say something about penetrance probabilities estimation
+TODO: Say something about penetrance probabilities estimation (Ros)
 
 .. _file_formats:
 
