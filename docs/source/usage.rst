@@ -271,9 +271,6 @@ Peeling parameters
       -update_alt_allele_prob
                             Estimate :ref:`alternative allele probabilities <alt_allele_prob_file_format>`
                             for each metafounder after each peeling cycle.
-      TODO: -est_rec_prob is not recognised
-      -est_rec_prob         Estimate :ref:`recombination probabilities <rec_prob_file_format>`
-                            after each peeling cycle.
       TODO: no_phase_founder is not documented - talking to Ros she noticed that
       the default behaviour is to phase heterozygous genotypes in founders
       in some way (TODO: what way - she noticed it is not driven by data possibly?!)
@@ -337,8 +334,6 @@ TODO: rename to update_alt_allele_prob to est_alt_allele_prob
 ``-update_alt_allele_prob``, or
 (3) provide starting values using ``-alt_allele_prob_file`` and
 then potentially ``-update_alt_allele_prob`` from the inputted genomic data.
-
-TODO: Say something about -est_rec_prob
 
 TODO: no_phase_founder is not documented / see above
 
@@ -867,22 +862,6 @@ Example with two metafounders and four loci:
   0.195520  0.219890
   0.733061  0.509849
   0.145847  0.090000
-
-.. _rec_prob_file_format:
-
-Recombination probability file
-==============================
-
-The ``.rec_prob.txt`` file contains *recombination probabilities*
-for each pair of neighbouring loci.
-There is one line per one pair of neighbouring loci with one value.
-
-Example with four loci:
-
-::
-  0.0000
-
-TODO: -est_rec_prob is not recognised - once it is, fill the example
 
 .. _geno_error_prob_file_format:
 
