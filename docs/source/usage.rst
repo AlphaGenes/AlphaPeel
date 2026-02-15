@@ -110,7 +110,7 @@ to run the analysis only on a subset of :ref:`markers <markers>`.
 
 |Software| supports specifying a number of model parameters,
 which are :ref:`probabilities <prob_freq_rate>` of different events or outcomes:
-alternative allele probabilities in the base population(s) through a file (``-alt_allele_prob_file``),
+alternative allele probabilities in the base population(s) through a file (``-``),
 recombination length of the chromosome (``-rec_length``),
 TODO: rename mutation_rate to mut_prob
 mutation rate (``-mutation_rate``),
@@ -269,7 +269,7 @@ Peeling parameters
                             all inputted genomic data prior to peeling.
       TODO: rename to est_alt_allele_prob
       -update_alt_allele_prob
-                            Estimate :ref:`alternative allele probabilities <alt_allele_prob_file_format>`
+                            Estimate :ref:`alternative allele probabilities <_format>`
                             for each metafounder after each peeling cycle.
       TODO: no_phase_founder is not documented - talking to Ros she noticed that
       the default behaviour is to phase heterozygous genotypes in founders
@@ -292,7 +292,7 @@ the number of threads (``-n_thread``, to reduce runtime on large datasets).
 
 TODO: delete these options as they are just making a mess - below is a clear and simple behaviour
       -no_param             Suppress output of model parameter files.
-      -alt_allele_prob      Output :ref:`alternative allele probabilities <alt_allele_prob_file_format>`.
+      -alt_allele_prob      Output :ref:`alternative allele probabilities <_format>`.
 
 |Software| can estimate the model parameters from the input data.
 The :ref:`default or user provided input values<input_options>`
@@ -319,7 +319,7 @@ This estimation can be initiated with an estimate from inputted genomic data
 (using ``-est_init_alt_allele_prob``).
 This option uses Newton optimisation, which also requires starting values.
 These starting values are by default 0.5,
-but can also be provided by the user using ``-alt_allele_prob_file``.
+but can also be provided by the user using ``-``.
 Note that this estimation is not taking the pedigree structure into account,
 so it is a naive population estimate and does not pertain to founders of the pedigree
 and ignores metafounders.
@@ -332,7 +332,7 @@ TODO: rename to update_alt_allele_prob to est_alt_allele_prob
 ``-update_alt_allele_prob``,
 (2) use ``-est_alt_allele_prob`` to get more informed starting value and
 ``-update_alt_allele_prob``, or
-(3) provide starting values using ``-alt_allele_prob_file`` and
+(3) provide starting values using ``-`` and
 then potentially ``-update_alt_allele_prob`` from the inputted genomic data.
 
 TODO: no_phase_founder is not documented / see above
@@ -340,7 +340,11 @@ TODO: no_phase_founder is not documented / see above
 Error probabilities (using ``-est_geno_error_prob`` and ``-est_seq_error_prob``)
 are estimated as the proportion of mismatches between observed and inferred states.
 
-TODO: Say something about penetrance probabilities estimation (Ros)
+Phenotype penetrance probabilities (using ``est_pheno_penetrance_prob``) are estimated 
+from the average conditional probabilities of phenotype states for each true phased genotype 
+across phenotyped individuals. This follows Kinghorn (2003) 
+A simple method to detect a single gene that determines a categorical trait with incomplete penetrance. 
+Assoc. Advmt. Anim. Breed. Genet. 15:103-106.
 
 .. _file_formats:
 
@@ -809,49 +813,29 @@ Parameter file formats
 Alternative allele probability file
 ===================================
 
-TODO: by row or by col? We think we will do it such that
-      metafounders are in columns and loci are in rows.
-      So, the task is to use this text below and modify it
-      accordingly and then merge the two alt allele prob file format
-      section below into one. Ros will lead on this with code
-      and documentation. The conclusion from looking across all the files
-      was that we will have loci by rows here and most of The
-      model parameter files.
-
-This file has one line with
-*alternative allele probabilities* for each metafounder.
+This file contains a line for 
+metafounder IDs followed by one line per locus with *alternative allele probabilities*. 
+If no metafounders are used, each line contains a single alternative allele probability per locus.
 It provides a way to include known information on allele probabilities
 in the pedigree founders (base population).
-The file should include all metafounders present in pedigrees.
-The first value in each line is the metafounder's ID.
+The file should include all metafounders present in pedigrees. 
+Any missing metafounders default to 0.5 for all loci.
+The first line contains the metafounder IDs.
 The remaining values are alternative allele probabilities for all loci.
 The default alternative allele probabilities are 0.5 for each locus.
 If you do not have information for some loci, provide 0.5 for those loci.
 
-Example with one metafounder and four loci:
+The file format is identical whether inputted via ``-alt_allele_prob_file`` or outputted from estimation using one or both ``est_start_alt_allele_prob`` or ``est_alt_allele_prob``.
+
+Example with no metafounder and four loci:
 
 ::
 
-  MF_1 0.30 0.21 0.44 0.24
+  0.468005
+  0.195520
+  0.733061
+  0.145847
 
-Example with two metafounders and four loci:
-
-::
-
-  MF_1 0.30 0.21 0.44 0.24
-  MF_2 0.40 0.34 0.25 0.40
-
-TODO: See the above duplicate section
-
-Alternative allele probability file
-===================================
-
-The ``.alt_allele_prob.txt`` file TODO
-
-TODO: is this the same as the input version? Review with Ros
-      :ref:`here <alt_allele_prob_file_format>`.
-      Hmm, we should transpose one of these!?
-      Best to make all of the inputs & outputs consistent - row-wise or column-wise!
 
 Example with two metafounders and four loci:
 
