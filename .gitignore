@@ -11,3 +11,15 @@ build/
 docs/build/
 example/outputs
 AlphaPeel_env
+tests/functional_tests/**/outputs/
+tests/functional_tests/**/outputs/**
+tests/accuracy_tests/outputs/
+tests/accuracy_tests/outputs/**
+.pytest_cache
+tests/accuracy_tests/accu_report.txt
+.Rproj.user
+**/.RData
+**/.Rhistory
+**/*.Rproj
+**/segfile.txt
+tests/accuracy_tests/sim_for_alphapeel_accu_test/seg_file.txt
