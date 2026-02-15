@@ -32,12 +32,12 @@ def generate_output_path(name):
 def generate_command(
     sim_path,
     method,
-    est_alt_allele_prob,
+    est_start_alt_allele_prob,
     est_geno_error_prob,
     est_seq_error_prob,
     seq_file,
     alt_allele_prob_file,
-    update_alt_allele_prob,
+    est_alt_allele_prob,
     metafounder,
     output_path,
 ):
@@ -56,13 +56,13 @@ def generate_command(
         "phased_geno_prob": None,
     }
 
-    if est_alt_allele_prob:
-        arguments["est_alt_allele_prob"] = None
+    if est_start_alt_allele_prob:
+        arguments["est_start_alt_allele_prob"] = None
     if est_geno_error_prob and est_seq_error_prob:
         arguments["est_geno_error_prob"] = None
         arguments["est_seq_error_prob"] = None
-    if update_alt_allele_prob:
-        arguments["update_alt_allele_prob"] = None
+    if est_alt_allele_prob:
+        arguments["est_alt_allele_prob"] = None
     if seq_file:
         input_file.append("seq_file")
     else:
@@ -224,15 +224,15 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
 
 
 @pytest.mark.parametrize(
-    "method, est_alt_allele_prob, est_geno_error_prob, est_seq_error_prob, seq_file, alt_allele_prob_file, update_alt_allele_prob, metafounder",
+    "method, est_start_alt_allele_prob, est_geno_error_prob, est_seq_error_prob, seq_file, alt_allele_prob_file, est_alt_allele_prob, metafounder",
     [
         ("single", None, None, None, None, None, None, None),
-        ("single", "est_alt_allele_prob", None, None, None, None, None, None),
+        ("single", "est_start_alt_allele_prob", None, None, None, None, None, None),
         ("multi", None, None, None, None, None, None, None),
-        ("multi", "est_alt_allele_prob", None, None, None, None, None, None),
+        ("multi", "est_start_alt_allele_prob", None, None, None, None, None, None),
         (
             "multi",
-            "est_alt_allele_prob",
+            "est_start_alt_allele_prob",
             "est_geno_error_prob",
             "est_seq_error_prob",
             None,
@@ -241,10 +241,19 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
             None,
         ),
         ("multi", None, None, None, "seq_file", None, None, None),
-        ("multi", "est_alt_allele_prob", None, None, "seq_file", None, None, None),
         (
             "multi",
-            "est_alt_allele_prob",
+            "est_start_alt_allele_prob",
+            None,
+            None,
+            "seq_file",
+            None,
+            None,
+            None,
+        ),
+        (
+            "multi",
+            "est_start_alt_allele_prob",
             "est_geno_error_prob",
             "est_seq_error_prob",
             "seq_file",
@@ -255,35 +264,44 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
         ("hybrid", None, None, None, None, None, None, None),
         ("hybrid", None, None, None, "seq_file", None, None, None),
         ("single", None, None, None, None, "alt_allele_prob_file", None, "metafounder"),
-        ("single", "est_alt_allele_prob", None, None, None, None, None, "metafounder"),
         (
             "single",
+            "est_start_alt_allele_prob",
             None,
             None,
             None,
             None,
             None,
-            "update_alt_allele_prob",
             "metafounder",
         ),
         (
             "single",
+            None,
+            None,
+            None,
+            None,
+            None,
             "est_alt_allele_prob",
-            None,
-            None,
-            None,
-            None,
-            "update_alt_allele_prob",
             "metafounder",
         ),
         (
             "single",
+            "est_start_alt_allele_prob",
             None,
+            None,
+            None,
+            None,
+            "est_alt_allele_prob",
+            "metafounder",
+        ),
+        (
+            "single",
+            "est_start_alt_allele_prob",
             None,
             None,
             None,
             "alt_allele_prob_file",
-            "update_alt_allele_prob",
+            "est_alt_allele_prob",
             "metafounder",
         ),
     ],
@@ -291,12 +309,12 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
 def test_accu(
     get_params,
     method,
-    est_alt_allele_prob,
+    est_start_alt_allele_prob,
     est_geno_error_prob,
     est_seq_error_prob,
     seq_file,
     alt_allele_prob_file,
-    update_alt_allele_prob,
+    est_alt_allele_prob,
     metafounder,
     sim_path,
     benchmark,
@@ -308,12 +326,12 @@ def test_accu(
                 lambda param: True if param else False,
                 [
                     method,
-                    est_alt_allele_prob,
+                    est_start_alt_allele_prob,
                     est_geno_error_prob,
                     est_seq_error_prob,
                     seq_file,
                     alt_allele_prob_file,
-                    update_alt_allele_prob,
+                    est_alt_allele_prob,
                     metafounder,
                 ],
             )
@@ -332,12 +350,12 @@ def test_accu(
                     lambda param: True if param else False,
                     [
                         "multi",
-                        est_alt_allele_prob,
+                        est_start_alt_allele_prob,
                         est_geno_error_prob,
                         est_seq_error_prob,
                         seq_file,
                         alt_allele_prob_file,
-                        update_alt_allele_prob,
+                        est_alt_allele_prob,
                         metafounder,
                     ],
                 )
@@ -359,12 +377,12 @@ def test_accu(
     command = generate_command(
         sim_path,
         method,
-        est_alt_allele_prob,
+        est_start_alt_allele_prob,
         est_geno_error_prob,
         est_seq_error_prob,
         seq_file,
         alt_allele_prob_file,
-        update_alt_allele_prob,
+        est_alt_allele_prob,
         metafounder,
         output_path,
     )
