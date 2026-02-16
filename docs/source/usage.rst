@@ -110,7 +110,7 @@ to run the analysis only on a subset of :ref:`markers <markers>`.
 
 |Software| supports specifying a number of model parameters,
 which are :ref:`probabilities <prob_freq_rate>` of different events or outcomes:
-alternative allele probabilities in the base population(s) through a file (``-``),
+alternative allele probabilities in the base population(s) through a file (``-alt_allele_prob_file``),
 recombination length of the chromosome (``-rec_length``),
 TODO: rename mutation_rate to mut_prob
 mutation rate (``-mutation_rate``),
@@ -269,7 +269,7 @@ Peeling parameters
                             all inputted genomic data prior to peeling.
       TODO: rename to est_alt_allele_prob
       -update_alt_allele_prob
-                            Estimate :ref:`alternative allele probabilities <_format>`
+                            Estimate :ref:`alternative allele probabilities <alt_allele_prob_file_format>`
                             for each metafounder after each peeling cycle.
       TODO: no_phase_founder is not documented - talking to Ros she noticed that
       the default behaviour is to phase heterozygous genotypes in founders
@@ -292,7 +292,7 @@ the number of threads (``-n_thread``, to reduce runtime on large datasets).
 
 TODO: delete these options as they are just making a mess - below is a clear and simple behaviour
       -no_param             Suppress output of model parameter files.
-      -alt_allele_prob      Output :ref:`alternative allele probabilities <_format>`.
+      -alt_allele_prob      Output :ref:`alternative allele probabilities <alt_allele_prob_file_format>`.
 
 |Software| can estimate the model parameters from the input data.
 The :ref:`default or user provided input values<input_options>`
@@ -316,24 +316,22 @@ metafounders).
 The estimates are constrained to be between 0.01 and 0.99
 to avoid TODO: discuss with Evie how to word this.
 This estimation can be initiated with an estimate from inputted genomic data
-(using ``-est_init_alt_allele_prob``).
+(using ``-est_start_alt_allele_prob``).
 This option uses Newton optimisation, which also requires starting values.
 These starting values are by default 0.5,
-but can also be provided by the user using ``-``.
+but can also be provided by the user using ``-alt_allele_prob_file``.
 Note that this estimation is not taking the pedigree structure into account,
 so it is a naive population estimate and does not pertain to founders of the pedigree
 and ignores metafounders.
 
 For a pedigree with multiple metafounders,
 the user has three options to obtain metafounder-specific alternative allele probabilities:
-TODO: rename est_alt_allele_prob to est_start_alt_allele_prob
-TODO: rename to update_alt_allele_prob to est_alt_allele_prob
 (1) use the default starting value of 0.5 for all loci and
-``-update_alt_allele_prob``,
-(2) use ``-est_alt_allele_prob`` to get more informed starting value and
-``-update_alt_allele_prob``, or
-(3) provide starting values using ``-`` and
-then potentially ``-update_alt_allele_prob`` from the inputted genomic data.
+``-est_alt_allele_prob``,
+(2) use ``-est_start_alt_allele_prob`` to get more informed starting value and
+``-est_alt_allele_prob``, or
+(3) provide starting values using ``-alt_allele_prob_file`` and
+then potentially ``-est_alt_allele_prob`` from the inputted genomic data.
 
 TODO: no_phase_founder is not documented / see above
 
