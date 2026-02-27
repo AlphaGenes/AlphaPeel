@@ -647,6 +647,9 @@ class TestClass:
             "incorrect_metafounder_in_file",
             "missing_metafounder_in_file",
             "extra_metafounder_in_file",
+            "alt_allele_prob_missing",
+            "alt_allele_prob_missing_9",
+            "alt_allele_prob_missing_metafounder",
             "metafounder_order_in_output",
         ]:
             # test case default: Test the default values of the alternative allele frequency
@@ -681,8 +684,15 @@ class TestClass:
             #           incorrect_metafounder_in_file: Test case when the names of input metafounders
             #                                          in the input alternative allele probability file do not start with MF_,
             #                                          whether an error would be raised
-            #           missing_metafounder_in_file: Test case when a metafounder is present in the pedigree but missing in the input alternative allele probability file.
-            #           extra_metafounder_in_file: Test case when an additional metafounder is present in the input alternative allele probability file.
+            #           missing_metafounder_in_file: Test case when a metafounder is present in the pedigree but missing in the
+            #                                       input alternative allele probability file.
+            #           extra_metafounder_in_file: Test case when an additional metafounder is present in the input alternative
+            #                                       allele probability file.
+            #           alt_allele_prob_missing: Test case when a value is missing in
+            #                                     the inputted alternative allele probability file.
+            #           alt_allele_prob_missing_9: Test case when a value is missing (with a missing value of 9) in the inputted alternative allele probability file.
+            #           alt_allele_prob_missing_metafounder: Test case when a metafounder is listed but empty in the
+            #                                       inputted alternative allele probability file.
             #           metafounder_order_in_output: Check the order of metafounders in the output is numerical when over 10 metafounders.
 
             self.output_file_prefix = f"alt_allele_prob.{self.test_cases}"
@@ -980,6 +990,27 @@ class TestClass:
                 )
                 # Check that the extra is removed from the alt_allele_prob output
                 assert self.output == self.expected
+
+            elif self.test_cases == "alt_allele_prob_missing":
+                self.generate_command()
+                exit_code = os.system(self.command)
+
+                # check if error message is in the output
+                assert exit_code in [512, 2]
+
+            elif self.test_cases == "alt_allele_prob_missing_9":
+                self.generate_command()
+                exit_code = os.system(self.command)
+
+                # check if error message is in the output
+                assert exit_code in [512, 2]
+
+            elif self.test_cases == "alt_allele_prob_missing_metafounder":
+                self.generate_command()
+                exit_code = os.system(self.command)
+
+                # check if error message is in the output
+                assert exit_code in [512, 2]
 
                 self.input_files.pop(-1)
                 self.input_file_depend_on_test_cases.pop(-1)

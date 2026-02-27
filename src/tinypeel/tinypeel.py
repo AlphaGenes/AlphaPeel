@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import warnings
 
@@ -55,7 +57,13 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
                             )
                         else:
                             for i in range(peelingInfo.nLoci):
-                                if pedigree.AAP[mfx][i] < 0.01:
+                                if pedigree.AAP[mfx][i] > 1 or pedigree.AAP[mfx][i] < 0:
+                                    # Throw an error (equivalent to if value is missing as set in tinyhouse)
+                                    print(
+                                        f"ERROR: Invalid value {pedigree.AAP[mfx][i]} for alternative allele probability for metafounder {mfx} at locus {i}. \nValues must be between 0 and 1. Set to 0.5 (default) if unknown. \nExiting..."
+                                    )
+                                    sys.exit(2)
+                                elif pedigree.AAP[mfx][i] < 0.01:
                                     pedigree.AAP[mfx][i] = 0.01
                                 elif pedigree.AAP[mfx][i] > 0.99:
                                     pedigree.AAP[mfx][i] = 0.99
