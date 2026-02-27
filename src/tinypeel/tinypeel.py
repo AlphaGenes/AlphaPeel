@@ -336,9 +336,7 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
     """
     if args.segfile is not None:
         # This just gets the locations in the map files.
-        snpMap = np.array(
-            InputOutput.readMapFile(args.map_file, args.startsnp, args.stopsnp)[2]
-        )
+        snpMap = peelingInfo.positions
         segMap = np.array(InputOutput.readMapFile(args.seg_map_file)[2])
 
         loci, distance = getLociAndDistance(snpMap, segMap)
@@ -380,6 +378,13 @@ def get_probability_options():
         required=False,
         type=float,
         help="Sequencing error rate. Default: 0.001.",
+    )
+    parse_dictionary["mutation_rate"] = lambda parser: parser.add_argument(
+        "-mutation_rate",
+        default=1e-8,
+        required=False,
+        type=float,
+        help="mutation rate. Default: 1e-8.",
     )
 
     return parse_dictionary
@@ -613,6 +618,14 @@ def getArgs():
             "main_metafounder",
         ],
     )
+    input_parser.add_argument(
+        "-map_file",
+        default=None,
+        required=False,
+        type=str,
+        help="A map file for all loci.",
+    )
+
     # Output options
     output_parser = parser.add_argument_group("Output Options")
 
@@ -686,7 +699,7 @@ def getArgs():
         "-geno",
         action="store_true",
         required=False,
-        help="Flag to call and write out the genotypes.",
+        help="Flag to call and write out the genotypes. If the ``-geno_threshold`` parameter is not provided, the default genotype calling threshold is set to 1/3.",
     )
     output_parser.add_argument(
         "-binary_call_file",
@@ -698,7 +711,7 @@ def getArgs():
         "-hap",
         action="store_true",
         required=False,
-        help="Flag to call and write out the haplotypes.",
+        help="Flag to call and write out the haplotypes. If the ``-hap_threshold`` parameter is not provided, the default haplotype calling threshold is set to 1/2.",
     )
 
     InputOutput.add_arguments_from_dictionary(
@@ -741,7 +754,7 @@ def getArgs():
     InputOutput.add_arguments_from_dictionary(
         peeling_parser,
         get_probability_options(),
-        options=["geno_error_prob", "seq_error_prob"],
+        options=["geno_error_prob", "seq_error_prob", "mutation_rate"],
     )
 
     peeling_control_parser = parser.add_argument_group("Peeling control arguments")
@@ -782,26 +795,19 @@ def getArgs():
         help="A flag phase a heterozygous allele in one of the founders (if such an allele can be found).",
     )
     peeling_control_parser.add_argument(
-        "-sex_chrom",
+        "-x_chr",
         action="store_true",
         required=False,
-        help="A flag to indicate that input data is for a sex chromosome. Sex needs to be given in the pedigree file. This is currently an experimental option.",
+        help="A flag to indicate that input data is for a sex chromosome. Sex needs to be given in the pedigree file.",
     )
 
     singleLocus_parser = parser.add_argument_group("Hybrid peeling arguments")
-    singleLocus_parser.add_argument(
-        "-map_file",
-        default=None,
-        required=False,
-        type=str,
-        help="a map file for all loci in hybrid peeling.",
-    )
     singleLocus_parser.add_argument(
         "-seg_map_file",
         default=None,
         required=False,
         type=str,
-        help="a map file for loci in the segregation probabilities file.",
+        help="A map file for loci in the segregation probabilities file in hybrid peeling.",
     )
     singleLocus_parser.add_argument(
         "-seg_file",
@@ -866,7 +872,7 @@ def main():
     PeelingIO.writeGenotypes(
         pedigree,
         genoProbFunc=peelingInfo.getGenoProbs,
-        isSexChrom=peelingInfo.isSexChrom,
+        isXChr=peelingInfo.isXChr,
     )
     if not args.no_param:
         PeelingIO.writeOutParamaters(peelingInfo)

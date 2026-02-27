@@ -58,7 +58,7 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
                 )
 
             if idx not in pedigree.individuals:
-                print(f"Individual {idx} not found in pedigree. Individual ignored.")
+                print(f"Individual {idx} is not found in pedigree. Individual ignored.")
             else:
                 ind = pedigree.individuals[idx]
                 if e == 0:
@@ -141,7 +141,7 @@ def writePhenoPenetrance(pedigree):
     )
 
 
-def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
+def writeGenotypes(pedigree, genoProbFunc, isXChr):
     """Writes out the genotypes for each individual. Format depends on user input and arguments.
     The output can include:
     - Dosages
@@ -154,52 +154,68 @@ def writeGenotypes(pedigree, genoProbFunc, isSexChrom):
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param genoProbFunc: function to get genotype probabilities for an individual
     :type genoProbFunc: function
-    :param isSexChrom: flag whether inputted genotypes are sex chromosome
-    :type isSexChrom: bool
+    :param isXChr: flag whether inputted genotypes are X chromosome
+    :type isXChr: bool
     :return: None. Writes to files specified in the InputOutput.args.
     """
     args = InputOutput.args
     if not args.no_dosage:
-        writeDosages(pedigree, genoProbFunc, isSexChrom, args.out_file + ".dosage.txt")
+        writeDosages(pedigree, genoProbFunc, isXChr, args.out_file + ".dosage.txt")
     if args.phased_geno_prob:
         writePhasedGenoProbs(
             pedigree, genoProbFunc, args.out_file + ".phased_geno_prob.txt"
         )
     if args.geno_prob:
         writeGenoProbs(pedigree, genoProbFunc, args.out_file + ".geno_prob.txt")
-    if args.geno_threshold and args.geno:
-        for thresh in args.geno_threshold:
-            if thresh < 1 / 3:
-                thresh = 1 / 3
+    if args.geno:
+        geno_threshold_list = []
+        if args.geno_threshold:
+            for thresh in args.geno_threshold:
+                if thresh < 1 / 3:
+                    geno_threshold_list.append(1 / 3)
+                else:
+                    geno_threshold_list.append(thresh)
+        else:
+            geno_threshold_list.append(1 / 3)
+
+        for threshold in geno_threshold_list:
             if args.binary_call_file:
                 writeBinaryCalledGenotypes(
                     pedigree,
                     genoProbFunc,
-                    isSexChrom,
-                    args.out_file + ".called." + str(thresh),
-                    thresh,
+                    isXChr,
+                    args.out_file + ".called." + str(threshold),
+                    threshold,
                 )
             else:
                 writeCalledGenotypes(
                     pedigree,
                     genoProbFunc,
-                    isSexChrom,
-                    args.out_file + ".geno_" + str(thresh) + ".txt",
-                    thresh,
+                    isXChr,
+                    args.out_file + ".geno_" + str(threshold) + ".txt",
+                    threshold,
                 )
 
-    if args.hap_threshold and args.hap:
-        for thresh in args.hap_threshold:
-            if thresh < 1 / 2:
-                thresh = 1 / 2
+    if args.hap:
+        hap_threshold_list = []
+        if args.hap_threshold:
+            for thresh in args.hap_threshold:
+                if thresh < 1 / 2:
+                    hap_threshold_list.append(1 / 2)
+                else:
+                    hap_threshold_list.append(thresh)
+        else:
+            hap_threshold_list.append(1 / 2)
+
+        for threshold in hap_threshold_list:
             if args.binary_call_file:
                 pass  # this function is not applied
             else:
                 writeCalledPhase(
                     pedigree,
                     genoProbFunc,
-                    args.out_file + ".hap_" + str(thresh) + ".txt",
-                    thresh,
+                    args.out_file + ".hap_" + str(threshold) + ".txt",
+                    threshold,
                 )
 
 
@@ -278,38 +294,38 @@ def writePhenoProbs(pedigree, phenoProbFunc):
                 )
 
 
-def writeDosages(pedigree, genoProbFunc, isSexChrom, outputFile):
+def writeDosages(pedigree, genoProbFunc, isXChr, outputFile):
     """Writes out the allele dosages to file.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param genoProbFunc: function to get genotype probabilities for an individual
     :type genoProbFunc: function
-    :param isSexChrom: flag whether inputted genotypes are sex chromosome
-    :type isSexChrom: bool
+    :param isXChr: flag whether inputted genotypes are X chromosome
+    :type isXChr: bool
     :param outputFile: name of output file to write to
     :type outputFile: str
     :return: None. Writes to the specified output file.
     """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
-            matrix = np.dot(np.array([0, 1, 1, 2]), genoProbFunc(ind.idn))
-
-            if isSexChrom and ind.sex == 0:
-                matrix *= 2
-
+            if isXChr and ind.sex == 0:
+                tmp = np.array([0, 1, 0, 0])
+            else:
+                tmp = np.array([0, 1, 1, 2])
+            matrix = np.dot(tmp, genoProbFunc(ind.idn))
             f.write(ind.idx + " " + " ".join(map("{:.4f}".format, matrix)) + "\n")
 
 
-def writeCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, thresh):
+def writeCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
     """Writes out the called genotypes to file.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param genoProbFunc: function to get genotype probabilities for an individual
     :type genoProbFunc: function
-    :param isSexChrom: flag whether inputted genotypes are sex chromosome
-    :type isSexChrom: bool
+    :param isXChr: flag whether inputted genotypes are X chromosome
+    :type isXChr: bool
     :param outputFile: name of output file to write to
     :type outputFile: str
     :param thresh: threshold for calling genotypes, defaults to 1/3
@@ -319,16 +335,19 @@ def writeCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, thresh)
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
+            if isXChr and ind.sex == 0:
+                matrixCollapsedHets = np.array(
+                    [matrix[0, :] + matrix[2, :], matrix[1, :] + matrix[3, :]],
+                    dtype=np.float32,
+                )
+            else:
+                matrixCollapsedHets = np.array(
+                    [matrix[0, :], matrix[1, :] + matrix[2, :], matrix[3, :]],
+                    dtype=np.float32,
+                )
 
-            matrixCollapsedHets = np.array(
-                [matrix[0, :], matrix[1, :] + matrix[2, :], matrix[3, :]],
-                dtype=np.float32,
-            )
             calledGenotypes = np.argmax(matrixCollapsedHets, axis=0)
             setMissing(calledGenotypes, matrixCollapsedHets, thresh)
-            if isSexChrom and ind.sex == 0:
-                doubleIfNotMissing(calledGenotypes)
-
             f.write(ind.idx + " " + " ".join(map(str, calledGenotypes)) + "\n")
 
 
@@ -368,15 +387,15 @@ def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
             f.write(ind.idx + " " + " ".join(map(str, maternal_haplotype)) + "\n")
 
 
-def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, thresh):
+def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
     """Writes out the called genotypes to file in binary format.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param genoProbFunc: function to get genotype probabilities for an individual
     :type genoProbFunc: function
-    :param isSexChrom: flag whether inputted genotypes are sex chromosome
-    :type isSexChrom: bool
+    :param isXChr: flag whether inputted genotypes are X chromosome
+    :type isXChr: bool
     :param outputFile: name of output file to write to
     :type outputFile: str
     :param thresh: threshold for calling genotypes, defaults to 1/3
@@ -390,8 +409,6 @@ def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isSexChrom, outputFile, t
         )
         calledGenotypes = np.argmax(matrixCollapsedHets, axis=0)
         setMissing(calledGenotypes, matrixCollapsedHets, thresh)
-        if isSexChrom and ind.sex == 0:
-            doubleIfNotMissing(calledGenotypes)
         ind.genotypes = calledGenotypes.astype(np.int8)
 
     InputOutput.writeOutGenotypesPlink(pedigree, outputFile)

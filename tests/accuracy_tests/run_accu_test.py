@@ -39,6 +39,7 @@ def generate_command(
     alt_allele_prob_file,
     est_alt_allele_prob,
     metafounder,
+    x_chr,
     output_path,
 ):
     command = "AlphaPeel "
@@ -76,6 +77,10 @@ def generate_command(
     if metafounder:
         for file in input_file:
             command += f"-{file} {os.path.join(sim_path, f'metafounder_{file}.txt')} "
+    elif x_chr:
+        for file in input_file:
+            command += f"-{file} {os.path.join(sim_path, f'X_chr_{file}.txt')} "
+        command += "-x_chr "
     else:
         for file in input_file:
             command += f"-{file} {os.path.join(sim_path, f'{file}.txt')} "
@@ -131,7 +136,7 @@ def get_ind_accu(output, real, nIndPerGen, n_row_per_ind, gen=None):
         return round(np.nanmean(accus), 3)
 
 
-def assess_peeling(sim_path, get_params, output_path, name, method, metafounder):
+def assess_peeling(sim_path, get_params, output_path, name, method, metafounder, x_chr):
     """
     Assess the performance of the peeling
     """
@@ -172,6 +177,8 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
         file_path = os.path.join(output_path, f".{file}.txt")
         if metafounder:
             true_path = os.path.join(sim_path, f"true-metafounder_{file}.txt")
+        elif x_chr:
+            true_path = os.path.join(sim_path, f"true-X_chr_{file}.txt")
         else:
             true_path = os.path.join(sim_path, f"true-{file}.txt")
 
@@ -180,10 +187,12 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
 
         if metafounder:
             print(f"File: metafounder_{file}")
+        elif x_chr:
+            print(f"File: x_chr_{file}")
         else:
             print(f"File: {file}")
 
-        Marker_accu = [str(get_marker_accu(new_file[:, 1:], true_file[:, 1:]))]
+        Marker_accu = [str(get_marker_accu(new_file[:, :], true_file[:, :]))]
         for gen in range(nGen):
             Marker_accu.append(
                 str(
@@ -205,7 +214,7 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
         print("Marker_accuracies", " ".join(Marker_accu))
 
         Ind_accu = [
-            str(get_ind_accu(new_file[:, 1:], true_file[:, 1:], nIndPerGen, None))
+            str(get_ind_accu(new_file[:, :], true_file[:, :], nIndPerGen, None))
         ]
         for gen in range(nGen):
             Ind_accu.append(
@@ -224,12 +233,52 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
 
 
 @pytest.mark.parametrize(
-    "method, est_start_alt_allele_prob, est_geno_error_prob, est_seq_error_prob, seq_file, alt_allele_prob_file, est_alt_allele_prob, metafounder",
+    "method, est_start_alt_allele_prob, est_geno_error_prob, est_seq_error_prob, seq_file, alt_allele_prob_file, est_alt_allele_prob, metafounder, x_chr",
     [
-        ("single", None, None, None, None, None, None, None),
-        ("single", "est_start_alt_allele_prob", None, None, None, None, None, None),
-        ("multi", None, None, None, None, None, None, None),
-        ("multi", "est_start_alt_allele_prob", None, None, None, None, None, None),
+        (
+          "single", 
+        None, 
+        None, 
+        None, 
+        None, 
+        None, 
+        None, 
+        None, 
+        None
+        ),
+        (
+          "single", 
+        "est_start_alt_allele_prob", 
+        None, 
+        None, 
+        None, 
+        None, 
+        None, 
+        None, 
+        None
+        ),
+        (
+          "multi", 
+          None, 
+          None, 
+          None, 
+          None, 
+          None, 
+          None, 
+          None, 
+          None
+          ),
+        (
+          "multi", 
+          "est_start_alt_allele_prob", 
+          None, 
+          None, 
+          None, 
+          None, 
+          None, 
+          None, 
+          None
+          ),
         (
             "multi",
             "est_start_alt_allele_prob",
@@ -239,14 +288,26 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
             None,
             None,
             None,
+            None,
         ),
-        ("multi", None, None, None, "seq_file", None, None, None),
+        (
+          "multi", 
+          None, 
+          None, 
+          None, 
+          "seq_file", 
+          None, 
+          None, 
+          None, 
+          None
+          ),
         (
             "multi",
             "est_start_alt_allele_prob",
             None,
             None,
             "seq_file",
+            None,
             None,
             None,
             None,
@@ -260,10 +321,41 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
             None,
             None,
             None,
+            None,
         ),
-        ("hybrid", None, None, None, None, None, None, None),
-        ("hybrid", None, None, None, "seq_file", None, None, None),
-        ("single", None, None, None, None, "alt_allele_prob_file", None, "metafounder"),
+        (
+          "hybrid", 
+          None, 
+          None, 
+          None, 
+          None, 
+          None, 
+          None, 
+          None, 
+          None
+          ),
+        (
+          "hybrid", 
+          None, 
+          None, 
+          None, 
+          "seq_file", 
+          None, 
+          None, 
+          None, 
+          None
+          ),
+        (
+            "single",
+            None,
+            None,
+            None,
+            None,
+            "alt_allele_prob_file",
+            None,
+            "metafounder",
+            None,
+        ),
         (
             "single",
             "est_start_alt_allele_prob",
@@ -273,6 +365,7 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
             None,
             None,
             "metafounder",
+            None,
         ),
         (
             "single",
@@ -283,6 +376,7 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
             None,
             "est_alt_allele_prob",
             "metafounder",
+            None,
         ),
         (
             "single",
@@ -303,7 +397,13 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
             "alt_allele_prob_file",
             "est_alt_allele_prob",
             "metafounder",
+            None,
         ),
+        ("single", None, None, None, None, None, None, None, "x_chr"),
+        ("multi", None, None, None, None, None, None, None, "x_chr"),
+        ("multi", None, None, None, "seq_file", None, None, None, "x_chr"),
+        ("hybrid", None, None, None, None, None, None, None, "x_chr"),
+        ("hybrid", None, None, None, "seq_file", None, None, None, "x_chr"),
     ],
 )
 def test_accu(
@@ -316,6 +416,7 @@ def test_accu(
     alt_allele_prob_file,
     est_alt_allele_prob,
     metafounder,
+    x_chr,
     sim_path,
     benchmark,
 ):
@@ -333,6 +434,7 @@ def test_accu(
                     alt_allele_prob_file,
                     est_alt_allele_prob,
                     metafounder,
+                    x_chr,
                 ],
             )
         ]
@@ -357,6 +459,7 @@ def test_accu(
                         alt_allele_prob_file,
                         est_alt_allele_prob,
                         metafounder,
+                        x_chr,
                     ],
                 )
             ]
@@ -384,9 +487,10 @@ def test_accu(
         alt_allele_prob_file,
         est_alt_allele_prob,
         metafounder,
+        x_chr,
         output_path,
     )
 
     benchmark(os.system, command)
 
-    assess_peeling(sim_path, get_params, output_path, name, method, metafounder)
+    assess_peeling(sim_path, get_params, output_path, name, method, metafounder, x_chr)
