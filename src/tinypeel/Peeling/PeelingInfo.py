@@ -92,6 +92,27 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
             XChrMaleFlag,
         )
 
+        if peelingInfo.isXChr:
+            if ind.sex == 0:
+                # male the segregation probabilities are 0.5 for pp and pm
+                peelingInfo.pointSeg[ind.idn, 0, :] = 0.5-1e-9
+                peelingInfo.pointSeg[ind.idn, 1, :] = 0.5-1e-9
+                peelingInfo.pointSeg[ind.idn, 2, :] = 1e-9
+                peelingInfo.pointSeg[ind.idn, 3, :] = 1e-9
+                peelingInfo.segregation[ind.idn, 0, :] = 0.5-1e-9
+                peelingInfo.segregation[ind.idn, 1, :] = 0.5-1e-9
+                peelingInfo.segregation[ind.idn, 2, :] = 1e-9
+                peelingInfo.segregation[ind.idn, 3, :] = 1e-9
+            else:
+                # female the segregation probabilities are 0.5 for mp and mm
+                peelingInfo.pointSeg[ind.idn, 0, :] = 1e-9
+                peelingInfo.pointSeg[ind.idn, 1, :] = 1e-9
+                peelingInfo.pointSeg[ind.idn, 2, :] = 0.5-1e-9
+                peelingInfo.pointSeg[ind.idn, 3, :] = 0.5-1e-9
+                peelingInfo.segregation[ind.idn, 0, :] = 1e-9
+                peelingInfo.segregation[ind.idn, 1, :] = 1e-9
+                peelingInfo.segregation[ind.idn, 2, :] = 0.5-1e-9
+                peelingInfo.segregation[ind.idn, 3, :] = 0.5-1e-9
         if ind.phenotype is not None:
             # If penetrance is yet updated by genotype inputs, use uniform distribution of 0.25 for all genotypes established in initialisation.
             # TODO: Update for if multiple phenotypes in input or multiple loci in genotypes.

@@ -348,8 +348,6 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
                 + (1 - distance[i]) * seg[:, :, segLoc1]
             )
 
-    else:
-        peelingInfo.segregation[:, :, :] = 0.25
 
 
 def get_probability_options():
@@ -887,6 +885,7 @@ def main():
         else:
             PeelingIO.writePhenoPenetrance(pedigree)
     if not singleLocusMode and args.seg_prob:
+        print(peelingInfo.segregation)
         InputOutput.writeIdnIndexedMatrix(
             pedigree, peelingInfo.segregation, args.out_file + ".seg_prob.txt"
         )
