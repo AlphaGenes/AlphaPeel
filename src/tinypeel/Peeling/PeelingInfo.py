@@ -95,24 +95,24 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
         if peelingInfo.isXChr:
             if ind.sex == 0:
                 # male the segregation probabilities are 0.5 for pp and pm
-                peelingInfo.pointSeg[ind.idn, 0, :] = 0.5-1e-9
-                peelingInfo.pointSeg[ind.idn, 1, :] = 0.5-1e-9
+                peelingInfo.pointSeg[ind.idn, 0, :] = 0.5 - 1e-9
+                peelingInfo.pointSeg[ind.idn, 1, :] = 0.5 - 1e-9
                 peelingInfo.pointSeg[ind.idn, 2, :] = 1e-9
                 peelingInfo.pointSeg[ind.idn, 3, :] = 1e-9
-                peelingInfo.segregation[ind.idn, 0, :] = 0.5-1e-9
-                peelingInfo.segregation[ind.idn, 1, :] = 0.5-1e-9
+                peelingInfo.segregation[ind.idn, 0, :] = 0.5 - 1e-9
+                peelingInfo.segregation[ind.idn, 1, :] = 0.5 - 1e-9
                 peelingInfo.segregation[ind.idn, 2, :] = 1e-9
                 peelingInfo.segregation[ind.idn, 3, :] = 1e-9
             else:
                 # female the segregation probabilities are 0.5 for mp and mm
                 peelingInfo.pointSeg[ind.idn, 0, :] = 1e-9
                 peelingInfo.pointSeg[ind.idn, 1, :] = 1e-9
-                peelingInfo.pointSeg[ind.idn, 2, :] = 0.5-1e-9
-                peelingInfo.pointSeg[ind.idn, 3, :] = 0.5-1e-9
+                peelingInfo.pointSeg[ind.idn, 2, :] = 0.5 - 1e-9
+                peelingInfo.pointSeg[ind.idn, 3, :] = 0.5 - 1e-9
                 peelingInfo.segregation[ind.idn, 0, :] = 1e-9
                 peelingInfo.segregation[ind.idn, 1, :] = 1e-9
-                peelingInfo.segregation[ind.idn, 2, :] = 0.5-1e-9
-                peelingInfo.segregation[ind.idn, 3, :] = 0.5-1e-9
+                peelingInfo.segregation[ind.idn, 2, :] = 0.5 - 1e-9
+                peelingInfo.segregation[ind.idn, 3, :] = 0.5 - 1e-9
         if ind.phenotype is not None:
             # If penetrance is yet updated by genotype inputs, use uniform distribution of 0.25 for all genotypes established in initialisation.
             # TODO: Update for if multiple phenotypes in input or multiple loci in genotypes.
@@ -423,11 +423,13 @@ class jit_peelingInformation(object):
         self.maf = np.full((self.nLoci), 0.5, dtype=np.float32)
         self.transmissionRate = np.full((self.nLoci - 1), 0, dtype=np.float32)
 
-    def getGenoProbs(self, idn):
+    def getGenoProbs(self, idn, sex):
         """Estimates the genotype probabilities for a given individual.
 
-        :param idn: Internal number for an individual in the pedigree.
+        :param ind: Internal number for an individual in the pedigree.
         :type idn: int
+        :param sex: 0 is male; 1 is female
+        :type sex: int
         :return: genoProbs: the genotype probabilities for the individual
         :rtype: 2D numpy array of float32 with shape 4 x nLoci
         """
@@ -436,6 +438,12 @@ class jit_peelingInformation(object):
             * self.posterior[idn, :, :]
             * self.penetrance[idn, :, :]
         )
+        if self.isXChr and sex == 0:  # male
+            genoProbs[0, :] = genoProbs[0, :] + genoProbs[2, :]
+            genoProbs[3, :] = genoProbs[1, :] + genoProbs[3, :]
+            genoProbs[1, :] = 0
+            genoProbs[2, :] = 0
+
         genoProbs = genoProbs / np.sum(genoProbs, 0)
         return genoProbs
 

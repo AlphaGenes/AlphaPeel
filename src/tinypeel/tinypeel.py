@@ -349,7 +349,6 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
             )
 
 
-
 def get_probability_options():
     """Collects potential user inputs for genotype error rate and sequencing error rate,
     otherwise the default is 0.0001 and 0.01 respectively.
@@ -885,7 +884,6 @@ def main():
         else:
             PeelingIO.writePhenoPenetrance(pedigree)
     if not singleLocusMode and args.seg_prob:
-        print(peelingInfo.segregation)
         InputOutput.writeIdnIndexedMatrix(
             pedigree, peelingInfo.segregation, args.out_file + ".seg_prob.txt"
         )
