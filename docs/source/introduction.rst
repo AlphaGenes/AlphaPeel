@@ -23,5 +23,3 @@ Disclaimer
 ----------
 
 While every effort has been made to ensure that |Software| does what it claims to do, there is absolutely no guarantee that the results provided are correct. Use of |Software| is entirely at your own risk.
-
-.. |Software| replace:: AlphaPeel
