@@ -214,6 +214,7 @@ def writeGenotypes(pedigree, genoProbFunc, isXChr):
                 writeCalledPhase(
                     pedigree,
                     genoProbFunc,
+                    isXChr,
                     args.out_file + ".hap_" + str(threshold) + ".txt",
                     threshold,
                 )
@@ -232,7 +233,7 @@ def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
     """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
-            matrix = genoProbFunc(ind.idn)
+            matrix = genoProbFunc(ind.idn, ind.sex)
             f.write("\n")
             for i in range(matrix.shape[0]):
                 f.write(
@@ -253,7 +254,7 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
     """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
-            matrix = genoProbFunc(ind.idn)
+            matrix = genoProbFunc(ind.idn, ind.sex)
             f.write("\n")
             for i in range(matrix.shape[0]):
                 if i == 1:  # Add up probabilities for aA and Aa
@@ -310,10 +311,10 @@ def writeDosages(pedigree, genoProbFunc, isXChr, outputFile):
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             if isXChr and ind.sex == 0:
-                tmp = np.array([0, 1, 0, 0])
+                tmp = np.array([0, 0, 0, 1])
             else:
                 tmp = np.array([0, 1, 1, 2])
-            matrix = np.dot(tmp, genoProbFunc(ind.idn))
+            matrix = np.dot(tmp, genoProbFunc(ind.idn, ind.sex))
             f.write(ind.idx + " " + " ".join(map("{:.4f}".format, matrix)) + "\n")
 
 
@@ -334,7 +335,7 @@ def writeCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
     """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
-            matrix = genoProbFunc(ind.idn)
+            matrix = genoProbFunc(ind.idn, ind.sex)
             if isXChr and ind.sex == 0:
                 matrixCollapsedHets = np.array(
                     [matrix[0, :] + matrix[2, :], matrix[1, :] + matrix[3, :]],
@@ -351,7 +352,7 @@ def writeCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
             f.write(ind.idx + " " + " ".join(map(str, calledGenotypes)) + "\n")
 
 
-def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
+def writeCalledPhase(pedigree, genoProbFunc, isXChr, outputFile, thresh):
     """Writes out the called haplotypes to file.
 
     :param pedigree: pedigree information container
@@ -366,15 +367,20 @@ def writeCalledPhase(pedigree, genoProbFunc, outputFile, thresh):
     """
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
-            matrix = genoProbFunc(ind.idn)
+            matrix = genoProbFunc(ind.idn, ind.sex)
 
             # Paternal
-            paternal_probs = np.array(
-                [matrix[0, :] + matrix[1, :], matrix[2, :] + matrix[3, :]],
-                dtype=np.float32,
-            )
-            paternal_haplotype = np.argmax(paternal_probs, axis=0)
-            setMissing(paternal_haplotype, paternal_probs, thresh)
+            if isXChr and ind.sex == 0:
+                paternal_haplotype = np.array(
+                    9 * np.ones(matrix.shape[1]), dtype=np.int8
+                )
+            else:
+                paternal_probs = np.array(
+                    [matrix[0, :] + matrix[1, :], matrix[2, :] + matrix[3, :]],
+                    dtype=np.float32,
+                )
+                paternal_haplotype = np.argmax(paternal_probs, axis=0)
+                setMissing(paternal_haplotype, paternal_probs, thresh)
             f.write(ind.idx + " " + " ".join(map(str, paternal_haplotype)) + "\n")
 
             # Maternal
@@ -403,10 +409,17 @@ def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thres
     :return: None. Writes to the specified output file.
     """
     for idx, ind in pedigree.writeOrder():
-        matrix = genoProbFunc(ind.idn)
-        matrixCollapsedHets = np.array(
-            [matrix[0, :], matrix[1, :] + matrix[2, :], matrix[3, :]], dtype=np.float32
-        )
+        matrix = genoProbFunc(ind.idn, ind.sex)
+        if isXChr and ind.sex == 0:
+            matrixCollapsedHets = np.array(
+                [matrix[0, :], matrix[3, :]],
+                dtype=np.float32,
+            )
+        else:
+            matrixCollapsedHets = np.array(
+                [matrix[0, :], matrix[1, :] + matrix[2, :], matrix[3, :]],
+                dtype=np.float32,
+            )
         calledGenotypes = np.argmax(matrixCollapsedHets, axis=0)
         setMissing(calledGenotypes, matrixCollapsedHets, thresh)
         ind.genotypes = calledGenotypes.astype(np.int8)
