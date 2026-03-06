@@ -5,7 +5,7 @@ Getting Started
 Install |Software|
 ------------------
 
-Here is a sample guide for installing AlphaPeel as a Python package.
+Here is a sample guide for installing ``AlphaPeel`` as a Python package.
 
 For more information on installing Python packages,
 visit `Python Packaging User Guide <https://packaging.python.org/en/latest/tutorials/installing-packages/>`_.
@@ -124,7 +124,7 @@ Install on Eddie
 
     This section is only for the users from the University of Edinburgh.
 
-To use AlphaPeel on the Eddie, the University of Edinburgh's Research Compute Cluster,
+To use ``AlphaPeel`` on the Eddie, the University of Edinburgh's Research Compute Cluster,
 you can find information to create an environment without causing the home directory to go over quota at
 `Eddie wiki page <https://www.wiki.ed.ac.uk/spaces/ResearchServices/pages/294388305/Anaconda>`_.
 

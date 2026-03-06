@@ -1,12 +1,303 @@
 Contribution and Development Guide
 ==================================
 
-Welcome to AlphaPeel contribution and development guide.
+Welcome to ``AlphaPeel`` contribution and development guide.
 
 This guide will give you an overview of the contribution and development workflow
-via the AlphaPeel GitHub repository at `<https://github.com/AlphaGenes/AlphaPeel>`_.
+via the ``AlphaPeel`` GitHub repository at `<https://github.com/AlphaGenes/AlphaPeel>`_.
 
 Critically, see also a list of issues at `<https://github.com/AlphaGenes/AlphaPeel/issues>`_.
+
+
+Introducton to collaborative development
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Before diving into the technical aspects of contribution, 
+it's essential to understand our collaborative development workflow. 
+This section will outline the rules and best practices for creating issues, branches, and pull requests, 
+as well as our overall workflow from defining tasks to reviewing code.
+
+Issue
+-----
+
+To efficiently manage our development process, 
+we use tags to categorize issues.
+Following are two main issue tags that we use to label issues:
+
+1. Discussion / Idea
+
+    * Label: ``discussion``
+
+    * No strict format
+
+    * Can stay messy
+
+2. Actionable Task
+
+    * Label: ``task``
+    
+    * Must follow a template
+
+**Rule**: Only task issues can have branches/PRs
+
+
+Task issue template
+^^^^^^^^^^^^^^^^^^^
+
+This template is available when you create a new issue.
+
+.. code-block:: markdown
+
+    ## Goal
+    What are we trying to achieve?
+
+    ## Proposed approach
+    (brief, not perfect)
+
+    ## Scope
+    What files/modules are affected?
+
+    ## Done when
+    Clear condition for completion
+
+Branch
+------
+
+We use branches to work on issues.
+
+Rules
+^^^^^
+
+* **Branches** are for development, **Version tags** are for releases
+
+    * ``devel`` → integration branch
+
+    * ``main`` → release branch
+
+    * version tags only on ``main``
+
+* **Flow**:
+
+    * Feature → PR into ``devel``
+
+    * Stabilise ``devel``
+
+    * Merge ``devel`` → ``main``
+
+    * Version tag on ``main``: ``v1.2.0``, ``latest``, ``stable``
+
+
+Branch naming
+^^^^^^^^^^^^^
+
+A suggested branch naming convention for a task issue on your fork is as follows:
+
+.. code-block:: 
+
+    <type>/issue-<id>-short-description
+
+* Examples:
+    * ``feat/issue-42-add-xchrom``
+    * ``fix/issue-17-type-error``
+    * ``refactor/issue-33-clean-io``
+    * ``doc/issue-223-add-collab-guide``
+
+* Types:
+    * ``feat``: new functionality
+    * ``fix``: bug fix
+    * ``refactor``: code cleanup
+    * ``doc``: documentation updates
+
+Pull request
+------------
+
+A pull request (PR) is a request to merge your code changes from your branch into the main repository's branch (e.g., ``devel``).
+
+The followings are the templates for PRs of ``AlphaPeel`` and ``tinyhouse``, 
+which the latter is the submodule referenced by the former. 
+The PR template should be followed when you create a PR to either 
+the ``AlphaPeel`` repository or the ``tinyhouse`` repository.
+
+We encourage you to open PRs early, 
+even when the code is not fully ready, 
+to facilitate early feedback and discussion. 
+You can use draft PRs to indicate that the PR is a work in progress.
+
+Template for PR of ``AlphaPeel``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: markdown
+
+    ## Related Issue
+    Closes #<issue-id>
+
+    ## What changed
+    - Brief summary of changes
+    - Key files/modules affected
+
+    ## Why this change
+    - What problem does this solve?
+    - What functionality does it enable?
+
+    ## Submodule changes
+    - Submodule repository: <name>
+    - PR: <link> (if applicable)
+    - Commit: <hash>
+    - Why needed: <what functionality depends on this>
+
+    ## Notes / Risks
+    - Anything reviewers should pay attention to
+
+
+Template for PR of``tinyhouse``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: markdown
+
+    ## Related Issue
+    <submodule-issue-id or main-repository issue link>
+
+    ## What changed
+    - Summary of changes
+
+    ## Why this change
+    - What functionality this enables
+
+    ## Used by
+    - Main repository PR: <link> (if applicable)
+
+    ## Notes
+    - Any compatibility considerations
+
+Full workflow
+-------------
+
+Below is the full workflow for contribution and development, 
+from defining the work to merging a pull request.
+
+1. Create and define the work
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    In ``AlphaPeel`` repository:
+
+    * Create a **task issue**
+    * Clearly define:
+
+        * goal
+        * scope
+        * “done when”
+
+    If ``tinyhouse`` changes are needed:
+
+    * create a **linked issue in ``tinyhouse``**
+
+
+2. Create branches (both repos)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    In your fork:
+
+    * ``AlphaPeel`` repository example:
+
+        .. code-block:: bash
+
+            feat/issue-42-new-analysis
+        
+
+    * ``tinyhouse`` repository example:
+
+        .. code-block:: bash
+
+            feat/issue-15-support-analysis
+
+
+3. Implement ``tinyhouse`` changes first
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    Steps:
+
+    * Implement changes in ``tinyhouse`` branch
+    * Push to your fork
+    * Open **PR to ``devel`` branch of ``tinyhouse`` repository**
+
+
+4. Use updated ``tinyhouse`` reference in ``AlphaPeel`` repository
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    In your ``AlphaPeel`` repository branch:
+
+        * Point ``tinyhouse`` submodule to your **branch commit**
+        * Continue development and testing the changes in ``AlphaPeel`` repository
+
+
+5. Open PRs early
+^^^^^^^^^^^^^^^^^
+
+    Open:
+
+    * ``tinyhouse`` PR → target: ``AlphaGenes/tinyhouse:devel``
+    * ``AlphaPeel`` PR → target: ``AlphaGenes/AlphaPeel:devel``
+
+    Link them both ways:
+
+    * ``AlphaPeel`` PR → links ``tinyhouse`` PR
+    * ``tinyhouse`` PR → links ``AlphaPeel`` PR
+
+
+6. Development + syncing
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+    During development, always keep your branch synced with upstream using ``rebase``.
+
+7. Review phase
+^^^^^^^^^^^^^^^
+
+    * First: ``tinyhouse`` PR
+
+        * Review and merge ``tinyhouse`` PR
+
+        * Now you have a **stable commit hash**
+
+    * Then: Update ``AlphaPeel`` repository
+    
+        * Update ``tinyhouse`` submodule pointer to the **merged commit**
+
+        * Push update to ``AlphaPeel`` repository branch
+
+    * Then: ``AlphaPeel`` repository PR review
+
+8. Merge flow
+^^^^^^^^^^^^^
+
+    * Before merge: 
+
+        * final check the new changes by others and update with ``rebase`` if needed
+
+        * ``squash`` the commits to simplify the history
+
+
+Developer meetings
+------------------
+
+We have routine developer meetings to discuss the ongoing work and plan for the next steps.
+
+In the meeting:
+
+* Each person shares:
+
+    * What issue they’re working on
+
+    * Any blockers
+
+    * Any upcoming PRs
+
+* Draft future plans:
+
+    * New tasks to define
+
+
+Technical Contribution Guide
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Fork the repository
 -------------------
@@ -152,7 +443,7 @@ Update submodules?
 ------------------
 
 Sometimes you have to update the submodules in line with
-your code changes in the AlphaPeel or the submodules.
+your code changes in the ``AlphaPeel`` or the submodules.
 
 First, check the current state of the submodule:
 

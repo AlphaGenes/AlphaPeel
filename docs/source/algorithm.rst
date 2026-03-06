@@ -163,7 +163,7 @@ The joint genotypes are estimated by
 .. math::
     p(g_{father}, g_{mother}|children) = \prod(p(g_{father}, g_{mother}|child)).
 
-Simulation results using AlphaPeel have suggested that accuracy may be increased
+Simulation results using ``AlphaPeel`` have suggested that accuracy may be increased
 by using the called genotype probabilities.
 Because of this we call the individual's genotypes, haplotypes, and segregation values.
 This has the added benefit of allowing us to use a look-up table to
@@ -297,7 +297,7 @@ There are a lot of possible places to obtain substantial memory savings.
 Function explanation
 ====================
 
-The main peeling function of AlphaPeel is given by ``tinypeel.Peeling.Peeling.peel()`` function:
+The main peeling function of ``AlphaPeel`` is given by ``tinypeel.Peeling.Peeling.peel()`` function:
 
 .. autofunction:: tinypeel.Peeling.Peeling.peel
 
