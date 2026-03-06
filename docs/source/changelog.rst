@@ -1,6 +1,30 @@
 =========
 Changelog
 =========
+[1.3.1] - 2026-03-05
+====================
+
+New features
+------------
+* Allow a founding individual to have two different metafounders, e.g., one for the paternal lineage and one for the maternal lineage
+  (:pr:`222`, :user:`RosCraddock`, :user:`gregorgorjanc`, :user:`XingerTang`).
+
+Maintenance
+-----------
+
+* Renaming of command line arguments, changing of input format, and corresponding documentation and test updates
+  (:issue:`221`, :pr:`219` ,:pr:`222`, :user:`RosCraddock`, :user:`gregorgorjanc`, :user:`XingerTang`).
+
+    - ``est_alt_allele_prob`` to ``est_start_alt_allele_prob``.
+
+    - ``update_alt_allele_prob`` to ``est_alt_allele_prob``.
+
+    - ``pheno_penetrance_file`` to ``phenotype_penetrance_prob_file``.
+
+    - ``update_pheno_penetrance`` to ``est_pheno_penetrance_file``.
+
+    - Reformatted the ``alt_allele_prob_file`` input to match the outputted ``alt_allele_prob_file``.
+
 
 [Unreleased] - 2026-02-12
 =========================
@@ -24,7 +48,7 @@ New features
 
     - Added ``pheno_penetrance_file`` file with user-provided phenotype error rates
       for the phenotypes, that is, the conditional probability of each phenotype
-      given the genotype. TODO: Rename to `pheno_error_prob_file`
+      given the genotype.
 
     - Added ``pheno_prob`` to output the phenotype probabilities of individuals.
 

@@ -439,5 +439,5 @@ class jit_peelingInformation(object):
             phenoProbs[i, 0] = np.sum(tmp)
             i += 1
 
-        phenoProbs = phenoProbs / np.sum(phenoProbs, 0)
+        phenoProbs /= np.sum(phenoProbs, 0)
         return phenoProbs
