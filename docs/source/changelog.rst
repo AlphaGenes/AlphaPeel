@@ -198,7 +198,7 @@ New features / additions
 * Implementation of cross-platform tests workflow with GitHub actions
   (:pr:`59`, :user:`XingerTang`).
 
-* Added instructions on how to contribute to AlphaPeel
+* Added instructions on how to contribute to ``AlphaPeel``
   (:pr:`27`, :pr:`31`, :user:`XingerTang`).
 
 Bug fixes

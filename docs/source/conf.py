@@ -74,7 +74,7 @@ exclude_patterns = []
 
 # Global substitutions available to all .rst files
 rst_epilog = """
-.. |Software| replace:: AlphaPeel
+.. |Software| replace:: ``AlphaPeel``
 """
 
 # The name of the Pygments (syntax highlighting) style to use.
