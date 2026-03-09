@@ -1,6 +1,39 @@
 =========
 Changelog
 =========
+[1.3.1] - 2026-03-05
+====================
+
+New features
+------------
+* Allow a founding individual to have two different metafounders, e.g., one for the paternal lineage and one for the maternal lineage
+  (:pr:`222`, :user:`RosCraddock`, :user:`gregorgorjanc`, :user:`XingerTang`).
+
+Maintenance
+-----------
+
+* Renaming of command line arguments, changing of input format, and corresponding documentation and test updates
+  (:issue:`221`, :pr:`219` ,:pr:`222`, :user:`RosCraddock`, :user:`gregorgorjanc`, :user:`XingerTang`).
+
+    - ``est_alt_allele_prob`` to ``est_start_alt_allele_prob``.
+
+    - ``update_alt_allele_prob`` to ``est_alt_allele_prob``.
+
+    - ``pheno_penetrance_file`` to ``phenotype_penetrance_prob_file``.
+
+    - ``update_pheno_penetrance`` to ``est_pheno_penetrance_file``.
+
+    - Reformatted the ``alt_allele_prob_file`` input to match the outputted ``alt_allele_prob_file``.
+
+
+[Unreleased] - 2026-02-12
+=========================
+
+Maintenance
+-----------
+
+* Updated the documentation to clarify inputs, outputs, and parameters
+  (:pr:`219`, :user:`gregorgorjanc`).
 
 [1.3.0] - 2026-02-05
 ====================
@@ -15,7 +48,7 @@ New features
 
     - Added ``pheno_penetrance_file`` file with user-provided phenotype error rates
       for the phenotypes, that is, the conditional probability of each phenotype
-      given the genotype. TODO: Rename to `pheno_error_prob_file`
+      given the genotype.
 
     - Added ``pheno_prob`` to output the phenotype probabilities of individuals.
 
@@ -33,10 +66,9 @@ New features
 
     - Added ``mutation_rate`` to allow user-provided mutation rate.
 
-Add map file input (:pr:`208`, :user:`XingerTang`, :user:`gregorgorjanc`).
+* Add map file input (:pr:`208`, :user:`XingerTang`, :user:`gregorgorjanc`).
 
     - Modified ``map_file`` to enable map file input for non-hybrid mode.
-
 
 Bug fixes
 ---------
@@ -59,7 +91,6 @@ Bug fixes
 * Fix the bug that ignores the first locus while calculating the accuracy in the accuracy test
   (:pr:`208`, :user:`XingerTang`, :user:`gregorgorjanc`).
 
-
 Maintenance
 -----------
 
@@ -80,7 +111,6 @@ Maintenance
 * Move changelog to documentation; add algorithm section, add a simple example, and
   update installation instructions in the documentation
   (:pr:`208`, :user:`XingerTang`, :user:`gregorgorjanc`).
-
 
 [1.2.0] - 2025-03-21
 ====================
@@ -174,7 +204,7 @@ Maintenance
 * Updates the documentation and help functions
   (:pr:`88`, :pr:`119`, :user:`XingerTang`, :user:`AprilYuZhang`).
 
-* Updates to accuracy and functional tests for new argument names
+* Updates to accuracy and functional tests for new option names
   (:pr:`126`, :pr:`130`, :pr:`131`, :user:`XingerTang`).
 
 [1.1.4] - 2023-08-25
@@ -192,7 +222,7 @@ New features / additions
 * Implementation of cross-platform tests workflow with GitHub actions
   (:pr:`59`, :user:`XingerTang`).
 
-* Added instructions on how to contribute to AlphaPeel
+* Added instructions on how to contribute to ``AlphaPeel``
   (:pr:`27`, :pr:`31`, :user:`XingerTang`).
 
 Bug fixes

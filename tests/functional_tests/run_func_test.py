@@ -349,7 +349,7 @@ class TestClass:
 
     def test_est(self):
         """
-        Check -est_geno_error_prob, -est_seq_error_prob, -est_alt_allele_prob, -rec_length just to make sure it runs.
+        Check -est_geno_error_prob, -est_seq_error_prob, -est_start_alt_allele_prob, -rec_length just to make sure it runs.
         """
         self.test_name = "test_est"
         self.prepare_path()
@@ -362,7 +362,7 @@ class TestClass:
         for self.test_cases in [
             "est_geno_error_prob",
             "est_seq_error_prob",
-            "est_alt_allele_prob",
+            "est_start_alt_allele_prob",
             "rec_length",
         ]:
             # TODO estrecombrate instead of just adding length
@@ -635,9 +635,9 @@ class TestClass:
             "alt_allele_prob_file_single",
             "alt_allele_prob_file_multiple",
             "multiple_metafounder_individual",
-            "update_alt_allele_prob_single",
-            "update_alt_allele_prob_multiple",
-            "update_alt_allele_prob_multiple_individual",
+            "est_alt_allele_prob_single",
+            "est_alt_allele_prob_multiple",
+            "est_alt_allele_prob_multiple_individual",
             "one_metafounder_individual",
             "both",
             "incorrect_pedigree",
@@ -647,6 +647,9 @@ class TestClass:
             "incorrect_metafounder_in_file",
             "missing_metafounder_in_file",
             "extra_metafounder_in_file",
+            "alt_allele_prob_missing",
+            "alt_allele_prob_missing_9",
+            "alt_allele_prob_missing_metafounder",
             "metafounder_order_in_output",
         ]:
             # test case default: Test the default values of the alternative allele frequency
@@ -658,15 +661,15 @@ class TestClass:
             #           multiple_metafounder_individual: Test case when an individual has multiple metafounders
             #                                       assigned and whether the average alternative allele
             #                                       probabilities are being used correctly
-            #           update_alt_allele_prob_single: Test the option update_alt_allele_prob
+            #           est_alt_allele_prob_single: Test the option est_alt_allele_prob
             #                                       for a single metafounder
-            #           update_alt_allele_prob_multiple: Test the option update_alt_allele_prob
+            #           est_alt_allele_prob_multiple: Test the option est_alt_allele_prob
             #                                         for multiple metafounders
-            #           update_alt_allele_prob_multiple_individual: Test case when an individual has multiple metafounders
+            #           est_alt_allele_prob_multiple_individual: Test case when an individual has multiple metafounders
             #                                       assigned and whether the average alternative allele
-            #                                       probabilities are being updated correctly with update_alt_allele_prob
+            #                                       probabilities are being updated correctly with est_alt_allele_prob
             #           one_metafounder_individual: Test case when an individual has one metafounder. This will trigger an error
-            #           both: Test the case when both alt_allele_prob_file and update_alt_allele_prob options are used,
+            #           both: Test the case when both alt_allele_prob_file and est_alt_allele_prob options are used,
             #                 whether the inputted alternative allele probabilities are used as
             #                 a starting point for alternative allele probabilities estimation
             #           incorrect_pedigree: Test case when a metafounder is written incorrectly as
@@ -681,8 +684,15 @@ class TestClass:
             #           incorrect_metafounder_in_file: Test case when the names of input metafounders
             #                                          in the input alternative allele probability file do not start with MF_,
             #                                          whether an error would be raised
-            #           missing_metafounder_in_file: Test case when a metafounder is present in the pedigree but missing in the input alternative allele probability file.
-            #           extra_metafounder_in_file: Test case when an additional metafounder is present in the input alternative allele probability file.
+            #           missing_metafounder_in_file: Test case when a metafounder is present in the pedigree but missing in the
+            #                                       input alternative allele probability file.
+            #           extra_metafounder_in_file: Test case when an additional metafounder is present in the input alternative
+            #                                       allele probability file.
+            #           alt_allele_prob_missing: Test case when a value is missing in
+            #                                     the inputted alternative allele probability file.
+            #           alt_allele_prob_missing_9: Test case when a value is missing (with a missing value of 9) in the inputted alternative allele probability file.
+            #           alt_allele_prob_missing_metafounder: Test case when a metafounder is listed but empty in the
+            #                                       inputted alternative allele probability file.
             #           metafounder_order_in_output: Check the order of metafounders in the output is numerical when over 10 metafounders.
 
             self.output_file_prefix = f"alt_allele_prob.{self.test_cases}"
@@ -770,8 +780,8 @@ class TestClass:
                 # self.input_files.pop(-1)
                 self.input_file_depend_on_test_cases.pop(-1)
 
-            elif self.test_cases == "update_alt_allele_prob_single":
-                self.arguments["update_alt_allele_prob"] = None
+            elif self.test_cases == "est_alt_allele_prob_single":
+                self.arguments["est_alt_allele_prob"] = None
                 self.output_file_to_check = "alt_allele_prob"
 
                 self.generate_command()
@@ -794,7 +804,7 @@ class TestClass:
                 # Compares alt_allele_prob output with expected when estimated by AlphaPeel for one metafounder
                 assert self.output == self.expected
 
-            elif self.test_cases == "update_alt_allele_prob_multiple":
+            elif self.test_cases == "est_alt_allele_prob_multiple":
                 self.generate_command()
                 os.system(self.command)
 
@@ -814,7 +824,7 @@ class TestClass:
                 )
                 # Compares alt_allele_prob output with expected when estimated by AlphaPeel for multiple metafounders
                 assert self.output == self.expected
-            elif self.test_cases == "update_alt_allele_prob_multiple_individual":
+            elif self.test_cases == "est_alt_allele_prob_multiple_individual":
                 self.generate_command()
                 os.system(self.command)
 
@@ -865,7 +875,7 @@ class TestClass:
                 # check if the estimated alt_allele_prob is 0.5
                 assert self.output == self.expected
 
-                self.arguments.pop("update_alt_allele_prob")
+                self.arguments.pop("est_alt_allele_prob")
 
             elif self.test_cases == "incorrect_pedigree":
                 self.generate_command()
@@ -981,6 +991,27 @@ class TestClass:
                 # Check that the extra is removed from the alt_allele_prob output
                 assert self.output == self.expected
 
+            elif self.test_cases == "alt_allele_prob_missing":
+                self.generate_command()
+                exit_code = os.system(self.command)
+
+                # check if error message is in the output
+                assert exit_code in [512, 2]
+
+            elif self.test_cases == "alt_allele_prob_missing_9":
+                self.generate_command()
+                exit_code = os.system(self.command)
+
+                # check if error message is in the output
+                assert exit_code in [512, 2]
+
+            elif self.test_cases == "alt_allele_prob_missing_metafounder":
+                self.generate_command()
+                exit_code = os.system(self.command)
+
+                # check if error message is in the output
+                assert exit_code in [512, 2]
+
                 self.input_files.pop(-1)
                 self.input_file_depend_on_test_cases.pop(-1)
 
@@ -1063,7 +1094,9 @@ class TestClass:
 
             elif self.test_cases == "pheno_probs_with_penetrance":
                 # This will print phenotype probabilities
-                self.input_file_depend_on_test_cases.append("pheno_penetrance_file")
+                self.input_file_depend_on_test_cases.append(
+                    "pheno_penetrance_prob_file"
+                )
 
                 self.generate_command()
                 os.system(self.command)
@@ -1078,7 +1111,7 @@ class TestClass:
                 )
                 self.output = read_and_sort_file(self.output_file_path)
                 self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_file.
+                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_prob_file.
                 assert self.output == self.expected
 
                 self.command = "AlphaPeel "
@@ -1100,7 +1133,7 @@ class TestClass:
                 )
                 self.output = read_and_sort_file(self.output_file_path)
                 self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_file.
+                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_prob_file.
                 assert self.output == self.expected
 
                 self.output_file_to_check = "dosage"
@@ -1113,7 +1146,7 @@ class TestClass:
                 )
                 self.output = read_and_sort_file(self.output_file_path)
                 self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted dosage file to the expected based on inputted pheno_penetrance_file.
+                # Compares the outputted dosage file to the expected based on inputted pheno_penetrance_prob_file.
                 assert self.output == self.expected
 
                 self.command = "AlphaPeel "
@@ -1133,7 +1166,7 @@ class TestClass:
                 )
                 self.output = read_and_sort_file(self.output_file_path)
                 self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_file.
+                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_prob_file.
                 assert self.output == self.expected
 
                 self.output_file_to_check = "dosage"
@@ -1146,7 +1179,7 @@ class TestClass:
                 )
                 self.output = read_and_sort_file(self.output_file_path)
                 self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted dosage file to the expected based on inputted pheno_penetrance_file.
+                # Compares the outputted dosage file to the expected based on inputted pheno_penetrance_prob_file.
                 assert self.output == self.expected
 
                 self.command = "AlphaPeel "
@@ -1167,7 +1200,7 @@ class TestClass:
                 )
                 self.output = read_and_sort_file(self.output_file_path)
                 self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_file.
+                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_prob_file.
                 assert self.output == self.expected
 
                 self.command = "AlphaPeel "
