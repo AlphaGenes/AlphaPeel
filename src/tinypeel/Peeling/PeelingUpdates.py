@@ -1,7 +1,6 @@
 from numba import jit
 import numpy as np
 
-from ..tinyhouse import InputOutput
 from ..tinyhouse import ProbMath
 
 from . import PeelingInfo
@@ -30,9 +29,9 @@ def updateMaf(pedigree, peelingInfo):
     :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
     :return: None. The function updates the pedigree.AAP attribute with the new alternative allele frequencies.
     """
-    if peelingInfo.isSexChrom:
+    if peelingInfo.isXChr:
         print(
-            "Updating error rates and alternative allele frequencies for sex chromosomes are not well test and will break in interesting ways. Recommend running without that option."
+            "Updating error rates and alternative allele frequencies for X chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
     MF = list(pedigree.AAP.keys())
     for mfx in MF:
@@ -165,30 +164,44 @@ def updateMafAfterPeeling(pedigree, peelingInfo):
     :return: None. The function updates the pedigree.AAP attribute with the new alternative allele frequencies.
     """
     MF = list(pedigree.AAP.keys())
-    for mfx in MF:
-        AAP = pedigree.AAP[mfx]
-        sumOfGenotypes = np.full((4, peelingInfo.nLoci), 0, dtype=np.float32)
-        n = 0
-        for ind in pedigree:
-            if ind.MetaFounder == mfx and ind.isFounder():
-                ind_genotype = peelingInfo.getGenoProbs(ind.idn)
-                sumOfGenotypes += ind_genotype
-                n += 1
-        for i in range(peelingInfo.nLoci):
-            marker_Aa = sumOfGenotypes[1, i]
-            marker_aA = sumOfGenotypes[2, i]
-            marker_AA = sumOfGenotypes[3, i]
-            AAP[i] = (0.5 * (marker_Aa + marker_aA) + marker_AA) / n
-            if AAP[i] < 0.01:
-                AAP[i] = 0.01
-            elif AAP[i] > 0.99:
-                AAP[i] = 0.99
+    indMF = {k: 0 for k in MF}
+    AAP = {k: np.zeros(peelingInfo.nLoci, dtype=np.float32) for k in MF}
+    for ind in pedigree:
+        if ind.MetaFounder is not None and ind.isFounder():
+            ind_genotype = peelingInfo.getGenoProbs(ind.idn)
+            if len(ind.MetaFounder) == 2:
+                AAP[ind.MetaFounder[0]] += 0.5 * ind_genotype[3, :] + ind_genotype[2, :]
+                AAP[ind.MetaFounder[1]] += 0.5 * ind_genotype[3, :] + ind_genotype[1, :]
+                indMF[ind.MetaFounder[0]] += 1
+                indMF[ind.MetaFounder[1]] += 1
+            else:
+                AAP[ind.MetaFounder[0]] += (
+                    0.5 * (ind_genotype[2, :] + ind_genotype[1, :]) + ind_genotype[3, :]
+                )
+                indMF[ind.MetaFounder[0]] += 1
 
-        mafGeno = ProbMath.getGenotypesFromMaf(AAP)
-        for ind in pedigree:
-            if ind.MetaFounder == mfx and ind.isFounder():
-                peelingInfo.anterior[ind.idn, :, :] = mafGeno
-        pedigree.AAP[mfx] = AAP.astype(np.float32)
+    for mfx in MF:
+        for i in range(peelingInfo.nLoci):
+            AAP[mfx][i] = AAP[mfx][i] / indMF[mfx]
+            if AAP[mfx][i] < 0.01:
+                AAP[mfx][i] = 0.01
+            elif AAP[mfx][i] > 0.99:
+                AAP[mfx][i] = 0.99
+        pedigree.AAP[mfx] = AAP[mfx].astype(np.float32)
+
+    for ind in pedigree:
+        if ind.MetaFounder is not None and ind.isFounder():
+            AAP = {
+                k: np.zeros(peelingInfo.nLoci, dtype=np.float32)
+                for k in ind.MetaFounder
+            }
+            for mfx in ind.MetaFounder:
+                AAP[mfx] = pedigree.AAP[mfx]
+            if len(ind.MetaFounder) == 2:
+                mafGeno = ProbMath.getGenotypesFromMultiMaf(AAP)
+            else:
+                mafGeno = ProbMath.getGenotypesFromMaf(AAP[mfx])
+            peelingInfo.anterior[ind.idn, :, :] = mafGeno
 
 
 # Commenting out the following code. This was used to do updates via grid search.
@@ -233,21 +246,22 @@ def updatePenetrance(pedigree, peelingInfo, args):
     if args.est_seq_error_prob:
         peelingInfo.seqError = updateSeqError(pedigree, peelingInfo)
 
-    if peelingInfo.isSexChrom:
+    if peelingInfo.isXChr:
         print(
-            "Updating error rates and minor allele frequencies for sex chromosomes are not well test and will break in interesting ways. Recommend running without that option."
+            "Updating error rates and minor allele frequencies for X chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
+    phaseFounder = not args.no_phase_founder
     for ind in pedigree:
-        sexChromFlag = (
-            peelingInfo.isSexChrom and ind.sex == 0
-        )  # This is the sex chromosome and the individual is male.
+        XChrMaleFlag = (
+            peelingInfo.isXChr and ind.sex == 0
+        )  # This is the X chromosome and the individual is male.
         peelingInfo.penetrance[ind.idn, :, :] = ProbMath.getGenotypeProbabilities(
             peelingInfo.nLoci,
             ind.genotypes,
             ind.reads,
             peelingInfo.genoError,
             peelingInfo.seqError,
-            sexChromFlag,
+            XChrMaleFlag,
         )
 
         if ind.phenotype is not None:
@@ -259,17 +273,14 @@ def updatePenetrance(pedigree, peelingInfo, args):
                 pedigree.phenoPenetrance,
             )
 
-        if (
-            ind.isGenotypedFounder()
-            and (not InputOutput.args.no_phase_founder)
-            and ind.genotypes is not None
-        ):
+        if ind.isGenotypedFounder() and phaseFounder and ind.genotypes is not None:
             loci = PeelingInfo.getHetMidpoint(ind.genotypes)
             if loci is not None:
-                e = peelingInfo.genoError[loci]
-                peelingInfo.penetrance[ind.idn, :, loci] = np.array(
-                    [e / 3, e / 3, 1 - e, e / 3], dtype=np.float32
-                )
+                error = peelingInfo.genoError[loci]
+                if not XChrMaleFlag:
+                    peelingInfo.penetrance[ind.idn, :, loci] = np.array(
+                        [error / 3, error / 3, 1 - error, error / 3], dtype=np.float32
+                    )
 
 
 def updateGenoError(pedigree, peelingInfo):

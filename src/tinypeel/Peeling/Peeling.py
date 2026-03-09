@@ -28,7 +28,7 @@ def peel(family, operation, peelingInfo, singleLocusMode):
     :type singleLocusMode: bool
     :return: None. The function modifies the peelingInfo object in place.
     """
-    isSexChrom = peelingInfo.isSexChrom
+    isXChr = peelingInfo.isXChr
 
     e = 0.000001
     e1e = 1 - e
@@ -117,10 +117,12 @@ def peel(family, operation, peelingInfo, singleLocusMode):
         # else:
         #     currentSeg[:,:] = segregation[child,:,:]
 
-        if isSexChrom and peelingInfo.sex[child] == 0:  # 0 for male, 1 for female.
+        if isXChr and peelingInfo.sex[child] == 0:  # 0 for male, 1 for female.
             segregationTensor = peelingInfo.segregationTensorXY
-        if isSexChrom and peelingInfo.sex[child] == 1:  # 0 for male, 1 for female.
+            segregationTensor_norm = peelingInfo.segregationTensorXY_norm
+        if isXChr and peelingInfo.sex[child] == 1:  # 0 for male, 1 for female.
             segregationTensor = peelingInfo.segregationTensorXX
+            segregationTensor_norm = peelingInfo.segregationTensorXX_norm
 
         # Einstien sum notation 2: Create the child-specific segregation tensor using the child's currrent segregation estimate.
         # childSegTensor[index,:,:,:,:] = np.einsum("abcd, di -> abci", segregationTensor, currentSeg)
@@ -218,10 +220,12 @@ def peel(family, operation, peelingInfo, singleLocusMode):
             childValues = childValues / np.sum(childValues, axis=0)
             childValues = e1e * childValues + e4
 
-            if isSexChrom and peelingInfo.sex[child] == 0:  # 0 for male, 1 for female.
+            if isXChr and peelingInfo.sex[child] == 0:  # 0 for male, 1 for female.
                 segregationTensor = peelingInfo.segregationTensorXY
-            if isSexChrom and peelingInfo.sex[child] == 1:  # 0 for male, 1 for female.
+                segregationTensor_norm = peelingInfo.segregationTensorXY_norm
+            if isXChr and peelingInfo.sex[child] == 1:  # 0 for male, 1 for female.
                 segregationTensor = peelingInfo.segregationTensorXX
+                segregationTensor_norm = peelingInfo.segregationTensorXX_norm
 
             # Einstien sum notation 5:
             # pointSeg[child,:,:] = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild[i,:,:,:], childValues)

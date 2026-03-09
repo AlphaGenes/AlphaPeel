@@ -12,9 +12,10 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath("../../src/"))
 
 
 # -- Project information -----------------------------------------------------
@@ -43,6 +44,8 @@ extensions = [
     "sphinx.ext.ifconfig",
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.extlinks",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -68,6 +71,11 @@ language = "python"
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
+
+# Global substitutions available to all .rst files
+rst_epilog = """
+.. |Software| replace:: ``AlphaPeel``
+"""
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
@@ -178,3 +186,9 @@ epub_exclude_files = ["search.html"]
 
 
 # -- Extension configuration -------------------------------------------------
+
+extlinks = {
+    "pr": ("https://github.com/AlphaGenes/AlphaPeel/pull/%s", "PR #%s"),
+    "issue": ("https://github.com/AlphaGenes/AlphaPeel/issues/%s", "Issue #%s"),
+    "user": ("https://github.com/%s", "@%s"),
+}

@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import warnings
 
@@ -20,8 +22,8 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     The set up includes:
     - saving the alternative allele probabilities for each metafounder
         - either with default of 0.5 or the -alt_allele_prob_file option input.
-        - using the est_alt_allele_prob option to estimate the alternative allele frequency.
-    - user warnings if metafounder is not in pedigree, or est_alt_allele_prob is used with -alt_allele_prob_file.
+        - using the est_start_alt_allele_prob option to estimate the alternative allele frequency.
+    - user warnings if metafounder is not in pedigree, or est_start_alt_allele_prob is used with -alt_allele_prob_file.
     Running the peeling cycles includes:
     - peeling down and up for each generation
     - collecting iterations
@@ -42,24 +44,35 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
         mf_pedigree = []
         for ind in pedigree:
             if ind.isFounder() and ind.MetaFounder is not None:
-                mfx = ind.MetaFounder
-                if mfx not in mf_pedigree:
-                    mf_pedigree.append(mfx)
-                if pedigree.AAP.get(mfx) is None:
-                    pedigree.AAP[mfx] = np.full(
-                        peelingInfo.nLoci, 0.5, dtype=np.float32
-                    )
+                AAP = {
+                    k: np.zeros(peelingInfo.nLoci, dtype=np.float32)
+                    for k in ind.MetaFounder
+                }
+                for mfx in ind.MetaFounder:
+                    if mfx not in mf_pedigree:
+                        mf_pedigree.append(mfx)
+                        if pedigree.AAP.get(mfx) is None:
+                            pedigree.AAP[mfx] = np.full(
+                                peelingInfo.nLoci, 0.5, dtype=np.float32
+                            )
+                        else:
+                            for i in range(peelingInfo.nLoci):
+                                if pedigree.AAP[mfx][i] > 1 or pedigree.AAP[mfx][i] < 0:
+                                    # Throw an error (equivalent to if value is missing as set in tinyhouse)
+                                    print(
+                                        f"ERROR: Invalid value {pedigree.AAP[mfx][i]} for alternative allele probability for metafounder {mfx} at locus {i}. \nValues must be between 0 and 1. Set to 0.5 (default) if unknown. \nExiting..."
+                                    )
+                                    sys.exit(2)
+                                elif pedigree.AAP[mfx][i] < 0.01:
+                                    pedigree.AAP[mfx][i] = 0.01
+                                elif pedigree.AAP[mfx][i] > 0.99:
+                                    pedigree.AAP[mfx][i] = 0.99
+                    AAP[mfx] = pedigree.AAP[mfx]
+                if len(ind.MetaFounder) == 2:
+                    mafGeno = ProbMath.getGenotypesFromMultiMaf(AAP)
                 else:
-                    AAP = pedigree.AAP[mfx]
-                    for i in range(peelingInfo.nLoci):
-                        if AAP[i] < 0.01:
-                            AAP[i] = 0.01
-                        elif AAP[i] > 0.99:
-                            AAP[i] = 0.99
-                    pedigree.AAP[mfx] = AAP.astype(np.float32)
-                aaf = pedigree.AAP[mfx]
-                aafGeno = ProbMath.getGenotypesFromMaf(aaf)
-                peelingInfo.anterior[ind.idn, :, :] = aafGeno
+                    mafGeno = ProbMath.getGenotypesFromMaf(AAP[mfx])
+                peelingInfo.anterior[ind.idn, :, :] = mafGeno
         mf_input = pedigree.AAP.copy()
         # removal of any metafounders not in pedigree
         for mfx in mf_input:
@@ -71,15 +84,15 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     else:
         for ind in pedigree:
             if ind.MetaFounder is not None:
-                mfx = ind.MetaFounder
-                if pedigree.AAP.get(mfx) is None:
-                    pedigree.AAP[mfx] = np.full(
-                        peelingInfo.nLoci, 0.5, dtype=np.float32
-                    )
-    if args.est_alt_allele_prob:
+                for mfx in ind.MetaFounder:
+                    if pedigree.AAP.get(mfx) is None:
+                        pedigree.AAP[mfx] = np.full(
+                            peelingInfo.nLoci, 0.5, dtype=np.float32
+                        )
+    if args.est_start_alt_allele_prob:
         if args.alt_allele_prob_file is not None and len(pedigree.AAP) > 1:
             warnings.warn(
-                "-est_alt_allele_prob will overwrite any differences between metafounders. To avoid this, please use -update_alt_allele_prob instead"
+                "-est_start_alt_allele_prob will overwrite any differences between metafounders. To avoid this, please use -est_alt_allele_prob instead"
             )
         PeelingUpdates.updateMaf(pedigree, peelingInfo)
     for i in range(args.n_cycle):
@@ -93,15 +106,15 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
         # PeelingUpdates.updateSeg(peelingInfo) #Option currently disabled.
         if args.est_geno_error_prob or args.est_seq_error_prob:
             PeelingUpdates.updatePenetrance(pedigree, peelingInfo, args)
-        if args.update_pheno_penetrance:
+        if args.est_pheno_penetrance_prob:
             if args.phenoPenetrance is None or args.phenotype is None:
                 warnings.warn(
-                    "Both -pheno_penetrance_file and -pheno_file are required to update the phenotype penetrance. Skipping update."
+                    "Both -pheno_penetrance_prob_file and -pheno_file are required to update the phenotype penetrance probabilities. Skipping update."
                 )
             else:
                 print("Updating Phenotype Penetrance")
                 PeelingUpdates.updatePhenoPenetrance(pedigree, peelingInfo)
-        if args.update_alt_allele_prob:
+        if args.est_alt_allele_prob:
             print("Updating Alternative Allele Frequencies")
             PeelingUpdates.updateMafAfterPeeling(pedigree, peelingInfo)
 
@@ -331,9 +344,7 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
     """
     if args.segfile is not None:
         # This just gets the locations in the map files.
-        snpMap = np.array(
-            InputOutput.readMapFile(args.map_file, args.startsnp, args.stopsnp)[2]
-        )
+        snpMap = peelingInfo.positions
         segMap = np.array(InputOutput.readMapFile(args.seg_map_file)[2])
 
         loci, distance = getLociAndDistance(snpMap, segMap)
@@ -376,6 +387,13 @@ def get_probability_options():
         type=float,
         help="Sequencing error rate. Default: 0.001.",
     )
+    parse_dictionary["mutation_rate"] = lambda parser: parser.add_argument(
+        "-mutation_rate",
+        default=1e-8,
+        required=False,
+        type=float,
+        help="mutation rate. Default: 1e-8.",
+    )
 
     return parse_dictionary
 
@@ -390,6 +408,7 @@ def get_input_options():
     -ped_file: pedigree
     -hap_file: phasefile
     -alt_allele_prob_file: alt_allele_prob_file
+    -pheno_penetrance_prob_file: pheno_penetrance_prob_file
     -start_snp: startsnp
     -stop_snp: stopsnp
     -main_metafounder: main_metafounder
@@ -463,13 +482,13 @@ def get_input_options():
         nargs="*",
         help="The alternative allele probabilities per metafounder(s). Default: 0.5 per marker",
     )
-    parse_dictionary["pheno_penetrance_file"] = lambda parser: parser.add_argument(
-        "-pheno_penetrance_file",
+    parse_dictionary["pheno_penetrance_prob_file"] = lambda parser: parser.add_argument(
+        "-pheno_penetrance_prob_file",
         default=None,
         required=False,
         type=str,
         nargs="*",
-        help="The penetrance file for the phenotypes.",
+        help="The penetrance probabilities file for the phenotypes.",
     )
     parse_dictionary["startsnp"] = lambda parser: parser.add_argument(
         "-start_snp",
@@ -601,12 +620,20 @@ def getArgs():
             "seqfile",
             "pedigree",
             "alt_allele_prob_file",
-            "pheno_penetrance_file",
+            "pheno_penetrance_prob_file",
             "startsnp",
             "stopsnp",
             "main_metafounder",
         ],
     )
+    input_parser.add_argument(
+        "-map_file",
+        default=None,
+        required=False,
+        type=str,
+        help="A map file for all loci.",
+    )
+
     # Output options
     output_parser = parser.add_argument_group("Output Options")
 
@@ -635,10 +662,10 @@ def getArgs():
         help="Flag to write out the alternative allele frequencies for each metafounder.",
     )
     output_parser.add_argument(
-        "-pheno_penetrance",
+        "-pheno_penetrance_prob",
         action="store_true",
         required=False,
-        help="Flag to write out the phenotype penetrance file.",
+        help="Flag to write out the phenotype penetrance probabilities.",
     )
     output_parser.add_argument(
         "-geno_prob",
@@ -680,7 +707,7 @@ def getArgs():
         "-geno",
         action="store_true",
         required=False,
-        help="Flag to call and write out the genotypes.",
+        help="Flag to call and write out the genotypes. If the ``-geno_threshold`` parameter is not provided, the default genotype calling threshold is set to 1/3.",
     )
     output_parser.add_argument(
         "-binary_call_file",
@@ -692,7 +719,7 @@ def getArgs():
         "-hap",
         action="store_true",
         required=False,
-        help="Flag to call and write out the haplotypes.",
+        help="Flag to call and write out the haplotypes. If the ``-hap_threshold`` parameter is not provided, the default haplotype calling threshold is set to 1/2.",
     )
 
     InputOutput.add_arguments_from_dictionary(
@@ -735,7 +762,7 @@ def getArgs():
     InputOutput.add_arguments_from_dictionary(
         peeling_parser,
         get_probability_options(),
-        options=["geno_error_prob", "seq_error_prob"],
+        options=["geno_error_prob", "seq_error_prob", "mutation_rate"],
     )
 
     peeling_control_parser = parser.add_argument_group("Peeling control arguments")
@@ -752,19 +779,19 @@ def getArgs():
         help="Flag to re-estimate the sequencing error rates after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
-        "-est_alt_allele_prob",
+        "-est_start_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Flag to estimate the alternative allele frequency using all observed genotypes prior to peeling.",
+        help="Flag to estimate the starting alternative allele probabilities using all inputted genomic data prior to peeling.",
     )
     peeling_control_parser.add_argument(
-        "-update_alt_allele_prob",
+        "-est_alt_allele_prob",
         action="store_true",
         required=False,
         help="Flag to re-estimate the alternative allele frequencies for each metafounder after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
-        "-update_pheno_penetrance",
+        "-est_pheno_penetrance_prob",
         action="store_true",
         required=False,
         help="Flag to re-estimate the phenotype penetrance after each peeling cycle.",
@@ -776,26 +803,19 @@ def getArgs():
         help="A flag phase a heterozygous allele in one of the founders (if such an allele can be found).",
     )
     peeling_control_parser.add_argument(
-        "-sex_chrom",
+        "-x_chr",
         action="store_true",
         required=False,
-        help="A flag to indicate that input data is for a sex chromosome. Sex needs to be given in the pedigree file. This is currently an experimental option.",
+        help="A flag to indicate that input data is for a sex chromosome. Sex needs to be given in the pedigree file.",
     )
 
     singleLocus_parser = parser.add_argument_group("Hybrid peeling arguments")
-    singleLocus_parser.add_argument(
-        "-map_file",
-        default=None,
-        required=False,
-        type=str,
-        help="a map file for all loci in hybrid peeling.",
-    )
     singleLocus_parser.add_argument(
         "-seg_map_file",
         default=None,
         required=False,
         type=str,
-        help="a map file for loci in the segregation probabilities file.",
+        help="A map file for loci in the segregation probabilities file in hybrid peeling.",
     )
     singleLocus_parser.add_argument(
         "-seg_file",
@@ -819,7 +839,7 @@ def main():
     args.bfile = args.plink_file
     args.genotypes = args.geno_file
     args.phenotype = args.pheno_file
-    args.phenoPenetrance = args.pheno_penetrance_file
+    args.phenoPenetrance = args.pheno_penetrance_prob_file
     args.phasefile = args.hap_file
     args.seqfile = args.seq_file
     args.pedigree = args.ped_file
@@ -860,7 +880,7 @@ def main():
     PeelingIO.writeGenotypes(
         pedigree,
         genoProbFunc=peelingInfo.getGenoProbs,
-        isSexChrom=peelingInfo.isSexChrom,
+        isXChr=peelingInfo.isXChr,
     )
     if not args.no_param:
         PeelingIO.writeOutParamaters(peelingInfo)
@@ -873,7 +893,7 @@ def main():
             )
         else:
             PeelingIO.writePhenoProbs(pedigree, phenoProbFunc=peelingInfo.getPhenoProbs)
-    if args.pheno_penetrance:
+    if args.pheno_penetrance_prob:
         if pedigree.phenoPenetrance is None:
             warnings.warn(
                 "Phenotype penetrance is not available. Please provide a penetrance file with -pheno_penetrance_file. -pheno_penetrance will be ignored."
