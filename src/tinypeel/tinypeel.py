@@ -361,9 +361,6 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
                 + (1 - distance[i]) * seg[:, :, segLoc1]
             )
 
-    else:
-        peelingInfo.segregation[:, :, :] = 0.25
-
 
 def get_probability_options():
     """Collects potential user inputs for genotype error rate and sequencing error rate,
