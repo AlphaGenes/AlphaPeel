@@ -12,7 +12,11 @@ Program options
 
 |Software| accepts several command-line options to control the program's behaviour.
 To view a list of all supported options, run |Software| like this:
-``AlphaPeel`` or ``AlphaPeel -h``.
+``AlphaPeel``, ``AlphaPeel -h``, ``AlphaPeel -help`` or ``AlphaPeel --help``.
+
+User can check the version of the program with ``AlphaPeel -version``. 
+Remember to use the correct version of the documentation for the version of the program you are using.
+For example, the link to the documentation for version ``v1.3.0`` is https://alphapeel.readthedocs.io/en/v1.3.0/index.html.
 
 .. _input_options:
 

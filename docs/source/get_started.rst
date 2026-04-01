@@ -2,6 +2,18 @@
 Getting Started
 ===============
 
+Quick links:
+
+* Installation: :ref:`install`
+
+* Simple example: :ref:`simple_example`
+
+* How to use: :ref:`usage`
+
+* Algorithm: :ref:`algorithm`
+
+.. _install:
+
 Install |Software|
 ------------------
 
@@ -135,6 +147,9 @@ you may can try:
 
     git config core.fileMode false
 
+
+.. _simple_example:
+
 An example
 ----------
 
@@ -233,7 +248,7 @@ And following output files:
 
     simple_output.dosage.txt
     simple_output.rec_prob.txt
-TODO: Let's round up these thresholds to 0.3333333333333333 to 0.33, so 2 digits
+.. TODO: Let's round up these thresholds to 0.3333333333333333 to 0.33, so 2 digits
       This should be enough, I reckon, but happy to discuss!
     simple_output.geno_0.3333333333333333.txt
     simple_output.seq_error_prob.txt
@@ -256,9 +271,10 @@ in line with their fully homozygous genotypes.
 As such, the progeny could only inherit one kind of a haplotype
 from each of the parents, making this a very simple example.
 
-TODO: Let's round up these thresholds to 0.3333333333333333 to 0.33, so 2 digits
+.. 
+    TODO: Let's round up these thresholds to 0.3333333333333333 to 0.33, so 2 digits
       This should be enough, I reckon, but happy to discuss!
-The ``simple_output.geno_0.3333333333333333.txt`` provides the called genotypes:
+    The ``simple_output.geno_0.3333333333333333.txt`` provides the called genotypes:
 
 .. code-block:: bash
 

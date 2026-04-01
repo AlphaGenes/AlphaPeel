@@ -16,6 +16,10 @@ import concurrent.futures
 from itertools import repeat
 import argparse
 
+from .Peeling import version
+
+version_version = version.version
+
 
 def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     """Sets up and runs each of the peeling cycles (default is 5).
@@ -825,6 +829,21 @@ def getArgs():
         help="A segregation file for hybrid peeling.",
     )
     # singleLocus_parser.add_argument('-blocksize',default=100, required=False, type=int, help='The number of markers to impute at once. This changes the memory requirements of the program.')
+
+    # special handle for version argument to allow it to be called with just -version
+    parser.add_argument(
+        "-version",
+        default=None,
+        action="version",
+        version="%(prog)s " + version_version,
+        help="Show program's version number and exit.",
+    )
+
+    args = sys.argv[1:]
+
+    if "-version" in args:
+        parser.parse_args(args)
+        sys.exit(0)
 
     return InputOutput.parseArgs("AlphaPeel", parser)
 
