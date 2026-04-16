@@ -42,10 +42,17 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
     # Information about the peeling positions are handled elsewhere.
     peelingInfo.positions = None
     if args.map_file:
-        peelingInfo.positions = np.array(
-            InputOutput.readMapFile(args.map_file, args.startsnp, args.stopsnp)[2],
-            dtype=np.int64,
-        )
+        if args.stopsnp is not None:
+            peelingInfo.positions = np.array(
+                InputOutput.readMapFile(args.map_file, args.startsnp, args.stopsnp + 1)[
+                    2
+                ],
+                dtype=np.int64,
+            )
+        else:
+            peelingInfo.positions = np.array(
+                InputOutput.readMapFile(args.map_file)[2], dtype=np.int64
+            )
 
     mutation_rate = args.mutation_rate
     # Generate the segregation tensors.

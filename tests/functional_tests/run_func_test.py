@@ -1232,7 +1232,7 @@ class TestClass:
         self.test_name = "test_map_input"
         self.prepare_path()
 
-        self.arguments = {"method": "multi"}
+        self.arguments = {"method": "multi", "start_snp": "2", "stop_snp": "5"}
         self.output_file_to_check = "dosage"
 
         # without map file input
