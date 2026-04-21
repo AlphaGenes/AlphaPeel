@@ -389,7 +389,7 @@ write.table(x = phasedGenotypes, file = "true-X_chr_phased_geno_prob.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 write.table(x = UnphasedGenotypes, file = "true-X_chr_geno_prob.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = genotypes, file = "true-X_chr_geno_0.3333333333333333.txt", 
+write.table(x = genotypes, file = "true-X_chr_geno_0.333.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
 write.table(x = genotypes, file = "true-X_chr_dosage.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)

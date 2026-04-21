@@ -149,7 +149,7 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder,
     else:
         file_to_check = [
             "dosage",
-            "geno_0.3333333333333333",
+            "geno_0.333",
             "hap_0.5",
             "geno_prob",
             "phased_geno_prob",
@@ -165,7 +165,7 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder,
     print(f"Test: {name}")
 
     for file in file_to_check:
-        if file in ["dosage", "geno_0.3333333333333333"]:
+        if file in ["dosage", "geno_0.333"]:
             n_row_per_ind = 1
         elif file in ["phased_geno_prob", "seg_prob"]:
             n_row_per_ind = 4

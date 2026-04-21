@@ -377,28 +377,27 @@ def get_probability_options():
     :rtype: dict
     """
     parse_dictionary = dict()
+    parse_dictionary["mut_prob"] = lambda parser: parser.add_argument(
+        "-mut_prob",
+        default=1e-8,
+        required=False,
+        type=float,
+        help="Mutation probability. Default: 1e-8.",
+    )
     parse_dictionary["geno_error_prob"] = lambda parser: parser.add_argument(
         "-geno_error_prob",
         default=0.0001,
         required=False,
         type=float,
-        help="Genotyping error rate. Default: 0.0001.",
+        help="Genotype error probability. Default: 0.0001.",
     )
     parse_dictionary["seq_error_prob"] = lambda parser: parser.add_argument(
         "-seq_error_prob",
         default=0.001,
         required=False,
         type=float,
-        help="Sequencing error rate. Default: 0.001.",
+        help="Sequencing error probability. Must not be 0. Default: 0.001.",
     )
-    parse_dictionary["mutation_rate"] = lambda parser: parser.add_argument(
-        "-mutation_rate",
-        default=1e-8,
-        required=False,
-        type=float,
-        help="mutation rate. Default: 1e-8.",
-    )
-
     return parse_dictionary
 
 
@@ -422,13 +421,13 @@ def get_input_options():
     :rtype: dict
     """
     parse_dictionary = dict()
-    parse_dictionary["bfile"] = lambda parser: parser.add_argument(
-        "-plink_file",
+    parse_dictionary["pedigree"] = lambda parser: parser.add_argument(
+        "-ped_file",
         default=None,
         required=False,
         type=str,
         nargs="*",
-        help="plink (binary) file(s).",
+        help="Pedigree file(s) in (see format details in the docs).",
     )
     parse_dictionary["genotypes"] = lambda parser: parser.add_argument(
         "-geno_file",
@@ -436,7 +435,52 @@ def get_input_options():
         required=False,
         type=str,
         nargs="*",
-        help="Genotype file(s) in AlphaGenes format.",
+        help="Genotype file(s) (see format details in the docs).",
+    )
+    parse_dictionary["seqfile"] = lambda parser: parser.add_argument(
+        "-seq_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="Sequence allele read count file(s) (see format details in the docs).",
+    )
+    parse_dictionary["bfile"] = lambda parser: parser.add_argument(
+        "-plink_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="Plink (binary) file(s) (see format details in the docs).",
+    )
+    parse_dictionary["startsnp"] = lambda parser: parser.add_argument(
+        "-start_snp",
+        default=None,
+        required=False,
+        type=int,
+        help="The first locus to consider. Counting starts at 1. Default: 1.",
+    )
+    parse_dictionary["stopsnp"] = lambda parser: parser.add_argument(
+        "-stop_snp",
+        default=None,
+        required=False,
+        type=int,
+        help="The last locus to consider. Default: all loci in input files",
+    )
+    parse_dictionary["alt_allele_prob_file"] = lambda parser: parser.add_argument(
+        "-alt_allele_prob_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="Alternative allele probability file (see format details in the docs). Default: 0.5 for each locus.",
+    )
+    parse_dictionary["main_metafounder"] = lambda parser: parser.add_argument(
+        "-main_metafounder",
+        default="MF_1",
+        required=False,
+        type=str,
+        help="ID used to represent the base population of the pedigree (metafounder / unknown parent group) (see format details in the docs). Default: MF_1.",
     )
     parse_dictionary["phenotype"] = lambda parser: parser.add_argument(
         "-pheno_file",
@@ -444,7 +488,15 @@ def get_input_options():
         required=False,
         type=str,
         nargs="*",
-        help="Phenotype file(s) in AlphaGenes format.",
+        help="Phenotype file(s) (see format details in the docs).",
+    )
+    parse_dictionary["pheno_penetrance_prob_file"] = lambda parser: parser.add_argument(
+        "-pheno_penetrance_prob_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="Phenotype penetrance probability file (see format details in the docs).",
     )
     parse_dictionary["reference"] = lambda parser: parser.add_argument(
         "-reference",
@@ -454,22 +506,6 @@ def get_input_options():
         nargs="*",
         help="A haplotype reference panel in AlphaGenes format.",
     )
-    parse_dictionary["seqfile"] = lambda parser: parser.add_argument(
-        "-seq_file",
-        default=None,
-        required=False,
-        type=str,
-        nargs="*",
-        help="Sequence allele read count file(s).",
-    )
-    parse_dictionary["pedigree"] = lambda parser: parser.add_argument(
-        "-ped_file",
-        default=None,
-        required=False,
-        type=str,
-        nargs="*",
-        help="Pedigree file(s) in AlphaGenes format.",
-    )
     parse_dictionary["phasefile"] = lambda parser: parser.add_argument(
         "-hap_file",
         default=None,
@@ -477,43 +513,6 @@ def get_input_options():
         type=str,
         nargs="*",
         help="A haplotype file in AlphaGenes format.",
-    )
-    parse_dictionary["alt_allele_prob_file"] = lambda parser: parser.add_argument(
-        "-alt_allele_prob_file",
-        default=None,
-        required=False,
-        type=str,
-        nargs="*",
-        help="The alternative allele probabilities per metafounder(s). Default: 0.5 per marker",
-    )
-    parse_dictionary["pheno_penetrance_prob_file"] = lambda parser: parser.add_argument(
-        "-pheno_penetrance_prob_file",
-        default=None,
-        required=False,
-        type=str,
-        nargs="*",
-        help="The penetrance probabilities file for the phenotypes.",
-    )
-    parse_dictionary["startsnp"] = lambda parser: parser.add_argument(
-        "-start_snp",
-        default=None,
-        required=False,
-        type=int,
-        help="The first marker to consider. The first marker in the file is marker '1'. Default: 1.",
-    )
-    parse_dictionary["stopsnp"] = lambda parser: parser.add_argument(
-        "-stop_snp",
-        default=None,
-        required=False,
-        type=int,
-        help="The last marker to consider. Default: all markers considered.",
-    )
-    parse_dictionary["main_metafounder"] = lambda parser: parser.add_argument(
-        "-main_metafounder",
-        default="MF_1",
-        required=False,
-        type=str,
-        help="The metafounder to use where parents are unknown with input 0. Default: MF_1.",
     )
     parse_dictionary["seed"] = lambda parser: parser.add_argument(
         "-seed",
@@ -548,14 +547,14 @@ def get_output_options():
         "-out_id_only",
         action="store_true",
         required=False,
-        help='Flag to surpress the individuals who are not present in the file used with -out_id_order. Also surpresses "dummy" individuals.',
+        help='Suppress output for individuals not present in the file specified with -out_id_order. It also suppresses "dummy" individuals.',
     )
     parse_dictionary["iothreads"] = lambda parser: parser.add_argument(
         "-n_io_thread",
         default=1,
         required=False,
         type=int,
-        help="Number of threads to use for io. Default: 1.",
+        help="Number of threads to use for input/output (IO). Default: 1.",
     )
 
     return parse_dictionary
@@ -582,7 +581,7 @@ def get_multithread_options():
         default=1,
         required=False,
         type=int,
-        help="Maximum number of threads to use for analysis. Default: 1.",
+        help="Maximum number of threads to use. Default: 1.",
     )
     return parse_dictionary
 
@@ -599,7 +598,10 @@ def getArgs():
     parser = argparse.ArgumentParser(description="")
     core_parser = parser.add_argument_group("Core arguments")
     core_parser.add_argument(
-        "-out_file", required=True, type=str, help="The output file prefix."
+        "-out_file",
+        required=True,
+        type=str,
+        help='The output file prefix. All file outputs will be named as "PREFIX.OUTPUT.txt", where "OUTPUT" is the type of output (for example, "dosage" and "geno_prob").',
     )
 
     core_peeling_parser = parser.add_argument_group("Mandatory peeling arguments")
@@ -608,7 +610,7 @@ def getArgs():
         default=None,
         required=False,
         type=str,
-        help='Program run type. Either "single" or "multi".',
+        help="Peeling method: single or multi.",
     )
 
     # Input options
@@ -635,7 +637,7 @@ def getArgs():
         default=None,
         required=False,
         type=str,
-        help="A map file for all loci.",
+        help="Map file for loci in genomic data files (see format details in the docs).",
     )
 
     # Output options
@@ -645,13 +647,61 @@ def getArgs():
         "-no_dosage",
         action="store_true",
         required=False,
-        help="Flag to suppress the output of the dosage file.",
+        help="Suppress default output of allele dosages (see format details in the docs).",
+    )
+    output_parser.add_argument(
+        "-geno",
+        action="store_true",
+        required=False,
+        help="Call and output genotypes (see format details in the docs). The default genotype calling threshold is set to 1/3.",
+    )
+    output_parser.add_argument(
+        "-geno_threshold",
+        default=None,
+        required=False,
+        type=float,
+        nargs="*",
+        help="Custom genotype calling threshold(s) from the genotype probabilities. Multiple space separated values allowed.\
+        Value(s) less than 1/3 are replaced by 1/3.",
+    )
+    output_parser.add_argument(
+        "-geno_prob",
+        action="store_true",
+        required=False,
+        help="Output genotype probabilities (see format details in the docs).",
+    )
+    output_parser.add_argument(
+        "-phased_geno_prob",
+        action="store_true",
+        required=False,
+        help="Output phased genotype probabilities (see format details in the docs).",
+    )
+    output_parser.add_argument(
+        "-hap",
+        action="store_true",
+        required=False,
+        help="Call and output haplotypes (see format details in the docs). The default haplotype calling threshold is set to 1/2.",
+    )
+    output_parser.add_argument(
+        "-hap_threshold",
+        default=None,
+        required=False,
+        type=float,
+        nargs="*",
+        help="Custom haplotype calling threshold(s) from the phased genotype probabilities. Multiple space separated values allowed.\
+        Value(s) less than 1/2 are replaced by 1/2.",
     )
     output_parser.add_argument(
         "-seg_prob",
         action="store_true",
         required=False,
         help="Flag to enable writing out the segregation probabilities.",
+    )
+    output_parser.add_argument(
+        "-pheno_prob",
+        action="store_true",
+        required=False,
+        help="Flag to enable writing out the phenotype probabilities.",
     )
     output_parser.add_argument(
         "-no_param",
@@ -672,58 +722,10 @@ def getArgs():
         help="Flag to write out the phenotype penetrance probabilities.",
     )
     output_parser.add_argument(
-        "-geno_prob",
-        action="store_true",
-        required=False,
-        help="Flag to enable writing out the genotype probabilities.",
-    )
-    output_parser.add_argument(
-        "-pheno_prob",
-        action="store_true",
-        required=False,
-        help="Flag to enable writing out the phenotype probabilities.",
-    )
-    output_parser.add_argument(
-        "-phased_geno_prob",
-        action="store_true",
-        required=False,
-        help="Flag to enable writing out the phased genotype probabilities.",
-    )
-    output_parser.add_argument(
-        "-geno_threshold",
-        default=None,
-        required=False,
-        type=float,
-        nargs="*",
-        help="Genotype calling threshold(s). Multiple space separated values allowed.\
-        Value less than 1/3 will be replaced by 1/3.",
-    )
-    output_parser.add_argument(
-        "-hap_threshold",
-        default=None,
-        required=False,
-        type=float,
-        nargs="*",
-        help="Haplotype calling threshold(s). Multiple space separated values allowed.\
-        Value less than 1/2 will be replaced by 1/2.",
-    )
-    output_parser.add_argument(
-        "-geno",
-        action="store_true",
-        required=False,
-        help="Flag to call and write out the genotypes. If the ``-geno_threshold`` parameter is not provided, the default genotype calling threshold is set to 1/3.",
-    )
-    output_parser.add_argument(
         "-binary_call_file",
         action="store_true",
         required=False,
         help="Flag to write out the called genotype files as a binary plink output [Not yet implemented].",
-    )
-    output_parser.add_argument(
-        "-hap",
-        action="store_true",
-        required=False,
-        help="Flag to call and write out the haplotypes. If the ``-hap_threshold`` parameter is not provided, the default haplotype calling threshold is set to 1/2.",
     )
 
     InputOutput.add_arguments_from_dictionary(
@@ -742,18 +744,18 @@ def getArgs():
 
     peeling_parser = parser.add_argument_group("Optional peeling arguments")
     peeling_parser.add_argument(
+        "-rec_length",
+        default=1.0,
+        required=False,
+        type=float,
+        help="Recombination length of the chromosome in Morgans. Default: 1.00",
+    )
+    peeling_parser.add_argument(
         "-n_cycle",
         default=5,
         required=False,
         type=int,
         help="Number of peeling cycles. Default: 5.",
-    )
-    peeling_parser.add_argument(
-        "-rec_length",
-        default=1.0,
-        required=False,
-        type=float,
-        help="Estimated recombination length of the chromosome in Morgans. [Default 1.00]",
     )
     peeling_parser.add_argument(
         "-penetrance",
@@ -766,51 +768,51 @@ def getArgs():
     InputOutput.add_arguments_from_dictionary(
         peeling_parser,
         get_probability_options(),
-        options=["geno_error_prob", "seq_error_prob", "mutation_rate"],
+        options=["geno_error_prob", "seq_error_prob", "mut_prob"],
     )
 
     peeling_control_parser = parser.add_argument_group("Peeling control arguments")
     peeling_control_parser.add_argument(
-        "-est_geno_error_prob",
+        "-x_chr",
         action="store_true",
         required=False,
-        help="Flag to re-estimate the genotyping error rates after each peeling cycle.",
-    )
-    peeling_control_parser.add_argument(
-        "-est_seq_error_prob",
-        action="store_true",
-        required=False,
-        help="Flag to re-estimate the sequencing error rates after each peeling cycle.",
+        help="Indicate that input data is for the X chromosome (see details in the docs).",
     )
     peeling_control_parser.add_argument(
         "-est_start_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Flag to estimate the starting alternative allele probabilities using all inputted genomic data prior to peeling.",
+        help="Estimate starting alternative allele probabilities from all inputted genomic data prior to peeling.",
     )
     peeling_control_parser.add_argument(
         "-est_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Flag to re-estimate the alternative allele frequencies for each metafounder after each peeling cycle.",
+        help="Estimate alternative allele probabilities after each peeling cycle.",
+    )
+    peeling_control_parser.add_argument(
+        "-est_geno_error_prob",
+        action="store_true",
+        required=False,
+        help="Estimate genotype error probability after each peeling cycle.",
+    )
+    peeling_control_parser.add_argument(
+        "-est_seq_error_prob",
+        action="store_true",
+        required=False,
+        help="Estimate sequence error probability after each peeling cycle.",
     )
     peeling_control_parser.add_argument(
         "-est_pheno_penetrance_prob",
         action="store_true",
         required=False,
-        help="Flag to re-estimate the phenotype penetrance after each peeling cycle.",
+        help="Estimate phenotype penetrance probabilities.",
     )
     peeling_control_parser.add_argument(
         "-no_phase_founder",
         action="store_true",
         required=False,
-        help="A flag phase a heterozygous allele in one of the founders (if such an allele can be found).",
-    )
-    peeling_control_parser.add_argument(
-        "-x_chr",
-        action="store_true",
-        required=False,
-        help="A flag to indicate that input data is for a sex chromosome. Sex needs to be given in the pedigree file.",
+        help="Suppress phasing a heterozygous allele (if such an allele can be found) in genotyped individuals without genotyped parents.",
     )
 
     singleLocus_parser = parser.add_argument_group("Hybrid peeling arguments")
@@ -819,14 +821,14 @@ def getArgs():
         default=None,
         required=False,
         type=str,
-        help="A map file for loci in the segregation probabilities file in hybrid peeling.",
+        help="Map file for loci in the segregation probabilities file.",
     )
     singleLocus_parser.add_argument(
         "-seg_file",
         default=None,
         required=False,
         type=str,
-        help="A segregation file for hybrid peeling.",
+        help="Segregation probabilities file (see format details in the docs).",
     )
     # singleLocus_parser.add_argument('-blocksize',default=100, required=False, type=int, help='The number of markers to impute at once. This changes the memory requirements of the program.')
 
@@ -850,20 +852,22 @@ def getArgs():
 
 def main():
     """Main function for the AlphaPeel program. This function collects the arguments from the command line and runs the peeling algorithm."""
+    docs_link = f"https://alphapeel.readthedocs.io/en/v{version_version}/usage.html"
+    InputOutput.print_boilerplate("AlphaPeel", version=version_version, docs=docs_link)
     args = getArgs()
     if args.start_snp:
         args.start_snp -= 1
     if args.stop_snp:
         args.stop_snp -= 1
-    args.bfile = args.plink_file
-    args.genotypes = args.geno_file
-    args.phenotype = args.pheno_file
-    args.phenoPenetrance = args.pheno_penetrance_prob_file
-    args.phasefile = args.hap_file
-    args.seqfile = args.seq_file
     args.pedigree = args.ped_file
+    args.genotypes = args.geno_file
+    args.seqfile = args.seq_file
+    args.phenotype = args.pheno_file
+    args.bfile = args.plink_file
     args.startsnp = args.start_snp
     args.stopsnp = args.stop_snp
+    args.phenoPenetrance = args.pheno_penetrance_prob_file
+    args.phasefile = args.hap_file
     args.writekey = args.out_id_order
     args.onlykeyed = args.out_id_only
     args.iothreads = args.n_io_thread

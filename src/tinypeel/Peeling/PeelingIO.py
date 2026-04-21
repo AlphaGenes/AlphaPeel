@@ -184,15 +184,18 @@ def writeGenotypes(pedigree, genoProbFunc, isXChr):
                     pedigree,
                     genoProbFunc,
                     isXChr,
-                    args.out_file + ".called." + str(threshold),
+                    args.out_file + ".called." + str(round(threshold, 3)),
                     threshold,
                 )
             else:
+                print(
+                    f"Writing called genotypes with threshold {threshold} to {args.out_file + '.geno_' + str(round(threshold, 3)) + '.txt'}"
+                )
                 writeCalledGenotypes(
                     pedigree,
                     genoProbFunc,
                     isXChr,
-                    args.out_file + ".geno_" + str(threshold) + ".txt",
+                    args.out_file + ".geno_" + str(round(threshold, 3)) + ".txt",
                     threshold,
                 )
 
@@ -211,10 +214,13 @@ def writeGenotypes(pedigree, genoProbFunc, isXChr):
             if args.binary_call_file:
                 pass  # this function is not applied
             else:
+                print(
+                    f"Writing called haplotypes with threshold {threshold} to {args.out_file + '.hap_' + str(round(threshold, 3)) + '.txt'}"
+                )
                 writeCalledPhase(
                     pedigree,
                     genoProbFunc,
-                    args.out_file + ".hap_" + str(threshold) + ".txt",
+                    args.out_file + ".hap_" + str(round(threshold, 3)) + ".txt",
                     threshold,
                 )
 
@@ -254,7 +260,6 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn)
-            f.write("\n")
             for i in range(matrix.shape[0]):
                 if i == 1:  # Add up probabilities for aA and Aa
                     f.write(

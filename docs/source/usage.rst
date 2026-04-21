@@ -64,10 +64,9 @@ Input options
                           (:ref:`see format details <ped_file_format>`).
                           Default: MF_1.
       -rec_length REC_LENGTH
-                          Recombination length of the chromosome in Morgans
-                          (see :ref:`map file <map_file_format>`).
+                          Recombination length of the chromosome in Morgans.
                           Default: 1.00.
-      -mutation_rate MUTATION_RATE
+      -mut_prob MUT_PROB
                           Mutation :ref:`probability <prob_freq_rate>`.
                           Default: 1e-8.
       -geno_error_prob GENO_ERROR_PROB
@@ -82,7 +81,6 @@ Input options
                           Phenotype penetrance :ref:`probability <prob_freq_rate>` file
                           (:ref:`see format details <pheno_penetrance_prob_file_format>`).
 
-.. TODO: rename mutation_rate to mut_prob
 
 |Software| requires a pedigree file (``-ped_file``) and
 one or more genomic data files to run the analysis.
@@ -118,13 +116,19 @@ to run the analysis only on a subset of :ref:`markers <markers>`.
 which are :ref:`probabilities <prob_freq_rate>` of different events or outcomes:
 alternative allele probabilities in the base population(s) (``-alt_allele_prob_file``),
 recombination length of the chromosome (``-rec_length``),
-
-.. TODO: rename mutation_rate to mut_prob
-
-mutation rate (``-mutation_rate``),
+mutation rate (``-mut_prob``),
 genotype error probability (``-geno_error_prob``),
 sequence error probability (``-seq_error_prob``), and
 phenotype penetrance probabilities (``-pheno_penetrance_prob_file``).
+
+The option ``-rec_length`` provides the software with the 
+recombination length of the input chromosome. |Software|
+assumes the recombination happens equally likely across
+the chromosome. Therefore, the recombination probability
+between two loci would be calculated by dividing the 
+values of ``-rec_length`` by the distance of the physical
+positions of the two loci relative to the total length of the 
+chromosome.
 
 .. _robust_parameters:
 
@@ -155,17 +159,18 @@ Output options
     Individuals:
       -no_dosage            Suppress default output of :ref:`allele dosages <dosage_file_format>`.
       -geno                 Call and output :ref:`genotypes <genotype_file_format>`.
+                            The default genotype calling threshold is set to 1/3.
       -geno_threshold [GENO_THRESHOLD ...]
-                            Genotype calling threshold(s) from the genotype probabilities.
+                            Custom genotype calling threshold(s) from the genotype probabilities.
                             Multiple space separated values allowed.
                             Value(s) less than 1/3 are replaced by 1/3.
-                            Default: 1/3.
       -geno_prob            Output :ref:`genotype probabilities <geno_prob_file_format>`.
       -phased_geno_prob     Output :ref:`phased genotype probabilities <phased_geno_prob_file_format>`.
       -hap                  Call and output :ref:`haplotypes <hap_file_format>`.
-                            Default: 1/2.
+                            The default haplotype calling threshold is set to 1/2.
       -hap_threshold [HAP_THRESHOLD ...]
-                            Haplotype calling threshold(s) from the phased genotype probabilities
+                            Custom haplotype calling threshold(s) from the 
+                            phased genotype probabilities.
                             Multiple space separated values allowed.
                             Value(s) less than 1/2 are replaced by 1/2.
       -seg_prob             Output :ref:`segregation probabilities <seg_prob_file_format>`.
@@ -194,6 +199,7 @@ Output options
 
 |Software| by default produces a :ref:`dosage file <dosage_file_format>`.
 Additional individual-level outputs can be requested with the options described above.
+
 The ``-geno_threshold`` and ``-hap_threshold``
 respectively control which genotypes and haplotypes are called.
 A threshold of 0.9 gives calls only if
@@ -205,6 +211,8 @@ but will result in fewer calls.
 Since there are three genotype states and two haplotype states,
 "best-guess" genotypes and haplotypes are
 respectively called with a threshold less than ``1/3`` and ``1/2``.
+
+We round the thresholds in the output filenames to three digits. 
 
 The output order of individuals can be changed
 using the ``-out_id_order`` option,
@@ -227,12 +235,12 @@ Peeling methods
 
     Strategy:
       -method METHOD        Peeling method: single or multi.
-                            Default: multi.
 
     Single-locus options for the second stage of hybrid peeling:
       -seg_file SEG_FILE    :ref:`Segregation probabilities file <seg_prob_file_format>`.
       -seg_map_file SEG_MAP_FILE
-                            Map file for loci in the segregation probabilities file.
+                            Map file for loci in the segregation probabilities file
+                             (:ref:`see format details <map_file_format>`).
 
 |Software| supports three peeling strategies: single-locus, multi-locus, and hybrid.
 
@@ -252,9 +260,9 @@ SNP genotypes to estimate segregation probabilities, and
 then run the single-locus peeling method on
 sequence allele read counts and the segregation probabilities.
 In this second stage of hybrid peeling, provide:
-a ``-map_file`` with positions for loci in the sequence allele read count data,
-a ``-seg_file`` with segregation probabilities generated via multi-locus method, and
-a ``-seg_map_file`` with genetic positions for loci in the segregation probabilities file.
+  * a ``-map_file`` with positions for loci in the sequence allele read count data,
+  * a ``-seg_file`` with segregation probabilities generated via multi-locus method, and
+  * a ``-seg_map_file`` with genetic positions for loci in the segregation probabilities file.
 This combination of options is not required in the standard multi-locus mode.
 
 .. _peeling_parameters:
@@ -268,7 +276,7 @@ Peeling parameters
       -n_cycle N_CYCLE      Number of peeling cycles.
                             Default: 5.
       -n_thread N_THREAD
-                            Number of threads to use.
+                            Maximum number of threads to use.
                             Default: 1.
 
     Estimation of model parameters:
@@ -284,11 +292,16 @@ Peeling parameters
       -est_pheno_penetrance_prob
                             Estimate :ref:`phenotype penetrance probabilities <pheno_penetrance_prob_file_format>`
                             after each peeling cycle.
-      -no_phase_founder     Phase a heterozygous allele in one of the
-                            founders (if such an allele can be found).
+      -no_phase_founder     Suppress phasing a heterozygous allele 
+                            (if such an allele can be found) in
+                            genotyped individuals without genotyped parents.
 
-.. TODO: no_phase_founder is not documented - see https://github.com/AlphaGenes/AlphaPeel/issues/112
-.. TODO: which section should this option be in?
+The option ``-no_phase_founder`` can be used to suppress the default 
+behaviour of phasing a midpoint heterozygote locus in a genotyped 
+individual with ungenotyped parents,
+where the alternative allele is set as paternally inherited. 
+Calling this option, we expect an equal probability
+of the alternative allele as paternally or maternally inherited.
 
 Computational effort and speed of |Software| can be controlled with
 the number of peeling cycles (``-n_cycle``,
@@ -336,16 +349,16 @@ but can also be provided using ``-alt_allele_prob_file``.
 
 For a pedigree with :ref:`multiple metafounders <ped_file_format>`,
 there are three options to obtain metafounder-specific alternative allele probabilities:
-(1) use the default starting values of 0.5 for all loci and then
-``-est_alt_allele_prob``,
-(2) use ``-est_start_alt_allele_prob`` to use sample-based starting values and
-then ``-est_alt_allele_prob``, or
-(3) provide starting values using ``-alt_allele_prob_file`` and
-then ``-est_alt_allele_prob``.
+  (1) use the default starting values of 0.5 for all loci and then
+  ``-est_alt_allele_prob``,
+
+  (2) use ``-est_start_alt_allele_prob`` to use sample-based starting values and
+  then ``-est_alt_allele_prob``, or
+  
+  (3) provide starting values using ``-alt_allele_prob_file`` and
+  then ``-est_alt_allele_prob``.
 In all three cases,
 ``-est_alt_allele_prob`` is optional.
-
-.. TODO: no_phase_founder is not documented / see above
 
 Error probabilities (using ``-est_geno_error_prob`` and ``-est_seq_error_prob``)
 are estimated as the proportion of mismatches between observed and inferred states.
@@ -566,8 +579,6 @@ the locus name, and
 the physical position (in base-pairs).
 Only loci on one chromosome should be provided!
 
-.. TODO: mention here how we convert physical positions to genetic positions (Morgans) and interaction? with -rec_length
-
 Example with four SNP loci on chromosome 1:
 
 ::
@@ -577,7 +588,11 @@ Example with four SNP loci on chromosome 1:
   1 snp_c 65429279
   1 snp_d 107421759
 
-.. TODO: how does seg_map_file look like?
+The input file for hybrid method, ``seg_map_file``, 
+has the same format as the above.
+It should include only the subsets of the loci that 
+have been chosen to run the single peeling stage of 
+the hybrid peeling.
 
 .. _output_file_formats:
 
@@ -616,8 +631,7 @@ Example with four individuals and four loci:
 Genotype file
 =============
 
-The ``.geno_THRESHOLD.txt`` file contains *called genotypes* for each individual
-for each specified threshold (``-geno_threshold THRESHOLD``).
+The ``.geno_THRESHOLD.txt`` file contains *called genotypes* for each individual.
 There is one line per individual.
 The first value in each line is the individual ID.
 The remaining values are called genotypes at each locus,
@@ -641,8 +655,6 @@ Genotype probability file
 
 The ``.geno_prob.txt`` file contains *genotype probabilities* for each individual.
 
-.. TODO: remove the empty lines in the output files? (4 will be 3 in text!)
-
 There are four lines per individual
 (an empty line and three lines with probabilities for
 ``aa``, ``aA`` or ``Aa``, and ``AA`` genotypes).
@@ -656,15 +668,12 @@ Example with four individuals and four loci:
   id1 0.7912 0.0000 0.0000 1.0000
   id1 0.2088 0.2179 0.5274 0.0000
   id1 0.0000 0.7820 0.4725 0.0000
-
   id2 0.0000 0.0000 0.0000 0.0001
   id2 1.0000 1.0000 1.0000 0.9999
   id2 0.0000 0.0000 0.0000 0.0000
-
   id3 0.3784 0.2171 0.0000 1.0000
   id3 0.4140 0.4329 0.0001 0.0000
   id3 0.2076 0.3500 0.9999 0.0000
-
   id4 0.9999 0.0000 0.0000 1.0000
   id4 0.0001 0.0001 0.9999 0.0000
   id4 0.0000 0.9999 0.0000 0.0000
@@ -675,8 +684,6 @@ Phased genotype probability file
 ================================
 
 The ``.phased_geno_prob.txt`` file contains *phased genotype probabilities* for each individual.
-
-.. TODO: remove the empty lines in the output files? (5 will be 4 in text!)
 
 There are five lines per individual
 (an empty line and four lines with probabilities for
@@ -692,27 +699,23 @@ Example with four individuals and four loci:
   id1 0.1044 0.1090 0.2637 0.0000
   id1 0.1044 0.1090 0.2637 0.0000
   id1 0.0000 0.7820 0.4725 0.0000
-
   id2 0.0000 0.0000 0.0000 0.0001
   id2 0.3764 0.6611 0.0000 0.9628
   id2 0.6236 0.3388 1.0000 0.0371
   id2 0.0000 0.0000 0.0000 0.0000
-
   id3 0.3784 0.2171 0.0000 1.0000
   id3 0.4140 0.0000 0.0001 0.0000
   id3 0.0000 0.4328 0.0000 0.0000
   id3 0.2076 0.3500 0.9999 0.0000
-
   id4 0.9999 0.0000 0.0000 1.0000
   id4 0.0000 0.0000 0.2912 0.0000
   id4 0.0000 0.0000 0.7088 0.0000
   id4 0.0000 0.9999 0.0000 0.0000
 
-
 .. _hap_file_format:
 
-Phase / haplotype file
-======================
+Phase/haplotype file
+====================
 
 The ``.hap_THRESHOLD.txt`` file contains *called haplotypes* for each individual.
 There are two lines per individual,

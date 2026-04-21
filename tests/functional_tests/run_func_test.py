@@ -134,7 +134,7 @@ class TestClass:
     # all the output files except the binary file and the parameter files
     files_to_check = [
         "hap_0.5",
-        "geno_0.3333333333333333",
+        "geno_0.333",
         "dosage",
         "phased_geno_prob",
         "seg_prob",
@@ -223,7 +223,7 @@ class TestClass:
             "seg_prob": None,
         }
         self.output_file_prefix = "files"
-        self.output_file_to_check = "geno_0.3333333333333333"
+        self.output_file_to_check = "geno_0.333"
 
         self.generate_command()
         os.system(self.command)
@@ -261,7 +261,7 @@ class TestClass:
             "seg_prob": None,
         }
         self.output_file_prefix = "subset"
-        self.output_file_to_check = "geno_0.3333333333333333"
+        self.output_file_to_check = "geno_0.333"
 
         self.generate_command()
         os.system(self.command)
@@ -307,7 +307,7 @@ class TestClass:
             "sequence": "seq",
         }
 
-        self.output_file_to_check = "geno_0.3333333333333333"
+        self.output_file_to_check = "geno_0.333"
 
         for self.test_cases in methods:
             self.arguments["out_id_order"] = self.test_cases
@@ -357,7 +357,7 @@ class TestClass:
         self.input_files = self.files_to_input
         self.input_file_depend_on_test_cases = self.files_to_input
         self.arguments = {"method": "multi", "geno_threshold": ".1", "geno": None}
-        self.output_file_to_check = "geno_0.3333333333333333"
+        self.output_file_to_check = "geno_0.333"
 
         for self.test_cases in [
             "est_geno_error_prob",
@@ -523,7 +523,7 @@ class TestClass:
             "with_recom_missing",
         ]:
             self.output_file_prefix = f"sex.{self.test_cases}"
-            self.output_file_to_check = ["geno_0.3333333333333333", "hap_0.5"]
+            self.output_file_to_check = ["geno_0.333", "hap_0.5"]
 
             self.generate_command()
             os.system(self.command)
@@ -537,7 +537,7 @@ class TestClass:
                     self.path, f"true-{self.output_file_prefix}.{check}.txt"
                 )
                 # Compares outputted genotype files to expected.
-                if check == "geno_0.3333333333333333":
+                if check == "geno_0.333":
                     compare_geno_hap(
                         self.output_file_path, self.expected_file_path, total_error=2
                     )
