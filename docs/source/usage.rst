@@ -193,9 +193,6 @@ Output options
       -out_id_only          Suppress output for individuals not present in
                             the file specified with -out_id_order. It also suppresses
                             "dummy" individuals.
-      -n_io_thread N_IO_THREAD
-                            Number of threads to use for input/output (IO).
-                            Default: 1.
 
 |Software| by default produces a :ref:`dosage file <dosage_file_format>`.
 Additional individual-level outputs can be requested with the options described above.
@@ -219,12 +216,6 @@ using the ``-out_id_order`` option,
 with additional control provided with the ``-out_id_only`` option.
 The latter option is not recommended for hybrid peeling or
 any combination of different input files.
-
-The option ``-n_io_thread`` controls the number of threads/processes
-used by |Software|.
-|Software| uses additional threads to parse and format input and output files.
-Setting this option to a value greater than 1 is only recommended for very large files
-(i.e. >10,000 individuals).
 
 .. _peeling_methods:
 

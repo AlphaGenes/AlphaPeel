@@ -529,7 +529,6 @@ def get_output_options():
     """Collects the optional output options of the program as a dictionary. The options are:
     -out_id_order: writekey (write in the same order as pedigree input)
     -out_id_only: onlykeyed (only include individuals from the pedigree input)
-    -iothreads: iothreads
 
     :return: the options for the output files and parameters.
     :rtype: dict
@@ -549,33 +548,18 @@ def get_output_options():
         required=False,
         help='Suppress output for individuals not present in the file specified with -out_id_order. It also suppresses "dummy" individuals.',
     )
-    parse_dictionary["iothreads"] = lambda parser: parser.add_argument(
-        "-n_io_thread",
-        default=1,
-        required=False,
-        type=int,
-        help="Number of threads to use for input/output (IO). Default: 1.",
-    )
 
     return parse_dictionary
 
 
 def get_multithread_options():
-    """Collects the optional multithread options of the program as a dictionary. The options are:
-    -n_io_thread: iothreads
+    """Collects the optional multithread options of the program as a dictionary. The option is:
     -n_thread: maxthreads
 
-    :return: the options for the multithreading parameters.
+    :return: the option for the multithreading parameters.
     :rtype: dict
     """
     parse_dictionary = dict()
-    parse_dictionary["iothreads"] = lambda parser: parser.add_argument(
-        "-n_io_thread",
-        default=1,
-        required=False,
-        type=int,
-        help="Number of threads to use for input and output. Default: 1.",
-    )
     parse_dictionary["maxthreads"] = lambda parser: parser.add_argument(
         "-n_thread",
         default=1,
@@ -739,7 +723,7 @@ def getArgs():
     InputOutput.add_arguments_from_dictionary(
         multithread_parser,
         get_multithread_options(),
-        options=["iothreads", "maxthreads"],
+        options=["maxthreads"],
     )
 
     peeling_parser = parser.add_argument_group("Optional peeling arguments")
@@ -870,7 +854,6 @@ def main():
     args.phasefile = args.hap_file
     args.writekey = args.out_id_order
     args.onlykeyed = args.out_id_only
-    args.iothreads = args.n_io_thread
     args.maxthreads = args.n_thread
     args.segfile = args.seg_file
 
