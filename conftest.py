@@ -85,7 +85,7 @@ def pytest_terminal_summary(terminalreporter):
 
     file_types = [
         "dosage",
-        "geno_0.3333333333333333",
+        "geno_0.333",
         "hap_0.5",
         "geno_prob",
         "phased_geno_prob",
@@ -94,7 +94,7 @@ def pytest_terminal_summary(terminalreporter):
         "metafounder_geno_prob",
         "metafounder_phased_geno_prob",
         "x_chr_dosage",
-        "x_chr_geno_0.3333333333333333",
+        "x_chr_geno_0.333",
         "x_chr_hap_0.5",
         "x_chr_geno_prob",
         "x_chr_phased_geno_prob",
