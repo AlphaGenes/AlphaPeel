@@ -38,12 +38,21 @@ def updateMaf(pedigree, peelingInfo):
         AAP = pedigree.AAP[mfx]
         for i in range(peelingInfo.nLoci):
             AAP[i] = newtonMafUpdates(peelingInfo, AAP, i)
-
-        mafGeno = ProbMath.getGenotypesFromMaf(AAP)
-        for ind in pedigree:
-            if ind.MetaFounder == mfx and ind.isFounder():
-                peelingInfo.anterior[ind.idn, :, :] = mafGeno
         pedigree.AAP[mfx] = AAP.astype(np.float32)
+
+    for ind in pedigree:
+        if ind.MetaFounder is not None and ind.isFounder():
+            AAP = {
+                k: np.zeros(peelingInfo.nLoci, dtype=np.float32)
+                for k in ind.MetaFounder
+            }
+            for mfx in ind.MetaFounder:
+                AAP[mfx] = pedigree.AAP[mfx]
+            if len(ind.MetaFounder) == 2:
+                mafGeno = ProbMath.getGenotypesFromMultiMaf(AAP)
+            else:
+                mafGeno = ProbMath.getGenotypesFromMaf(AAP[mfx])
+            peelingInfo.anterior[ind.idn, :, :] = mafGeno
 
 
 def newtonMafUpdates(peelingInfo, AAP, index):

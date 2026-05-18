@@ -362,7 +362,6 @@ class TestClass:
         for self.test_cases in [
             "est_geno_error_prob",
             "est_seq_error_prob",
-            "est_start_alt_allele_prob",
             "rec_length",
         ]:
             # TODO estrecombrate instead of just adding length
@@ -375,7 +374,6 @@ class TestClass:
             self.output_file_prefix = f"est.{self.test_cases}"
 
             self.generate_command()
-            print(self.command)
             os.system(self.command)
 
             self.output_file_path = os.path.join(
@@ -393,6 +391,53 @@ class TestClass:
 
             self.arguments.pop(self.test_cases)
             self.command = "AlphaPeel "
+
+        # test est_start_alt_allele_prob functionality
+        self.test_cases = "est_start_alt_allele_prob"
+        self.input_files = ["geno_file", "ped_file"]
+        self.input_file_depend_on_test_cases = self.input_files
+        self.arguments["est_start_alt_allele_prob"] = None
+        self.arguments["alt_allele_prob"] = None
+        self.output_file_prefix = f"est.{self.test_cases}"
+
+        self.generate_command()
+        os.system(self.command)
+
+        self.output_file_to_check = "alt_allele_prob"
+        self.output_file_path = os.path.join(
+            self.output_path,
+            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+        )
+        self.expected_file_path = os.path.join(
+            self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+        )
+
+        self.output, MF = read_and_sort_file(
+            self.output_file_path, test_alt_allele_prob=True, decimal_place=1
+        )
+        self.expected, MF = read_and_sort_file(
+            self.expected_file_path, test_alt_allele_prob=True, decimal_place=1
+        )
+        assert self.output == self.expected
+
+        self.output_file_to_check = "dosage"
+
+        self.output_file_path = os.path.join(
+            self.output_path,
+            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+        )
+        self.expected_file_path = os.path.join(
+            self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
+        )
+
+        self.output = read_and_sort_file(self.output_file_path, decimal_place=1)
+        self.expected = read_and_sort_file(self.expected_file_path, decimal_place=1)
+
+        # Check the outputted dosage file with expected when est_start_alt_allele_prob is used as starting point for estimation.
+        assert self.output == self.expected
+
+        self.arguments.pop(self.test_cases)
+        self.command = "AlphaPeel "
 
     def test_no(self):
         """
@@ -1187,7 +1232,6 @@ class TestClass:
             elif self.test_cases == "multi_pheno_state":
                 # This will update the dosage and pheno_prob file
                 self.generate_command()
-                print(self.command)
                 os.system(self.command)
 
                 self.output_file_to_check = "pheno_prob"
