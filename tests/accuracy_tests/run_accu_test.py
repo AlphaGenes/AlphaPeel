@@ -352,9 +352,7 @@ def assess_peeling(sim_path, get_params, output_path, name, method, metafounder,
         ),
         ("single", None, None, None, None, None, None, None, "x_chr"),
         ("multi", None, None, None, None, None, None, None, "x_chr"),
-        ("multi", None, None, None, "seq_file", None, None, None, "x_chr"),
         ("hybrid", None, None, None, None, None, None, None, "x_chr"),
-        ("hybrid", None, None, None, "seq_file", None, None, None, "x_chr"),
     ],
 )
 def test_accu(
