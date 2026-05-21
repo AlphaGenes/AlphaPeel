@@ -2,6 +2,7 @@ from numba import jit, float32, int64, optional, boolean
 from numba.experimental import jitclass
 import numpy as np
 from collections import OrderedDict
+import warnings
 
 from ..tinyhouse import ProbMath
 from ..tinyhouse import HaplotypeOperations
@@ -149,18 +150,18 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
 
     if args.penetrance is not None:
         if peelingInfo.isXChr:
-            print(
+            warnings.warn(
                 "Using an external penetrance file and the x_chr option is highly discouraged. Please do not use."
             )
 
         if args.est_geno_error_prob:
-            print(
+            warnings.warn(
                 "External penetrance file included, but est_geno_error_prob flag used. The two options are incompatible. est_geno_error_prob set to false."
             )
             args.est_geno_error_prob = False
 
         if args.est_seq_error_prob:
-            print(
+            warnings.warn(
                 "External penetrance file included, but est_seq_error_prob flag used. The two options are incompatible. est_seq_error_prob set to false."
             )
             args.est_seq_error_prob = False
@@ -265,7 +266,9 @@ def addPenetranceFromExternalFile(pedigree, peelingInfo, fileName, args):
             penetranceLine = np.array([float(val) for val in parts], dtype=np.float32)
 
             if idx not in pedigree.individuals:
-                print("Individual", idx, "not found in pedigree. Individual ignored.")
+                warnings.warn(
+                    "Individual", idx, "not found in pedigree. Individual ignored."
+                )
             else:
                 ind = pedigree.individuals[idx]
                 peelingInfo.penetrance[ind.idn, e, :] *= penetranceLine

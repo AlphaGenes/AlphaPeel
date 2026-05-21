@@ -1,6 +1,7 @@
 import numpy as np
 from numba import jit
 from ..tinyhouse import InputOutput
+import warnings
 
 
 def readInSeg(pedigree, fileName, start=None, stop=None):
@@ -58,7 +59,9 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
                 )
 
             if idx not in pedigree.individuals:
-                print(f"Individual {idx} is not found in pedigree. Individual ignored.")
+                warnings.warn(
+                    f"Individual {idx} is not found in pedigree. Individual ignored."
+                )
             else:
                 ind = pedigree.individuals[idx]
                 if e == 0:
@@ -74,7 +77,9 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
                 indHit[ind.idn] += 1
         for ind in pedigree:
             if indHit[ind.idn] != 4:
-                print(f"No segregation information found for individual {ind.idx}")
+                warnings.warn(
+                    f"No segregation information found for individual {ind.idx}"
+                )
 
     return seg
 
