@@ -5,6 +5,8 @@ from ..tinyhouse import ProbMath
 
 from . import PeelingInfo
 
+import warnings
+
 #########################################################################################
 # In this module we will update 3 things:                                               #
 # 1) Our estimate for the MAF (both prior to peeling and after each peeling cycle) .    #
@@ -30,7 +32,7 @@ def updateMaf(pedigree, peelingInfo):
     :return: None. The function updates the pedigree.AAP attribute with the new alternative allele frequencies.
     """
     if peelingInfo.isXChr:
-        print(
+        warnings.warn(
             "Updating error rates and alternative allele frequencies for X chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
     MF = list(pedigree.AAP.keys())
@@ -256,7 +258,7 @@ def updatePenetrance(pedigree, peelingInfo, args):
         peelingInfo.seqError = updateSeqError(pedigree, peelingInfo)
 
     if peelingInfo.isXChr:
-        print(
+        warnings.warn(
             "Updating error rates and minor allele frequencies for X chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
     phaseFounder = not args.no_phase_founder

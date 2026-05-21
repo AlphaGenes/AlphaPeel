@@ -859,7 +859,7 @@ def main():
 
     singleLocusMode = args.method == "single"
     if args.method == "multi" and args.segfile:
-        print("Running in multi-locus mode, external segfile ignored")
+        warnings.warn("Running in multi-locus mode, external segfile ignored")
 
     # For now, only support a single phenotype (will remove in future)
     if args.phenotype is not None and pedigree.nPheno > 1:
