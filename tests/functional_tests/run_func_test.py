@@ -202,6 +202,7 @@ class TestClass:
             "geno_error_prob",
             "seq_error_prob",
             "phased_geno_prob",
+            "rec_prob",
         ]
         return [check(file) for file in files]
 
@@ -397,7 +398,6 @@ class TestClass:
         self.input_files = ["geno_file", "ped_file"]
         self.input_file_depend_on_test_cases = self.input_files
         self.arguments["est_start_alt_allele_prob"] = None
-        self.arguments["alt_allele_prob"] = None
         self.output_file_prefix = f"est.{self.test_cases}"
 
         self.generate_command()
@@ -441,31 +441,48 @@ class TestClass:
 
     def test_no(self):
         """
-        Check to make sure the no_dosage, seg_prob, no_param, phased_geno_prob
-        flags work.
+        Check to make sure the following flags output the correct files:
+        - no_dosage,
+        - seg_prob,
+        - est_geno_error_prob,
+        - est_seq_error_prob,
+        - est_start_alt_allele_prob,
+        - est_alt_allele_prob,
+        - alt_allele_prob,
+        - phased_geno_prob,
+        - rec_prob.
         """
         self.test_name = "test_no"
         self.prepare_path()
 
         self.input_files = self.files_to_input
+        self.input_files.remove("penetrance")
         self.arguments = {"method": "multi"}
         # whether the output files exist
         # 0: not exist
         # 1: exist
         expect = {
-            "no_dosage": [0, 0, 0, 1, 1, 0],
-            "seg_prob": [1, 1, 0, 1, 1, 0],
-            "alt_allele_prob": [1, 0, 1, 1, 1, 0],
-            "no_param": [1, 0, 0, 0, 0, 0],
-            "phased_geno_prob": [1, 0, 0, 1, 1, 1],
+            "no_dosage": [0, 0, 0, 0, 0, 0, 0],
+            "seg_prob": [1, 1, 0, 0, 0, 0, 0],
+            "est_geno_error_prob": [1, 0, 0, 1, 0, 0, 0],
+            "est_seq_error_prob": [1, 0, 0, 0, 1, 0, 0],
+            "est_start_alt_allele_prob": [1, 0, 1, 0, 0, 0, 0],
+            "est_alt_allele_prob": [1, 0, 1, 0, 0, 0, 0],
+            "alt_allele_prob": [1, 0, 1, 0, 0, 0, 0],
+            "phased_geno_prob": [1, 0, 0, 0, 0, 1, 0],
+            "rec_prob": [1, 0, 0, 0, 0, 0, 1],
         }
 
         for self.test_cases in [
             "no_dosage",
             "seg_prob",
+            "est_geno_error_prob",
+            "est_seq_error_prob",
+            "est_start_alt_allele_prob",
+            "est_alt_allele_prob",
             "alt_allele_prob",
-            "no_param",
             "phased_geno_prob",
+            "rec_prob",
         ]:
             self.arguments[self.test_cases] = None
             self.output_file_prefix = f"no.{self.test_cases}"
@@ -473,10 +490,15 @@ class TestClass:
             self.generate_command()
             os.system(self.command)
             # When requested through commands, test the presents of file outputs:
-            # no_dosage, output files: alt_allele_prob, geno_error_prob, seg_error_prob
-            # seg_prob, output files: dosage, seg_prob, alt_allele_prob, geno_error_prob, seg_error_prob
-            # no_param, output file: dosage
-            # phased_geno_prob, output files: dosage, alt_allele_prob, geno_error_prob, seg_error_prob, phased_geno_prob
+            # no_dosage, output files: no output
+            # seg_prob, output files: dosage, seg_prob
+            # est_geno_error_prob, output files: dosage, geno_error_prob
+            # est_seq_error_prob, output files: dosage, seq_error_prob
+            # est_start_alt_allele_prob, output files: dosage, alt_allele_prob
+            # est_alt_allele_prob, output files: dosage, alt_allele_prob
+            # alt_allele_prob, output files: dosage, alt_allele_prob
+            # phased_geno_prob, output files: dosage, phased_geno_prob
+            # rec_prob, output files: dosage, rec_prob
             assert self.check_files() == expect[self.test_cases]
 
             self.arguments.pop(self.test_cases)
@@ -768,7 +790,6 @@ class TestClass:
                 assert self.output == self.expected
 
             elif self.test_cases == "alt_allele_prob_file_single":
-                # self.input_files.append("alt_allele_prob_file")
                 self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
 
                 self.output_file_to_check = "dosage"

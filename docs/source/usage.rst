@@ -175,6 +175,9 @@ Output options
                             Value(s) less than 1/2 are replaced by 1/2.
       -seg_prob             Output :ref:`segregation probabilities <seg_prob_file_format>`.
       -pheno_prob           Output :ref:`phenotype probabilities <pheno_prob_file_format>`.
+      -alt_allele_prob      Output :ref:`alternative allele probabilities <alt_allele_prob_file_format>`.
+      -pheno_penetrance_prob
+                            Output :ref:`phenotype penetrance probabilities <pheno_penetrance_prob_file_format>`.
 
     Prefix, order, and IO:
       -out_file PREFIX      The output file prefix. All file outputs will be named
@@ -272,17 +275,17 @@ Peeling parameters
 
     Estimation of model parameters:
       -est_start_alt_allele_prob
-                            Estimate starting alternative allele probabilities
-                            from all inputted genomic data prior to peeling.
-      -est_alt_allele_prob  Estimate :ref:`alternative allele probabilities <alt_allele_prob_file_format>`
-                            after each peeling cycle.
-      -est_geno_error_prob  Estimate :ref:`genotype error probability <geno_error_prob_file_format>`
-                            after each peeling cycle.
-      -est_seq_error_prob   Estimate :ref:`sequence error probability <seq_error_prob_file_format>`
-                            after each peeling cycle.
+                            Estimate from all inputted genomic data prior to peeling and 
+                            output :ref:`alternative allele probabilities <alt_allele_prob_file_format>`.
+      -est_alt_allele_prob  Estimate after each peeling cycle and output 
+                            :ref:`alternative allele probabilities <alt_allele_prob_file_format>`.
+      -est_geno_error_prob  Estimate after each peeling cycle and 
+                            output :ref:`genotype error probabilities <geno_error_prob_file_format>`. 
+      -est_seq_error_prob   Estimate after each peeling cycle and 
+                            output :ref:`sequence error probabilities <seq_error_prob_file_format>`. 
       -est_pheno_penetrance_prob
-                            Estimate :ref:`phenotype penetrance probabilities <pheno_penetrance_prob_file_format>`
-                            after each peeling cycle.
+                            Estimate after each peeling cycle 
+                            and output :ref:`phenotype penetrance probabilities <pheno_penetrance_prob_file_format>`.
       -no_phase_founder     Suppress phasing a heterozygous allele 
                             (if such an allele can be found) in
                             genotyped individuals without genotyped parents.
@@ -299,18 +302,11 @@ the number of peeling cycles (``-n_cycle``,
 increasing the number will marginally increase accuracy, but also runtime) and
 the number of threads (``-n_thread``, to reduce runtime on large datasets).
 
-..
-  TODO: delete these options as they are just making a mess - below is a clear and simple behaviour
-  -no_param             Suppress output of model parameter files.
-  -alt_allele_prob      Output :ref:`alternative allele probabilities <alt_allele_prob_file_format>`.
-
 |Software| can estimate the model parameters from the input data.
 The :ref:`default or user provided input values<input_options>`
 are used as a starting point for estimation.
 See a note on :ref:`robustness of results <robust_parameters>`
 to these parameters.
-
-.. TODO: check for this behaviour for each parameter (output only when estimated)
 
 When estimation options are used,
 the respective parameters are estimated after each peeling cycle and
