@@ -676,37 +676,37 @@ def getArgs():
         "-seg_prob",
         action="store_true",
         required=False,
-        help="Flag to enable writing out the segregation probabilities.",
+        help="Output segregation probabilities (see format details in the docs).",
     )
     output_parser.add_argument(
         "-pheno_prob",
         action="store_true",
         required=False,
-        help="Flag to enable writing out the phenotype probabilities.",
+        help="Output phenotype probabilities (see format details in the docs).",
     )
     output_parser.add_argument(
-        "-no_param",
+        "-rec_prob",
         action="store_true",
         required=False,
-        help="Flag to suppress writing the model parameter files.",
+        help="Output recombination probabilities (NOT IMPLEMENTED YET).",
     )
     output_parser.add_argument(
         "-alt_allele_prob",
         action="store_true",
         required=False,
-        help="Flag to write out the alternative allele frequencies for each metafounder.",
+        help="Output alternative allele frequencies (see format details in the docs).",
     )
     output_parser.add_argument(
         "-pheno_penetrance_prob",
         action="store_true",
         required=False,
-        help="Flag to write out the phenotype penetrance probabilities.",
+        help="Output phenotype penetrance probabilities (see format details in the docs).",
     )
     output_parser.add_argument(
         "-binary_call_file",
         action="store_true",
         required=False,
-        help="Flag to write out the called genotype files as a binary plink output [Not yet implemented].",
+        help="Output called genotype files as a binary plink output (NOT IMPLEMENTED YET).",
     )
 
     InputOutput.add_arguments_from_dictionary(
@@ -763,31 +763,31 @@ def getArgs():
         "-est_start_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Estimate starting alternative allele probabilities from all inputted genomic data prior to peeling.",
+        help="Estimate from all inputted genomic data prior to peeling and output alternative allele probabilities (see format details in the docs).",
     )
     peeling_control_parser.add_argument(
         "-est_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Estimate alternative allele probabilities after each peeling cycle.",
+        help="Estimate after each peeling cycle and output alternative allele probabilities (see format details in the docs).",
     )
     peeling_control_parser.add_argument(
         "-est_geno_error_prob",
         action="store_true",
         required=False,
-        help="Estimate genotype error probability after each peeling cycle.",
+        help="Estimate after each peeling cycle and output genotype error probabilities (see format details in the docs).",
     )
     peeling_control_parser.add_argument(
         "-est_seq_error_prob",
         action="store_true",
         required=False,
-        help="Estimate sequence error probability after each peeling cycle.",
+        help="Estimate after each peeling cycle and output sequence error probabilities (see format details in the docs).",
     )
     peeling_control_parser.add_argument(
         "-est_pheno_penetrance_prob",
         action="store_true",
         required=False,
-        help="Estimate phenotype penetrance probabilities.",
+        help="Estimate after each peeling cycle and output phenotype penetrance probabilities (see format details in the docs).",
     )
     peeling_control_parser.add_argument(
         "-no_phase_founder",
@@ -885,9 +885,12 @@ def main():
         genoProbFunc=peelingInfo.getGenoProbs,
         isXChr=peelingInfo.isXChr,
     )
-    if not args.no_param:
-        PeelingIO.writeOutParamaters(peelingInfo)
-    if args.alt_allele_prob:
+    PeelingIO.writeOutParamaters(peelingInfo)
+    if (
+        args.est_alt_allele_prob
+        or args.est_start_alt_allele_prob
+        or args.alt_allele_prob
+    ):
         PeelingIO.writeOutAltAlleleProb(pedigree)
     if args.pheno_prob:
         if args.phenoPenetrance is None:
@@ -896,7 +899,7 @@ def main():
             )
         else:
             PeelingIO.writePhenoProbs(pedigree, phenoProbFunc=peelingInfo.getPhenoProbs)
-    if args.pheno_penetrance_prob:
+    if args.est_pheno_penetrance_prob or args.pheno_penetrance_prob:
         if pedigree.phenoPenetrance is None:
             warnings.warn(
                 "Phenotype penetrance is not available. Please provide a penetrance file with -pheno_penetrance_file. -pheno_penetrance will be ignored."
