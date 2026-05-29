@@ -545,6 +545,13 @@ def get_output_options():
         required=False,
         help='Suppress output for individuals not present in the file specified with -out_id_order. It also suppresses "dummy" individuals.',
     )
+    parse_dictionary["out_digits"] = lambda parser: parser.add_argument(
+        "-out_digits",
+        default=4,
+        type=int,
+        required=False,
+        help="Specify the number of digits to round the outputs. Does not apply to outputs from ``alt_allele_prob``, ``geno_error_prob``, ``seq_error_prob``, and ``pheno_penetrance``. Default: 4.",
+    )
 
     return parse_dictionary
 
@@ -712,7 +719,7 @@ def getArgs():
     InputOutput.add_arguments_from_dictionary(
         output_parser,
         get_output_options(),
-        options=["writekey", "onlykeyed"],
+        options=["writekey", "onlykeyed", "out_digits"],
     )
 
     # Multithreading

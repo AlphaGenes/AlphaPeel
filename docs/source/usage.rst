@@ -196,7 +196,11 @@ Output options
       -out_id_only          Suppress output for individuals not present in
                             the file specified with -out_id_order. It also suppresses
                             "dummy" individuals.
-
+      -out_digits           Specify the number of digits to round the outputs. 
+                            Does not apply to outputs from ``alt_allele_prob``, 
+                            ``geno_error_prob``, ``seq_error_prob``, 
+                            and ``pheno_penetrance``. 
+                            Default: 4.
 |Software| by default produces a :ref:`dosage file <dosage_file_format>`.
 Additional individual-level outputs can be requested with the options described above.
 
