@@ -695,7 +695,7 @@ class TestClass:
 
         self.input_files = ["geno_file", "ped_file"]
         self.input_file_depend_on_test_cases = self.input_files
-        self.arguments = {"method": "multi", "out_id_only": None}
+        self.arguments = {"method": "multi", "out_id_only": None, "out_digits": 2}
 
         for self.test_cases in [
             "default",

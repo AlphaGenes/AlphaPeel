@@ -92,18 +92,20 @@ def writeOutParamaters(peelingInfo):
     :return: None. Writes to files specified in the InputOutput.args.
     """
     args = InputOutput.args
-
     if args.est_geno_error_prob:
         np.savetxt(
-            args.out_file + ".geno_error_prob.txt", peelingInfo.genoError, fmt="%f"
+            args.out_file + ".geno_error_prob.txt",
+            peelingInfo.genoError,
         )
     if args.est_seq_error_prob:
         np.savetxt(
-            args.out_file + ".seq_error_prob.txt", peelingInfo.seqError, fmt="%f"
+            args.out_file + ".seq_error_prob.txt",
+            peelingInfo.seqError,
         )
     if args.rec_prob:
         np.savetxt(
-            args.out_file + ".rec_prob.txt", np.empty((1, 1)), fmt="%f"
+            args.out_file + ".rec_prob.txt",
+            np.empty((1, 1)),
         )  # not implemented atm, just as a placeholder
     # np.savetxt(args.out_file + ".trans", peelingInfo.transmissionRate, fmt = "%f")
 
@@ -134,7 +136,6 @@ def writeOutAltAlleleProb(pedigree):
         args.out_file + ".alt_allele_prob.txt",
         combined_AAP,
         delimiter="\t",
-        fmt="%.2f",
         header="\t".join(sorted_MF),
         comments="",
     )
@@ -149,7 +150,8 @@ def writePhenoPenetrance(pedigree):
     """
     args = InputOutput.args
     np.savetxt(
-        args.out_file + ".pheno_penetrance.txt", pedigree.phenoPenetrance, fmt="%.2f"
+        args.out_file + ".pheno_penetrance.txt",
+        pedigree.phenoPenetrance,
     )
 
 
@@ -249,13 +251,17 @@ def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
     :type outputFile: str
     :return: None. Writes to the specified output file.
     """
+    args = InputOutput.args
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn, ind.sex)
             f.write("\n")
             for i in range(matrix.shape[0]):
                 f.write(
-                    ind.idx + " " + " ".join(map("{:.4f}".format, matrix[i, :])) + "\n"
+                    ind.idx
+                    + " "
+                    + " ".join(map(f"{{:.{args.out_digits}f}}".format, matrix[i, :]))
+                    + "\n"
                 )
 
 
@@ -270,6 +276,7 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
     :type outputFile: str
     :return: None. Writes to the specified output file.
     """
+    args = InputOutput.args
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn, ind.sex)
@@ -279,7 +286,10 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
                         ind.idx
                         + " "
                         + " ".join(
-                            map("{:.4f}".format, matrix[i, :] + matrix[i + 1, :])
+                            map(
+                                f"{{:.{args.out_digits}f}}".format,
+                                matrix[i, :] + matrix[i + 1, :],
+                            )
                         )
                         + "\n"
                     )
@@ -287,7 +297,9 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
                     f.write(
                         ind.idx
                         + " "
-                        + " ".join(map("{:.4f}".format, matrix[i, :]))
+                        + " ".join(
+                            map(f"{{:.{args.out_digits}f}}".format, matrix[i, :])
+                        )
                         + "\n"
                     )
 
@@ -308,7 +320,10 @@ def writePhenoProbs(pedigree, phenoProbFunc):
             f.write("\n")
             for i in range(matrix.shape[0]):
                 f.write(
-                    ind.idx + " " + " ".join(map("{:.4f}".format, matrix[i, :])) + "\n"
+                    ind.idx
+                    + " "
+                    + " ".join(map(f"{{:.{args.out_digits}f}}".format, matrix[i, :]))
+                    + "\n"
                 )
 
 
@@ -325,6 +340,7 @@ def writeDosages(pedigree, genoProbFunc, isXChr, outputFile):
     :type outputFile: str
     :return: None. Writes to the specified output file.
     """
+    args = InputOutput.args
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             if isXChr and ind.sex == 0:
@@ -332,7 +348,12 @@ def writeDosages(pedigree, genoProbFunc, isXChr, outputFile):
             else:
                 tmp = np.array([0, 1, 1, 2])
             matrix = np.dot(tmp, genoProbFunc(ind.idn, ind.sex))
-            f.write(ind.idx + " " + " ".join(map("{:.4f}".format, matrix)) + "\n")
+            f.write(
+                ind.idx
+                + " "
+                + " ".join(map(f"{{:.{args.out_digits}f}}".format, matrix))
+                + "\n"
+            )
 
 
 def writeCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
