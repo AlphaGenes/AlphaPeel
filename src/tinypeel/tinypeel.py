@@ -598,7 +598,7 @@ def getArgs():
         default=None,
         required=False,
         type=str,
-        help="Peeling method: single or multi.",
+        help="Peeling method: single or multi. Default: multi.",
     )
 
     # Input options
@@ -701,7 +701,7 @@ def getArgs():
         "-alt_allele_prob",
         action="store_true",
         required=False,
-        help="Output alternative allele frequencies (see format details in the docs).",
+        help="Output alternative allele frequencies (see format details in the docs). Output 0.5 if none of ``est_start_alt_allele_prob``, ``est_alt_allele_prob``, or ``alt_allele_prob_file`` is used.",
     )
     output_parser.add_argument(
         "-pheno_penetrance_prob",

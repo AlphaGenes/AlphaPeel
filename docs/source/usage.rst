@@ -175,7 +175,9 @@ Output options
                             Value(s) less than 1/2 are replaced by 1/2.
       -seg_prob             Output :ref:`segregation probabilities <seg_prob_file_format>`.
       -pheno_prob           Output :ref:`phenotype probabilities <pheno_prob_file_format>`.
-      -alt_allele_prob      Output :ref:`alternative allele probabilities <alt_allele_prob_file_format>`.
+      -alt_allele_prob      Output :ref:`alternative allele probabilities <alt_allele_prob_file_format>`. 
+                            Output initial value ``0.5`` if none of ``est_start_alt_allele_prob``, 
+                            ``est_alt_allele_prob``, or ``alt_allele_prob_file`` is used.
       -pheno_penetrance_prob
                             Output :ref:`phenotype penetrance probabilities <pheno_penetrance_prob_file_format>`.
 
@@ -232,7 +234,7 @@ Peeling methods
 .. parsed-literal::
 
     Strategy:
-      -method METHOD        Peeling method: single or multi.
+      -method METHOD        Peeling method: single or multi. Default: multi.
 
     Single-locus options for the second stage of hybrid peeling:
       -seg_file SEG_FILE    :ref:`Segregation probabilities file <seg_prob_file_format>`.
@@ -416,7 +418,8 @@ Example with two metafounders:
   id3 id1 id2
   id4 id1 id2
 
-Example with sex information;
+Example with sex information:
+
 id1 and id3 are males, while id2 and id4 are females:
 
 ::
@@ -480,7 +483,8 @@ Example with four individuals and their genotypes at four loci:
   id3 2 0 2 0
   id4 0 2 1 0
 
-Example with four individuals and their X chromosome genotypes at four loci;
+Example with four individuals and their X chromosome genotypes at four loci:
+
 id1 and id3 are males, while id2 and id4 are females:
 
 ::
@@ -646,9 +650,8 @@ Genotype probability file
 
 The ``.geno_prob.txt`` file contains *genotype probabilities* for each individual.
 
-There are four lines per individual
-(an empty line and three lines with probabilities for
-``aa``, ``aA`` or ``Aa``, and ``AA`` genotypes).
+There are three lines per individual, corresponding to probabilities for
+``aa``, ``aA`` or ``Aa``, and ``AA`` genotypes.
 The first value in each line is the individual ID.
 The remaining values are genotype probabilities at each locus.
 
@@ -669,6 +672,30 @@ Example with four individuals and four loci:
   id4 0.0001 0.0001 0.9999 0.0000
   id4 0.0000 0.9999 0.0000 0.0000
 
+When working with the X chromosome, for a female individual, the interpretation
+is as for an autosomal chromosome above. For a male individual, the first line and 
+the last line respectively correspond to ``a`` and ``A`` genotypes, with the middle
+line is a placeholder. 
+
+Example with four individuals and their X chromosome genotypes at four loci:
+
+id1 and id3 are males, while id2 and id4 are females:
+
+::
+
+  id1 0.7912 0.2179 0.5274 1.0000
+  id1 0.0000 0.0000 0.0000 0.0000
+  id1 0.2088 0.7820 0.4725 0.0000
+  id2 0.0000 0.0000 0.0000 0.0001
+  id2 1.0000 1.0000 1.0000 0.9999
+  id2 0.0000 0.0000 0.0000 0.0000
+  id3 0.3784 0.2171 0.0001 1.0000
+  id3 0.0000 0.0000 0.0000 0.0000
+  id3 0.6216 0.7829 0.9999 0.0000
+  id4 0.9999 0.0000 0.0000 1.0000
+  id4 0.0001 0.0001 0.9999 0.0000
+  id4 0.0000 0.9999 0.0000 0.0000
+
 .. _phased_geno_prob_file_format:
 
 Phased genotype probability file
@@ -676,9 +703,8 @@ Phased genotype probability file
 
 The ``.phased_geno_prob.txt`` file contains *phased genotype probabilities* for each individual.
 
-There are five lines per individual
-(an empty line and four lines with probabilities for
-``aa``, ``aA``, ``Aa``, and ``AA`` phased genotypes).
+There are four lines per individual, corresponding to probabilities for
+``aa``, ``aA``, ``Aa``, and ``AA`` phased genotypes.
 The first value in each line is the individual ID.
 The remaining values are phased genotype probabilities at each locus.
 
@@ -698,6 +724,34 @@ Example with four individuals and four loci:
   id3 0.4140 0.0000 0.0001 0.0000
   id3 0.0000 0.4328 0.0000 0.0000
   id3 0.2076 0.3500 0.9999 0.0000
+  id4 0.9999 0.0000 0.0000 1.0000
+  id4 0.0000 0.0000 0.2912 0.0000
+  id4 0.0000 0.0000 0.7088 0.0000
+  id4 0.0000 0.9999 0.0000 0.0000
+
+When working with the X chromosome, for a female individual, the interpretation
+is as for an autosomal chromosome above. For a male individual, the first line and 
+the last line respectively correspond to ``a`` and ``A`` genotypes, with the middle 
+two lines are placeholders.
+
+Example with four individuals and their X chromosome genotypes at four loci:
+
+id1 and id3 are males, while id2 and id4 are females:
+
+::
+
+  id1 0.7912 0.2179 0.5274 1.0000
+  id1 0.0000 0.0000 0.0000 0.0000
+  id1 0.0000 0.0000 0.0000 0.0000
+  id1 0.2088 0.7820 0.4725 0.0000
+  id2 0.0000 0.0000 0.0000 0.0001
+  id2 0.3764 0.6611 0.0000 0.9628
+  id2 0.6236 0.3388 1.0000 0.0371
+  id2 0.0000 0.0000 0.0000 0.0000
+  id3 0.3784 0.2171 0.0001 1.0000
+  id3 0.0000 0.0000 0.0000 0.0000
+  id3 0.0000 0.0000 0.0000 0.0000
+  id3 0.6216 0.7829 0.9999 0.0000
   id4 0.9999 0.0000 0.0000 1.0000
   id4 0.0000 0.0000 0.2912 0.0000
   id4 0.0000 0.0000 0.7088 0.0000
