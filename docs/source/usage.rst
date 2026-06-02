@@ -326,10 +326,6 @@ Alternative allele probabilities are estimated (using ``-est_alt_allele_prob``)
 as half of the mean of estimated :ref:`allele dosage <dosage_file_format>`
 in the base population(s) (metafounders).
 
-..
-  The estimates are constrained to be between 0.01 and 0.99
-  to avoid TODO: discuss with Evie how to word this.
-
 This estimation can be warm-started with a sample estimate from inputted genomic data
 (using ``-est_start_alt_allele_prob``).
 Note that this sample estimate is not taking the pedigree structure into account,
@@ -352,6 +348,11 @@ there are three options to obtain metafounder-specific alternative allele probab
   then ``-est_alt_allele_prob``.
 In all three cases,
 ``-est_alt_allele_prob`` is optional.
+
+The estimates (using ``-est_start_alt_allele_prob`` or ``-est_alt_allele_prob``) or 
+inputs (using ``-alt_allele_prob_file``) of the alternative allele probabilities 
+are constrained to be between 0.001 and 0.999 to ensure valid probabilities and 
+avoid getting trapped in boundary values, 0 or 1.
 
 Error probabilities (using ``-est_geno_error_prob`` and ``-est_seq_error_prob``)
 are estimated as the proportion of mismatches between observed and inferred states.

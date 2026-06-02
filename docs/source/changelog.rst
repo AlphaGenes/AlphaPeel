@@ -25,7 +25,8 @@ Bug fixes
 
 Maintenance
 -----------
-
+* Update the alternative allele probability limits from [0.01, 0.99] to [0.001, 0.999]
+  (:issue:`185`, :issue:`276`, :pr:`227`, :user:`RosCraddock`, :user:`XingerTang`, :user:`gregorgorjanc`).
 * Renaming of command line arguments, changing of input format, and corresponding documentation and test updates
   (:issue:`221`, :pr:`219` ,:pr:`222`, :user:`RosCraddock`, :user:`gregorgorjanc`, :user:`XingerTang`).
 
