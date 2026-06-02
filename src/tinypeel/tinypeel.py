@@ -67,10 +67,10 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
                                         f"ERROR: Invalid value {pedigree.AAP[mfx][i]} for alternative allele probability for metafounder {mfx} at locus {i}. \nValues must be between 0 and 1. Set to 0.5 (default) if unknown. \nExiting..."
                                     )
                                     sys.exit(2)
-                                elif pedigree.AAP[mfx][i] < 0.01:
-                                    pedigree.AAP[mfx][i] = 0.01
-                                elif pedigree.AAP[mfx][i] > 0.99:
-                                    pedigree.AAP[mfx][i] = 0.99
+                                elif pedigree.AAP[mfx][i] < 0.001:
+                                    pedigree.AAP[mfx][i] = 0.001
+                                elif pedigree.AAP[mfx][i] > 0.999:
+                                    pedigree.AAP[mfx][i] = 0.999
                     AAP[mfx] = pedigree.AAP[mfx]
                 if len(ind.MetaFounder) == 2:
                     mafGeno = ProbMath.getGenotypesFromMultiMaf(AAP)

@@ -59,7 +59,7 @@ def updateMaf(pedigree, peelingInfo):
 
 def newtonMafUpdates(peelingInfo, AAP, index):
     """Iterative approximation for the prior alternative allele frequency.
-    Currently limits all AAP to be between 0.01 and 0.99.
+    Currently limits all AAP to be between 0.001 and 0.999.
 
     :param peelingInfo: Peeling information container.
     :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
@@ -71,10 +71,10 @@ def newtonMafUpdates(peelingInfo, AAP, index):
     :rtype: float
     """
 
-    if AAP[index] < 0.01:
-        maf = 0.01
-    elif AAP[index] > 0.99:
-        maf = 0.99
+    if AAP[index] < 0.001:
+        maf = 0.001
+    elif AAP[index] > 0.999:
+        maf = 0.999
     else:
         maf = AAP[index]
 
@@ -84,10 +84,10 @@ def newtonMafUpdates(peelingInfo, AAP, index):
         maf_old = maf
         delta = getNewtonUpdate(maf_old, peelingInfo, index)
         maf = maf_old + delta
-        if maf < 0.01:
-            maf = 0.01
-        if maf > 0.99:
-            maf = 0.99
+        if maf < 0.001:
+            maf = 0.001
+        if maf > 0.999:
+            maf = 0.999
         if abs(maf - maf_old) < 0.0001:
             converged = True
         iters -= 1
@@ -166,7 +166,7 @@ def addIndividualToUpdate(d, p, LLp, LLpp):
 
 def updateMafAfterPeeling(pedigree, peelingInfo):
     """Updates the alternative allele frequency for each unknown parent group based on the mean genotype probabilities of the founders.
-    Currently limits all AAP to be between 0.01 and 0.99.
+    Currently limits all AAP to be between 0.001 and 0.999.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
@@ -194,10 +194,10 @@ def updateMafAfterPeeling(pedigree, peelingInfo):
     for mfx in MF:
         for i in range(peelingInfo.nLoci):
             AAP[mfx][i] = AAP[mfx][i] / indMF[mfx]
-            if AAP[mfx][i] < 0.01:
-                AAP[mfx][i] = 0.01
-            elif AAP[mfx][i] > 0.99:
-                AAP[mfx][i] = 0.99
+            if AAP[mfx][i] < 0.001:
+                AAP[mfx][i] = 0.001
+            elif AAP[mfx][i] > 0.999:
+                AAP[mfx][i] = 0.999
         pedigree.AAP[mfx] = AAP[mfx].astype(np.float32)
 
     for ind in pedigree:
