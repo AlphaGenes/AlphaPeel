@@ -9,7 +9,7 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
-    :param fileName: path to the external penetrance file
+    :param fileName: path to the external segregation file
     :type fileName: str
     :param start: starting locus/marker, defaults to None
     :type start: int, optional
