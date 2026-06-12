@@ -35,6 +35,9 @@ Input options
       -seq_file [SEQ_FILE ...]
                           Sequence allele read count file(s)
                           (:ref:`see format details <seq_file_format>`).
+      -hap_file [HAP_FILE ...]
+                          Haplotype file 
+                          (:ref:`see format details <hap_file_format>`)
       -x_chr              Indicate that input data is for the :ref:`X chromosome <zero_one_two_etc>`.
       -pheno_file [PHENO_FILE ...]
                           Phenotype file(s)
@@ -42,6 +45,10 @@ Input options
       -plink_file [PLINK_FILE ...]
                           Plink (binary) file(s)
                           (:ref:`see format details <plink_file_format>`).
+      -phased_geno_prob_file [PHASED_GENO_PROB_FILE ...]
+                          Optional external phased_geno_prob_file file(s) 
+                          (:ref:`see format details <penetrance_file_format>`).
+                          This will provide the starting internal genotype probability state. 
 
     :ref:`Markers <markers>`:
       -map_file MAP_FILE  Map file for :ref:`loci <markers>` in genomic data files
@@ -87,12 +94,25 @@ one or more genomic data files to run the analysis.
 
 |Software| supports the following genomic data files:
 genotype file in the AlphaGenes format (``-geno_file``),
-sequence allele read count file in the AlphaGenes format (``-seq_file``), and
+sequence allele read count file in the AlphaGenes format (``-seq_file``),
+haplotype file in the AlphaGenes format (``-hap_file``), and
 binary Plink file (``-plink_file``).
+
+.. note::
+
+  Internally, the haplotype input by ``-hap_file`` is used to fill up the missing genotype information,
+  and the phasing information is not preserved. If you want to input phased data, 
+  consider the ``-phased_geno_prob_file`` input.
+
+|Software| supports genotype probabilities input in the AlphaGenes format (``-phased_geno_prob_file``). 
+The ``-phased_geno_prob_file`` is assumed to contain error-free phased genotype probabilities. 
+Hence, when using ``-phased_geno_prob_file`` as the input, you should not use with options ``-est_geno_error_prob``, 
+``-est_seq_error_prob``. 
+The option does not support the ``-x_chr`` option for now. 
 
 When ``-x_chr`` is used the :ref:`pedigree file <ped_file_format>` and
 :ref:`genotype file <geno_file_format>` have specific requirements.
-Follow the links to respective file formats for more details.
+Follow the links to file formats for more details.
 
 |Software| also supports phenotype files (``-pheno_file``) and
 corresponding phenotype penetrance files (``-pheno_penetrance_prob_file``).
@@ -166,7 +186,7 @@ Output options
                             Value(s) less than 1/3 are replaced by 1/3.
       -geno_prob            Output :ref:`genotype probabilities <geno_prob_file_format>`.
       -phased_geno_prob     Output :ref:`phased genotype probabilities <phased_geno_prob_file_format>`.
-      -hap                  Call and output :ref:`haplotypes <hap_file_format>`.
+      -hap                  Call and output :ref:`haplotypes <haplotype_file_format>`.
                             The default haplotype calling threshold is set to 1/2.
       -hap_threshold [HAP_THRESHOLD ...]
                             Custom haplotype calling threshold(s) from the 
@@ -451,7 +471,7 @@ Only loci on one chromosome should be provided!
     *alternative (minor)* allele ``A``.
     The terms major and minor indicates their frequency in a population,
     but this is not a requirement for |Software|.
-    These alleles are numerically encoded as ``0`` and ``1``, respectively.
+    These alleles are respectively numerically encoded as ``0`` and ``1``.
     Combining two alleles in a diploid individual gives three possible *genotypes*:
     reference homozygote ``a/a``,
     heterozygote ``a/A`` or ``A/a``, and
@@ -460,7 +480,7 @@ Only loci on one chromosome should be provided!
     we have four *phased genotypes*: ``aa``, ``aA``, ``Aa``, and ``AA``,
     where the *paternal allele* is listed first and
     the *maternal allele* is listed second.
-    These genotypes are numerically encoded as ``0``, ``1``, and ``2``, respectively.
+    These genotypes are respectively numerically encoded as ``0``, ``1``, and ``2``.
     Missing alleles and genotypes are numerically encoded as ``9``.
     The numerical codes are called *allele dosages*, because
     they represent the number (dose) of alternative alleles.
@@ -524,6 +544,37 @@ Example with four individuals and their allele read counts at four loci:
   id4 2 0 6 7
   id4 0 7 7 0
 
+.. _hap_file_format:
+
+Haplotype file
+==============
+
+This file has two lines with
+*observed haplotypes* for each phased genotyped individual; 
+possibly from previous analyses.
+The order of maternal and paternal haplotypes is not important  
+because the current implementation translates these haplotypes into genotypes. 
+The file does not need to include all individuals present in other files.
+The first value in each line is the individual's ID.
+The remaining values are observed haplotypes at each locus,
+encoded as ``0`` and ``1``, or ``9`` when the value is missing. 
+Only loci on one chromosome should be provided!
+
+Example with four individuals and four loci:
+
+::
+
+  id1 0 1 1 0 
+  id1 0 1 1 0 
+  id2 1 0 1 0
+  id2 0 1 0 1
+  id3 0 1 1 0
+  id3 1 0 1 0
+  id4 0 1 1 0
+  id4 0 1 0 0
+
+The X chromosome functionality for haplotype input is not tested, so do not use it.
+
 .. _pheno_file_format:
 
 Phenotype file
@@ -548,6 +599,44 @@ Example with four individuals and their phenotypes for a binary trait:
   id2 1
   id3 1
   id4 0
+
+.. _penetrance_file_format:
+
+Phased genotype probabilities file
+==================================
+
+This file has four lines with
+*phased genotype probabilities* for each genotyped and phased individual;
+possibly from previous analyses.
+The four lines respectively correspond to probabilities for
+``aa``, ``aA``, ``Aa``, and ``AA`` phased genotypes.
+The file does not need to include all individuals present in other files.
+The first value in each line is the individual ID.
+The remaining values are phased genotype probabilities at each locus.
+These values are assumed without an error and
+used directly as individual's phased genotype probability state.
+Only loci on one chromosome should be provided!
+
+Example with four individuals and four loci:
+
+::
+
+  id1 0.7912 0.0000 0.0000 1.0000
+  id1 0.1044 0.1090 0.2637 0.0000
+  id1 0.1044 0.1090 0.2637 0.0000
+  id1 0.0000 0.7820 0.4725 0.0000
+  id2 0.0000 0.0000 0.0000 0.0001
+  id2 0.3764 0.6611 0.0000 0.9628
+  id2 0.6236 0.3388 1.0000 0.0371
+  id2 0.0000 0.0000 0.0000 0.0000
+  id3 0.3784 0.2171 0.0000 1.0000
+  id3 0.4140 0.0000 0.0001 0.0000
+  id3 0.0000 0.4328 0.0000 0.0000
+  id3 0.2076 0.3500 0.9999 0.0000
+  id4 0.9999 0.0000 0.0000 1.0000
+  id4 0.0000 0.0000 0.2912 0.0000
+  id4 0.0000 0.0000 0.7088 0.0000
+  id4 0.0000 0.9999 0.0000 0.0000
 
 .. _plink_file_format:
 
@@ -758,7 +847,7 @@ id1 and id3 are males, while id2 and id4 are females:
   id4 0.0000 0.0000 0.7088 0.0000
   id4 0.0000 0.9999 0.0000 0.0000
 
-.. _hap_file_format:
+.. _haplotype_file_format:
 
 Phase/haplotype file
 ====================
@@ -784,6 +873,26 @@ Example with four individuals and four loci:
   id2 1 0 1 0
   id2 0 1 0 1
   id3 0 1 1 0
+  id3 1 0 1 0
+  id4 0 1 1 0
+  id4 0 1 0 0
+
+When working with the X chromosome, for a female individual, the interpretation
+is as for an autosomal chromosome above. For a male individual, 
+the first line will always be ``9``, 
+the second line is the value of the maternal haplotype.
+
+Example with four individuals and their X chromosome genotypes at four loci:
+
+id1 and id3 are males, while id2 and id4 are females:
+
+::
+
+  id1 9 9 9 9 # Paternal haplotype
+  id1 0 1 1 0 # Maternal haplotype
+  id2 1 0 1 0
+  id2 0 1 0 1
+  id3 9 9 9 9
   id3 1 0 1 0
   id4 0 1 1 0
   id4 0 1 0 0

@@ -148,25 +148,25 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
                         [error / 3, error / 3, 1 - error, error / 3], dtype=np.float32
                     )
 
-    if args.penetrance is not None:
+    if args.phased_geno_prob_file is not None:
         if peelingInfo.isXChr:
             warnings.warn(
-                "Using an external penetrance file and the x_chr option is highly discouraged. Please do not use."
+                "Using an external phased genotype probability file and the x_chr option is highly discouraged. Please do not use."
             )
 
         if args.est_geno_error_prob:
             warnings.warn(
-                "External penetrance file included, but est_geno_error_prob flag used. The two options are incompatible. est_geno_error_prob set to false."
+                "External phased genotype probability file included, but est_geno_error_prob flag used. The two options are incompatible. est_geno_error_prob set to false."
             )
             args.est_geno_error_prob = False
 
         if args.est_seq_error_prob:
             warnings.warn(
-                "External penetrance file included, but est_seq_error_prob flag used. The two options are incompatible. est_seq_error_prob set to false."
+                "External phased genotype probability file included, but est_seq_error_prob flag used. The two options are incompatible. est_seq_error_prob set to false."
             )
             args.est_seq_error_prob = False
 
-        for pen in args.penetrance:
+        for pen in args.phased_geno_prob_file:
             addPenetranceFromExternalFile(pedigree, peelingInfo, pen, args)
     # updateMaf(pedigree, peelingInfo)
     return peelingInfo

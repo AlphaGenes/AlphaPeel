@@ -130,7 +130,13 @@ class TestClass:
     input_file_depend_on_test_cases = None
 
     # all the input file options for non-hybrid peeling except the binary file
-    files_to_input = ["geno_file", "ped_file", "penetrance", "hap_file", "seq_file"]
+    files_to_input = [
+        "geno_file",
+        "ped_file",
+        "phased_geno_prob_file",
+        "hap_file",
+        "seq_file",
+    ]
     # all the output files except the binary file and the parameter files
     files_to_check = [
         "hap_0.5",
@@ -241,7 +247,7 @@ class TestClass:
         self.expected = read_and_sort_file(self.expected_file_path)
 
         # Produced dosage file correctly where multiple different files are inputted of unrelated individuals:
-        # Geno_file, hap_file, ped_file, penetrance, and seq_file
+        # Geno_file, hap_file, ped_file, phased_geno_prob_file, and seq_file
         assert self.output == self.expected
 
     def test_subset(self):
@@ -387,7 +393,7 @@ class TestClass:
 
             self.output = read_and_sort_file(self.output_file_path)
             self.expected = read_and_sort_file(self.expected_file_path)
-            # Checking AlphaPeel runs so compares outputted genotypes, haplotypes, seq, and penetrance with expected.
+            # Checking AlphaPeel runs so compares outputted genotypes with expected.
             assert self.output == self.expected
 
             self.arguments.pop(self.test_cases)
@@ -456,7 +462,7 @@ class TestClass:
         self.prepare_path()
 
         self.input_files = self.files_to_input
-        self.input_files.remove("penetrance")
+        self.input_files.remove("phased_geno_prob_file")
         self.arguments = {"method": "multi"}
         # whether the output files exist
         # 0: not exist

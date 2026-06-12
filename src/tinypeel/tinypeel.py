@@ -403,7 +403,6 @@ def get_input_options():
     -plink_file: bfile
     -geno_file: genotypes
     -pheno_file: phenotype
-    -reference: reference
     -seq_file: seqfile
     -ped_file: pedigree
     -hap_file: phasefile
@@ -495,21 +494,13 @@ def get_input_options():
         nargs="*",
         help="Phenotype penetrance probability file (see format details in the docs).",
     )
-    parse_dictionary["reference"] = lambda parser: parser.add_argument(
-        "-reference",
-        default=None,
-        required=False,
-        type=str,
-        nargs="*",
-        help="A haplotype reference panel in AlphaGenes format.",
-    )
     parse_dictionary["phasefile"] = lambda parser: parser.add_argument(
         "-hap_file",
         default=None,
         required=False,
         type=str,
         nargs="*",
-        help="A haplotype file in AlphaGenes format.",
+        help="Haplotype file (see format details in the docs).",
     )
     parse_dictionary["seed"] = lambda parser: parser.add_argument(
         "-seed",
@@ -626,6 +617,14 @@ def getArgs():
         required=False,
         type=str,
         help="Map file for loci in genomic data files (see format details in the docs).",
+    )
+    input_parser.add_argument(
+        "-phased_geno_prob_file",
+        default=None,
+        required=False,
+        type=str,
+        nargs="*",
+        help="Optional external phased genotype probability file(s) (see format details in the docs). This will provide the starting internal genotype probability state. ",
     )
 
     # Output options
@@ -745,14 +744,7 @@ def getArgs():
         type=int,
         help="Number of peeling cycles. Default: 5.",
     )
-    peeling_parser.add_argument(
-        "-penetrance",
-        default=None,
-        required=False,
-        type=str,
-        nargs="*",
-        help=argparse.SUPPRESS,  # This argument will not appear in the help message, but is still available to use.
-    )  # help='An optional external penetrance file. This will overwrite the default penetrance values.')
+
     InputOutput.add_arguments_from_dictionary(
         peeling_parser,
         get_probability_options(),
