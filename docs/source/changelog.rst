@@ -7,7 +7,7 @@ Changelog
   add your changes to the top of the file under the [Unreleased] section. 
   Please also include the pull request number and the GitHub username(s) of the contributor(s) who made the change.
 
-[Unreleased] - 2026-04-??
+[Unreleased] - 2026-06-??
 =========================
 
 New features
@@ -67,6 +67,9 @@ Maintenance
 
 * Remove extra empty lines in the genotype probabilities output file
   (:pr:`246`, :user:`XingerTang`).
+
+* Restructure the documentation to make file format documentation easier to navigate and cross-reference
+  (:pr:`283`, :user:`XingerTang`, :user:`gregorgorjanc`).
 
 [1.3.0] - 2026-02-05
 ====================

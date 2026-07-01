@@ -9,6 +9,8 @@ For further details read:
 
 .. [1] Whalen, A, Ros-Freixedes, R, Wilson, DL, Gorjanc, G, Hickey, JM. (2018). *Hybrid peeling for fast and accurate calling, phasing, and imputation with sequence data of any coverage in pedigrees*. Genetics Selection Evolution; doi: https://doi.org/10.1186/s12711-018-0438-2
 
+.. _peeling_basics:
+
 Peeling basics
 ==============
 
@@ -91,6 +93,8 @@ from an ``aA`` father and an ``AA`` mother are:
 Segregation probabilities are really helpful for determining which alleles an individual inherits
 from their parents and are used for both the peel down (anterior) and peel up (posterior) steps.
 The following sections outline how the penetrance, anterior, posterior, and segregation terms are calculated.
+
+.. _penetrance:
 
 Penetrance
 ----------
@@ -295,6 +299,9 @@ There are a lot of possible places to obtain substantial memory savings.
     - We currently store the posterior estimates as a list and re-add.
       We could instead store the values as a single matrix and just add each time.
       We need to be careful with the parallel updates on this term though.
+
+
+.. _function_explanation:
 
 Function explanation
 ====================
