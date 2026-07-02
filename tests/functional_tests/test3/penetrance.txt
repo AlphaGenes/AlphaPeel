@@ -1,4 +1,0 @@
-penetrance 1 0 0 0 1
-penetrance 0 1 0 0 0
-penetrance 0 0 1 0 0
-penetrance 0 0 0 1 0

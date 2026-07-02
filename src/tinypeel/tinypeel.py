@@ -400,7 +400,6 @@ def get_probability_options():
 
 def get_input_options():
     """Collects the input options of the program as a dictionary. The options are:
-    -plink_file: bfile
     -geno_file: genotypes
     -pheno_file: phenotype
     -seq_file: seqfile
@@ -441,14 +440,7 @@ def get_input_options():
         nargs="*",
         help="Sequence allele read count file(s) (see format details in the docs).",
     )
-    parse_dictionary["bfile"] = lambda parser: parser.add_argument(
-        "-plink_file",
-        default=None,
-        required=False,
-        type=str,
-        nargs="*",
-        help="Plink (binary) file(s) (see format details in the docs).",
-    )
+
     parse_dictionary["startsnp"] = lambda parser: parser.add_argument(
         "-start_snp",
         default=None,
@@ -708,12 +700,6 @@ def getArgs():
         required=False,
         help="Output phenotype penetrance probabilities (see format details in the docs).",
     )
-    output_parser.add_argument(
-        "-binary_call_file",
-        action="store_true",
-        required=False,
-        help="Output called genotype files as a binary plink output (NOT IMPLEMENTED YET).",
-    )
 
     InputOutput.add_arguments_from_dictionary(
         output_parser,
@@ -843,7 +829,6 @@ def main():
     args.genotypes = args.geno_file
     args.seqfile = args.seq_file
     args.phenotype = args.pheno_file
-    args.bfile = args.plink_file
     args.startsnp = args.start_snp
     args.stopsnp = args.stop_snp
     args.phenoPenetrance = args.pheno_penetrance_prob_file

@@ -193,25 +193,16 @@ def writeGenotypes(pedigree, genoProbFunc, isXChr):
             geno_threshold_list.append(1 / 3)
 
         for threshold in geno_threshold_list:
-            if args.binary_call_file:
-                writeBinaryCalledGenotypes(
-                    pedigree,
-                    genoProbFunc,
-                    isXChr,
-                    args.out_file + ".called." + str(round(threshold, 3)),
-                    threshold,
-                )
-            else:
-                print(
-                    f"Writing called genotypes with threshold {threshold} to {args.out_file + '.geno_' + str(round(threshold, 3)) + '.txt'}"
-                )
-                writeCalledGenotypes(
-                    pedigree,
-                    genoProbFunc,
-                    isXChr,
-                    args.out_file + ".geno_" + str(round(threshold, 3)) + ".txt",
-                    threshold,
-                )
+            print(
+                f"Writing called genotypes with threshold {threshold} to {args.out_file + '.geno_' + str(round(threshold, 3)) + '.txt'}"
+            )
+            writeCalledGenotypes(
+                pedigree,
+                genoProbFunc,
+                isXChr,
+                args.out_file + ".geno_" + str(round(threshold, 3)) + ".txt",
+                threshold,
+            )
 
     if args.hap:
         hap_threshold_list = []
@@ -225,19 +216,16 @@ def writeGenotypes(pedigree, genoProbFunc, isXChr):
             hap_threshold_list.append(1 / 2)
 
         for threshold in hap_threshold_list:
-            if args.binary_call_file:
-                pass  # this function is not applied
-            else:
-                print(
-                    f"Writing called haplotypes with threshold {threshold} to {args.out_file + '.hap_' + str(round(threshold, 3)) + '.txt'}"
-                )
-                writeCalledPhase(
-                    pedigree,
-                    genoProbFunc,
-                    isXChr,
-                    args.out_file + ".hap_" + str(round(threshold, 3)) + ".txt",
-                    threshold,
-                )
+            print(
+                f"Writing called haplotypes with threshold {threshold} to {args.out_file + '.hap_' + str(round(threshold, 3)) + '.txt'}"
+            )
+            writeCalledPhase(
+                pedigree,
+                genoProbFunc,
+                isXChr,
+                args.out_file + ".hap_" + str(round(threshold, 3)) + ".txt",
+                threshold,
+            )
 
 
 def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
@@ -429,40 +417,6 @@ def writeCalledPhase(pedigree, genoProbFunc, isXChr, outputFile, thresh):
             maternal_haplotype = np.argmax(maternal_probs, axis=0)
             setMissing(maternal_haplotype, maternal_probs, thresh)
             f.write(ind.idx + " " + " ".join(map(str, maternal_haplotype)) + "\n")
-
-
-def writeBinaryCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
-    """Writes out the called genotypes to file in binary format.
-
-    :param pedigree: pedigree information container
-    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
-    :param genoProbFunc: function to get genotype probabilities for an individual
-    :type genoProbFunc: function
-    :param isXChr: flag whether inputted genotypes are X chromosome
-    :type isXChr: bool
-    :param outputFile: name of output file to write to
-    :type outputFile: str
-    :param thresh: threshold for calling genotypes, defaults to 1/3
-    :type thresh: float
-    :return: None. Writes to the specified output file.
-    """
-    for idx, ind in pedigree.writeOrder():
-        matrix = genoProbFunc(ind.idn, ind.sex)
-        if isXChr and ind.sex == 0:
-            matrixCollapsedHets = np.array(
-                [matrix[0, :], matrix[3, :]],
-                dtype=np.float32,
-            )
-        else:
-            matrixCollapsedHets = np.array(
-                [matrix[0, :], matrix[1, :] + matrix[2, :], matrix[3, :]],
-                dtype=np.float32,
-            )
-        calledGenotypes = np.argmax(matrixCollapsedHets, axis=0)
-        setMissing(calledGenotypes, matrixCollapsedHets, thresh)
-        ind.genotypes = calledGenotypes.astype(np.int8)
-
-    InputOutput.writeOutGenotypesPlink(pedigree, outputFile)
 
 
 @jit(nopython=True)
