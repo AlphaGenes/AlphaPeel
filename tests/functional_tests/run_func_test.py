@@ -1361,8 +1361,3 @@ class TestClass:
         self.output = read_and_sort_file(self.output_file_path)
 
         assert round(float(self.output[1][1])) == 2
-
-    # TODO test_plink for PLINK
-    #      a. binary PLINK output
-    #      b. binary output + input
-    #      c. ped_file
