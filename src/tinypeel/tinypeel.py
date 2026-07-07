@@ -63,10 +63,9 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
                             for i in range(peelingInfo.nLoci):
                                 if pedigree.AAP[mfx][i] > 1 or pedigree.AAP[mfx][i] < 0:
                                     # Throw an error (equivalent to if value is missing as set in tinyhouse)
-                                    print(
-                                        f"ERROR: Invalid value {pedigree.AAP[mfx][i]} for alternative allele probability for metafounder {mfx} at locus {i}. \nValues must be between 0 and 1. Set to 0.5 (default) if unknown. \nExiting..."
+                                    raise ValueError(
+                                        f"Invalid value {pedigree.AAP[mfx][i]} for alternative allele probability for metafounder {mfx} at locus {i}. \nValues must be between 0 and 1. Set to 0.5 (default) if unknown."
                                     )
-                                    sys.exit(2)
                                 elif pedigree.AAP[mfx][i] < 0.001:
                                     pedigree.AAP[mfx][i] = 0.001
                                 elif pedigree.AAP[mfx][i] > 0.999:
@@ -560,7 +559,7 @@ def get_multithread_options():
 # ACTUAL PROGRAM BELOW
 
 
-def getArgs():
+def getArgs(argv=None):
     """Presents and collects the arguments from the command line.
 
     :return: the user input arguments for the AlphaPeel program
@@ -813,14 +812,14 @@ def getArgs():
         parser.parse_args(args)
         sys.exit(0)
 
-    return InputOutput.parseArgs("AlphaPeel", parser)
+    return InputOutput.parseArgs("AlphaPeel", parser, argv=argv)
 
 
-def main():
+def main(argv=None):
     """Main function for the AlphaPeel program. This function collects the arguments from the command line and runs the peeling algorithm."""
     docs_link = f"https://alphapeel.readthedocs.io/en/v{version_version}/usage.html"
     InputOutput.print_boilerplate("AlphaPeel", version=version_version, docs=docs_link)
-    args = getArgs()
+    args = getArgs(argv=argv)
     if args.start_snp:
         args.start_snp -= 1
     if args.stop_snp:
