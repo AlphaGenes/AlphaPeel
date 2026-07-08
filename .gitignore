@@ -19,6 +19,8 @@ docs/build/
 example/outputs
 example/simple_*/*_output.*
 tests/accuracy_tests/accu_report.txt
+tests/accuracy_tests/outputs*
+tests/accuracy_tests/reports*
 tests/accuracy_tests/outputs/
 tests/accuracy_tests/outputs/**
 tests/accuracy_tests/sim_for_alphapeel_accu_test/seg_file.txt
