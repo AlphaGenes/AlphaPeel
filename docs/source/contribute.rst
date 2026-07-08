@@ -497,6 +497,16 @@ If the tests run successfully, you are expected to see the head of the output si
     tests/functional_tests/run_func_test.py .............                    [100%]
     ...
 
+.. note::
+
+    It is possible to run memory profiling and coverage test with ``pytest`` on the functional tests.
+
+    * For memory profiling, you can install ``memray`` and run ``pytest --memray tests/functional_tests``.
+
+    * For coverage test, you can install ``coverage`` and run ``coverage run -m pytest tests/functional_tests``,
+      and check the coverage report by running ``coverage report`` or ``coverage html`` to generate an HTML report.
+      Remember that coverage report cannot identify the calls to JIT-compiled functions.
+
 The instructions of building your own distribution is available at :ref:`dist-install`.
 
 Instructions on running the examples are at :ref:`run-examples`.
