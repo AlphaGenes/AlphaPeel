@@ -319,7 +319,15 @@ class TestClass:
         self.output_file_to_check = "geno_0.333"
 
         self.generate_arguments()
-        tinypeel.main(argv=self.argv)
+        with pytest.warns(
+            UserWarning,
+            match="External phased genotype probability file included, but est_geno_error_prob flag used. The two options are incompatible. est_geno_error_prob set to false.",
+        ):
+            with pytest.warns(
+                UserWarning,
+                match="External phased genotype probability file included, but est_seq_error_prob flag used. The two options are incompatible. est_seq_error_prob set to false.",
+            ):
+                tinypeel.main(argv=self.argv)
 
         self.output_file_path = os.path.join(
             self.output_path,
@@ -481,8 +489,9 @@ class TestClass:
         self.test_name = "test_est"
         self.prepare_path()
 
-        self.input_files = self.files_to_input
-        self.input_file_depend_on_test_cases = self.files_to_input
+        self.input_files = self.files_to_input.copy()
+        self.input_files.remove("phased_geno_prob_file")
+        self.input_file_depend_on_test_cases = self.input_files
         self.arguments = {"method": "multi", "geno_threshold": ".1", "geno": None}
         self.output_file_to_check = "geno_0.333"
 
@@ -498,6 +507,7 @@ class TestClass:
                 # Do we need to continue use this value for lengh
                 # as it is the same as the default value
                 self.arguments["rec_length"] = "1.0"
+                self.input_files.append("phased_geno_prob_file")
             self.output_file_prefix = f"est.{self.test_cases}"
 
             self.generate_arguments()
@@ -583,7 +593,7 @@ class TestClass:
         self.test_name = "test_no"
         self.prepare_path()
 
-        self.input_files = self.files_to_input
+        self.input_files = self.files_to_input.copy()
         self.input_files.remove("phased_geno_prob_file")
         self.arguments = {"method": "multi"}
         # whether the output files exist
@@ -748,7 +758,7 @@ class TestClass:
     def test_error(self):
         """Functional test: error-correction scenarios.
 
-        The true values to check against for test_error is not written yet
+        The true values to check against for test_error is not written yet.
         """
         self.test_name = "test_error"
         self.prepare_path()
@@ -768,24 +778,9 @@ class TestClass:
             #              with genotype value missing
 
             self.output_file_prefix = f"error.{self.test_cases}"
-            # self.output_file_to_check = "genotypes"
 
             self.generate_arguments()
             tinypeel.main(argv=self.argv)
-
-            # self.output_file_path = os.path.join(
-            #     self.output_path,
-            #     f"{self.output_file_prefix}.{self.output_file_to_check}.txt"
-            #     )
-            # self.expected_file_path = os.path.join(
-            #     self.path,
-            #     f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-            #     )
-
-            # self.output = read_and_sort_file(self.output_file_path)
-            # self.expected = read_and_sort_file(self.expected_file_path)
-
-            # assert self.output == self.expected
 
     def test_alt_allele_prob(self):
         """Functional test: alternative allele probability handling and metafounders.
@@ -1146,7 +1141,11 @@ class TestClass:
 
             elif self.test_cases == "extra_metafounder_in_file":
                 self.generate_arguments()
-                tinypeel.main(argv=self.argv)
+                with pytest.warns(
+                    UserWarning,
+                    match="MF_3 is not in the pedigree. The alternative allele probability for MF_3 has been ignored.",
+                ):
+                    tinypeel.main(argv=self.argv)
 
                 self.output_file_path = os.path.join(
                     self.output_path,
@@ -1252,7 +1251,12 @@ class TestClass:
                 # This will give a warning and not print phenotype probabilities
                 self.arguments["pheno_prob"] = None
                 self.generate_arguments()
-                tinypeel.main(argv=self.argv)
+
+                with pytest.warns(
+                    UserWarning,
+                    match="Phenotype probabilities are not available. Please provide a penetrance file with -pheno_penetrance_file. -pheno_prob will be ignored.",
+                ):
+                    tinypeel.main(argv=self.argv)
 
                 self.output_file_to_check = "pheno_prob"
                 # Check the pheno_prob file does not exist
