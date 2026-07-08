@@ -151,18 +151,21 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
     if args.phased_geno_prob_file is not None:
         if peelingInfo.isXChr:
             warnings.warn(
-                "Using an external phased genotype probability file and the x_chr option is highly discouraged. Please do not use."
+                "Using an external phased genotype probability file and the x_chr option is highly discouraged. Please do not use.",
+                UserWarning,
             )
 
         if args.est_geno_error_prob:
             warnings.warn(
-                "External phased genotype probability file included, but est_geno_error_prob flag used. The two options are incompatible. est_geno_error_prob set to false."
+                "External phased genotype probability file included, but est_geno_error_prob flag used. The two options are incompatible. est_geno_error_prob set to false.",
+                UserWarning,
             )
             args.est_geno_error_prob = False
 
         if args.est_seq_error_prob:
             warnings.warn(
-                "External phased genotype probability file included, but est_seq_error_prob flag used. The two options are incompatible. est_seq_error_prob set to false."
+                "External phased genotype probability file included, but est_seq_error_prob flag used. The two options are incompatible. est_seq_error_prob set to false.",
+                UserWarning,
             )
             args.est_seq_error_prob = False
 
@@ -267,7 +270,10 @@ def addPenetranceFromExternalFile(pedigree, peelingInfo, fileName, args):
 
             if idx not in pedigree.individuals:
                 warnings.warn(
-                    "Individual", idx, "not found in pedigree. Individual ignored."
+                    "Individual",
+                    idx,
+                    "not found in pedigree. Individual ignored.",
+                    UserWarning,
                 )
             else:
                 ind = pedigree.individuals[idx]

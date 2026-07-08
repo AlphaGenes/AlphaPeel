@@ -60,7 +60,8 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
 
             if idx not in pedigree.individuals:
                 warnings.warn(
-                    f"Individual {idx} is not found in pedigree. Individual ignored."
+                    f"Individual {idx} is not found in pedigree. Individual ignored.",
+                    UserWarning,
                 )
             else:
                 ind = pedigree.individuals[idx]
@@ -78,7 +79,8 @@ def readInSeg(pedigree, fileName, start=None, stop=None):
         for ind in pedigree:
             if indHit[ind.idn] != 4:
                 warnings.warn(
-                    f"No segregation information found for individual {ind.idx}"
+                    f"No segregation information found for individual {ind.idx}",
+                    UserWarning,
                 )
 
     return seg
