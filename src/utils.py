@@ -567,16 +567,16 @@ def assess_test_accuracy(
 
         if file_name == "seg_prob":
             ind_corr = get_ind_corr(
-                new_file[:, 1:],
-                true_file[:, 1:],
+                new_file[:, :],
+                true_file[:, :],
                 n_ind_per_gen,
                 n_row_per_ind,
                 start_gen=SEG_PROB_START_GEN,
             )
         else:
             ind_corr = get_ind_corr(
-                new_file[:, 1:],
-                true_file[:, 1:],
+                new_file[:, :],
+                true_file[:, :],
                 n_ind_per_gen,
                 n_row_per_ind,
             )
@@ -623,8 +623,26 @@ def assess_accuracy(
         new_file = _load_accuracy_matrix(file_path, n_loci_all)
         true_file = _load_accuracy_matrix(true_path, n_loci_all)
 
-        marker_corr = [str(get_marker_corr(new_file[:, :], true_file[:, :]))]
+        if x_chr and file_name == "hap_0.5":
+            new_file[true_file == 9] = 0
+            true_file[true_file == 9] = 0
+
+        marker_corr = [
+            str(
+                get_marker_corr(
+                    _comparison_slice(
+                        new_file, file_name, n_ind_per_gen, n_row_per_ind
+                    ),
+                    _comparison_slice(
+                        true_file, file_name, n_ind_per_gen, n_row_per_ind
+                    ),
+                )
+            )
+        ]
         for gen in range(n_gen):
+            if gen in [0, 1] and file_name == "seg_prob":
+                marker_corr.append("nan")
+                continue
             marker_corr.append(
                 str(
                     get_marker_corr(
@@ -644,17 +662,40 @@ def assess_accuracy(
                 )
             )
 
-        file_out.write(f"{file_name},{method},marker_corr,{marker_corr}\n")
+        file_out.write(f"{file_name},{name},marker_corr,{marker_corr}\n")
 
-        ind_corr = [
-            str(get_ind_corr(new_file[:, :], true_file[:, :], n_ind_per_gen, None))
-        ]
+        if file_name == "seg_prob":
+            ind_corr = [
+                str(
+                    get_ind_corr(
+                        new_file[:, :],
+                        true_file[:, :],
+                        n_ind_per_gen,
+                        n_row_per_ind,
+                        start_gen=SEG_PROB_START_GEN,
+                    )
+                )
+            ]
+        else:
+            ind_corr = [
+                str(
+                    get_ind_corr(
+                        new_file[:, :],
+                        true_file[:, :],
+                        n_ind_per_gen,
+                        n_row_per_ind,
+                    )
+                )
+            ]
         for gen in range(n_gen):
+            if gen in [0, 1] and file_name == "seg_prob":
+                ind_corr.append("nan")
+                continue
             ind_corr.append(
                 str(
                     get_ind_corr(
-                        new_file[:, 1:],
-                        true_file[:, 1:],
+                        new_file[:, :],
+                        true_file[:, :],
                         n_ind_per_gen,
                         n_row_per_ind,
                         gen,
@@ -663,7 +704,7 @@ def assess_accuracy(
                 )
             )
 
-        file_out.write(f"{file_name},{method},ind_corr,{ind_corr}\n")
+        file_out.write(f"{file_name},{name},ind_corr,{ind_corr}\n")
 
 
 def _read_map_marker_names(path):
@@ -775,7 +816,7 @@ def run_accuracy_case(
     benchmark=None,
     run_name="test_accu",
 ):
-    """Run one accuracy benchmark case through ``tinypeel.main`` directly."""
+    """Run AlphaPeel and evaluate outputs based on the specified parameters."""
 
     name = build_accuracy_case_name(
         method,
