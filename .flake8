@@ -4,5 +4,8 @@ max-line-length = 88
 extend-ignore = 
     # also the Black's default, whitespace before ':'
     E203,
+    # for the missing whitespace after ',', csv files need to have no whitespace after the comma
+    # also for the missing whitespace after ':', which is used in website links
+    E231,
     # this is for the line length, all the lines too long are comments now
     E501
