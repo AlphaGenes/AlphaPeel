@@ -1,15 +1,58 @@
-import numpy as np
-import os
-import subprocess
 import argparse
-import warnings
+import os
+import shlex
 import shutil
+import subprocess
+import warnings
+
+import numpy as np
+
 import src.tinypeel.tinypeel as tinypeel
 
 
+ACCURACY_TEST_ROOT = os.path.join("tests", "accuracy_tests")
+SIMULATION_PARAMETERS_FILE = os.path.join(
+    ACCURACY_TEST_ROOT, "simulation_parameters.txt"
+)
+SIMULATION_FIXTURE_DIR = os.path.join(ACCURACY_TEST_ROOT, "sim_for_alphapeel_accu_test")
+
+DEFAULT_ALPHA_PEEL_ARGS = {
+    "n_cycle": "5",
+    "n_thread": "6",
+    "geno_threshold": ".1",
+    "hap_threshold": ".1",
+    "geno": None,
+    "hap": None,
+    "seg_prob": None,
+    "geno_prob": None,
+    "phased_geno_prob": None,
+}
+
+BASE_ACCURACY_FILES = [
+    "dosage",
+    "geno_0.333",
+    "hap_0.5",
+    "geno_prob",
+    "phased_geno_prob",
+]
+METAFOUNDER_ACCURACY_FILES = [
+    "dosage",
+    "geno_prob",
+    "phased_geno_prob",
+]
+ROWS_PER_INDIVIDUAL = {
+    "dosage": 1,
+    "geno_0.333": 1,
+    "hap_0.5": 2,
+    "geno_prob": 3,
+    "phased_geno_prob": 4,
+    "seg_prob": 4,
+}
+SEG_PROB_START_GEN = 2
+
+
 def get_params():
-    param_file = os.path.join("tests", "accuracy_tests", "simulation_parameters.txt")
-    with open(param_file, "r") as file:
+    with open(SIMULATION_PARAMETERS_FILE, "r") as file:
         sim_params = [line.strip().split() for line in file]
 
     params = {}
@@ -26,19 +69,19 @@ def sim_path():
     :rtype: str
     """
 
-    return os.path.join("tests", "accuracy_tests", "sim_for_alphapeel_accu_test")
+    return SIMULATION_FIXTURE_DIR
 
 
 def get_accuracy_benchmark_output_root(run_name="test_accu"):
     """Return the root directory for direct-call accuracy benchmark outputs."""
 
-    return os.path.join("tests", "accuracy_tests", f"outputs_{run_name}")
+    return os.path.join(ACCURACY_TEST_ROOT, f"outputs_{run_name}")
 
 
 def get_accuracy_benchmark_report_root(run_name="test_accu"):
     """Return the root directory for direct-call accuracy benchmark reports."""
 
-    return os.path.join("tests", "accuracy_tests", f"reports_{run_name}")
+    return os.path.join(ACCURACY_TEST_ROOT, f"reports_{run_name}")
 
 
 def prepare_directory(path):
@@ -229,24 +272,93 @@ def build_accuracy_case_name(
     """Build the benchmark case name from the accuracy case parameters."""
 
     return "_".join(
-        [
-            param
-            for param in filter(
-                lambda param: True if param else False,
-                [
-                    method,
-                    est_start_alt_allele_prob,
-                    est_geno_error_prob,
-                    est_seq_error_prob,
-                    seq_file,
-                    alt_allele_prob_file,
-                    est_alt_allele_prob,
-                    metafounder,
-                    x_chr,
-                ],
-            )
+        str(param)
+        for param in [
+            method,
+            est_start_alt_allele_prob,
+            est_geno_error_prob,
+            est_seq_error_prob,
+            seq_file,
+            alt_allele_prob_file,
+            est_alt_allele_prob,
+            metafounder,
+            x_chr,
         ]
+        if param
     )
+
+
+def _alpha_peel_arguments(method):
+    """Return the common AlphaPeel arguments for an accuracy run."""
+
+    return {
+        "method": method,
+        **DEFAULT_ALPHA_PEEL_ARGS,
+    }
+
+
+def _input_files_for_case(method, seq_file=False, alt_allele_prob_file=False):
+    """Return the fixture input file keys needed for an accuracy case."""
+
+    input_files = ["ped_file", "seq_file" if seq_file else "geno_file"]
+
+    if alt_allele_prob_file:
+        input_files.append("alt_allele_prob_file")
+    if method == "hybrid":
+        input_files.extend(["map_file", "seg_map_file", "seg_file"])
+
+    return input_files
+
+
+def _fixture_file_prefix(metafounder=False, x_chr=False):
+    """Return the fixture filename prefix for special benchmark modes."""
+
+    if metafounder:
+        return "metafounder_"
+    if x_chr:
+        return "X_chr_"
+    return ""
+
+
+def _fixture_file_path(sim_path, file_name, metafounder=False, x_chr=False):
+    """Build the path to one benchmark fixture file."""
+
+    prefix = _fixture_file_prefix(metafounder=metafounder, x_chr=x_chr)
+    return os.path.join(sim_path, f"{prefix}{file_name}.txt")
+
+
+def _input_file_path(
+    sim_path,
+    file_name,
+    metafounder=False,
+    x_chr=False,
+    file_overrides=None,
+):
+    """Build an input file path, allowing a case to override selected files."""
+
+    if file_overrides and file_name in file_overrides:
+        return file_overrides[file_name]
+
+    return _fixture_file_path(
+        sim_path,
+        file_name,
+        metafounder=metafounder,
+        x_chr=x_chr,
+    )
+
+
+def _add_argument(argv, key, value):
+    """Append a CLI argument to ``argv`` when building a direct-call run."""
+
+    argv.append(f"-{key}")
+    if value is not None:
+        argv.append(value)
+
+
+def _argv_to_command(executable, argv):
+    """Convert an argv-style command to a shell-safe command string."""
+
+    return " ".join(shlex.quote(arg) for arg in [executable] + argv)
 
 
 def generate_accuracy_argv(
@@ -261,23 +373,22 @@ def generate_accuracy_argv(
     metafounder,
     x_chr,
     output_path,
+    file_overrides=None,
+    extra_input_files=None,
+    input_files_method=None,
 ):
     """Generate an ``argv`` list for a direct ``tinypeel.main`` accuracy run."""
 
     argv = []
-    input_files = ["ped_file"]
-    arguments = {
-        "method": method,
-        "n_cycle": "5",
-        "n_thread": "6",
-        "geno_threshold": ".1",
-        "hap_threshold": ".1",
-        "geno": None,
-        "hap": None,
-        "seg_prob": None,
-        "geno_prob": None,
-        "phased_geno_prob": None,
-    }
+    input_files = _input_files_for_case(
+        input_files_method or method,
+        seq_file,
+        alt_allele_prob_file,
+    )
+    if extra_input_files:
+        input_files.extend(extra_input_files)
+
+    arguments = _alpha_peel_arguments(method)
 
     if est_start_alt_allele_prob:
         arguments["est_start_alt_allele_prob"] = None
@@ -286,42 +397,25 @@ def generate_accuracy_argv(
         arguments["est_seq_error_prob"] = None
     if est_alt_allele_prob:
         arguments["est_alt_allele_prob"] = None
-    if seq_file:
-        input_files.append("seq_file")
-    else:
-        input_files.append("geno_file")
-    if alt_allele_prob_file:
-        input_files.append("alt_allele_prob_file")
-    if method == "hybrid":
-        input_files.append("map_file")
-        input_files.append("seg_map_file")
-        input_files.append("seg_file")
+    for file_name in input_files:
+        argv.extend(
+            [
+                f"-{file_name}",
+                _input_file_path(
+                    sim_path,
+                    file_name,
+                    metafounder=metafounder,
+                    x_chr=x_chr,
+                    file_overrides=file_overrides,
+                ),
+            ]
+        )
 
-    if metafounder:
-        for file_name in input_files:
-            argv.extend(
-                [
-                    f"-{file_name}",
-                    os.path.join(sim_path, f"metafounder_{file_name}.txt"),
-                ]
-            )
-    elif x_chr:
-        for file_name in input_files:
-            argv.extend(
-                [
-                    f"-{file_name}",
-                    os.path.join(sim_path, f"X_chr_{file_name}.txt"),
-                ]
-            )
+    if x_chr:
         argv.append("-x_chr")
-    else:
-        for file_name in input_files:
-            argv.extend([f"-{file_name}", os.path.join(sim_path, f"{file_name}.txt")])
 
     for key, value in arguments.items():
-        argv.append(f"-{key}")
-        if value is not None:
-            argv.append(value)
+        _add_argument(argv, key, value)
 
     argv.extend(["-out_file", f"{output_path}{os.sep}"])
 
@@ -332,6 +426,17 @@ def generate_command(
     sim_path,
     method,
     output_path,
+    est_start_alt_allele_prob=False,
+    est_geno_error_prob=False,
+    est_seq_error_prob=False,
+    seq_file=False,
+    alt_allele_prob_file=False,
+    est_alt_allele_prob=False,
+    metafounder=False,
+    x_chr=False,
+    file_overrides=None,
+    extra_input_files=None,
+    input_files_method=None,
 ):
     """Generate the shell command used to run AlphaPeel for a test case.
 
@@ -346,41 +451,90 @@ def generate_command(
     :rtype: str
     """
 
-    command = "AlphaPeel "
-    input_file = ["ped_file"]
-    arguments = {
-        "method": method,
-        "n_cycle": "5",
-        "n_thread": "6",
-        "geno_threshold": ".1",
-        "hap_threshold": ".1",
-        "geno": None,
-        "hap": None,
-        "seg_prob": None,
-        "geno_prob": None,
-        "phased_geno_prob": None,
-    }
+    argv = generate_accuracy_argv(
+        sim_path,
+        method,
+        est_start_alt_allele_prob,
+        est_geno_error_prob,
+        est_seq_error_prob,
+        seq_file,
+        alt_allele_prob_file,
+        est_alt_allele_prob,
+        metafounder,
+        x_chr,
+        output_path,
+        file_overrides=file_overrides,
+        extra_input_files=extra_input_files,
+        input_files_method=input_files_method,
+    )
 
-    input_file.append("geno_file")
-
-    for file in input_file:
-        command += f"-{file} {os.path.join(sim_path, f'{file}.txt')} "
-
-    for key, value in arguments.items():
-        if value is not None:
-            command += f"-{key} {value} "
-        else:
-            command += f"-{key} "
-
-    command += f"-out_file {output_path}{os.sep}"
-
-    return command
+    return _argv_to_command("AlphaPeel", argv)
 
 
 def run_tinypeel_direct(argv):
     """Run AlphaPeel by calling ``src.tinypeel.tinypeel.main`` directly."""
 
     tinypeel.main(argv=argv)
+
+
+def _accuracy_files(method, metafounder=False):
+    """Return output file stems to compare for an accuracy run."""
+
+    file_names = METAFOUNDER_ACCURACY_FILES if metafounder else BASE_ACCURACY_FILES
+    file_names = list(file_names)
+
+    if method == "multi":
+        file_names.append("seg_prob")
+
+    return file_names
+
+
+def _accuracy_dimensions(get_params):
+    """Return generation, individual, and locus dimensions from parameters."""
+
+    n_gen = int(get_params["nGen"])
+    n_ind_per_gen = int(get_params["nInd"] / n_gen)
+    n_loci_all = int(get_params["nLociAll"])
+
+    return n_gen, n_ind_per_gen, n_loci_all
+
+
+def _load_accuracy_matrix(path, n_loci_all):
+    """Load an AlphaPeel output or truth matrix for accuracy comparison."""
+
+    return np.loadtxt(path, usecols=np.arange(1, n_loci_all + 1))
+
+
+def _truth_file_path(sim_path, file_name, metafounder=False, x_chr=False):
+    """Build the path to a truth file for an accuracy comparison."""
+
+    if metafounder:
+        true_file = f"true-metafounder_{file_name}.txt"
+    elif x_chr:
+        true_file = f"true-X_chr_{file_name}.txt"
+    else:
+        true_file = f"true-{file_name}.txt"
+
+    return os.path.join(sim_path, true_file)
+
+
+def _comparison_slice(matrix, file_name, n_ind_per_gen, n_row_per_ind):
+    """Return the portion of a matrix used by the test accuracy report."""
+
+    if file_name == "seg_prob":
+        start = SEG_PROB_START_GEN * (n_ind_per_gen * n_row_per_ind)
+        return matrix[start:, 1:]
+
+    return matrix[:, 1:]
+
+
+def _generation_slice(matrix, gen, n_ind_per_gen, n_row_per_ind):
+    """Return rows belonging to one generation."""
+
+    start = gen * (n_ind_per_gen * n_row_per_ind)
+    end = (gen + 1) * (n_ind_per_gen * n_row_per_ind)
+
+    return matrix[start:end]
 
 
 def assess_test_accuracy(
@@ -390,52 +544,30 @@ def assess_test_accuracy(
     method,
     file_out,
 ):
-    file_to_check = [
-        "dosage",
-        "geno_0.333",
-        "hap_0.5",
-        "geno_prob",
-        "phased_geno_prob",
-    ]
-    if method == "multi":
-        file_to_check.append("seg_prob")
-
-    nGen = int(get_params["nGen"])
-    nIndPerGen = int(get_params["nInd"] / nGen)
-    nLociAll = int(get_params["nLociAll"])
+    file_to_check = _accuracy_files(method)
+    _, n_ind_per_gen, n_loci_all = _accuracy_dimensions(get_params)
 
     for file_name in file_to_check:
-        if file_name in ["dosage", "geno_0.333"]:
-            n_row_per_ind = 1
-        elif file_name in ["phased_geno_prob", "seg_prob"]:
-            n_row_per_ind = 4
-        elif file_name == "geno_prob":
-            n_row_per_ind = 3
-        elif file_name == "hap_0.5":
-            n_row_per_ind = 2
-
+        n_row_per_ind = ROWS_PER_INDIVIDUAL[file_name]
         file_path = os.path.join(output_path, f".{file_name}.txt")
         true_path = os.path.join(sim_path, f"true-{file_name}.txt")
 
         try:
-            new_file = np.loadtxt(file_path, usecols=np.arange(1, nLociAll + 1))
+            new_file = _load_accuracy_matrix(file_path, n_loci_all)
         except ValueError:
             print(f"Error loading {file_path}")
             continue
 
         try:
-            true_file = np.loadtxt(true_path, usecols=np.arange(1, nLociAll + 1))
+            true_file = _load_accuracy_matrix(true_path, n_loci_all)
         except ValueError:
             print(f"Error loading {true_path}")
             continue
 
-        if file_name == "seg_prob":
-            marker_corr = get_marker_corr(
-                new_file[2 * (nIndPerGen * n_row_per_ind) :, 1:],
-                true_file[2 * (nIndPerGen * n_row_per_ind) :, 1:],
-            )
-        else:
-            marker_corr = get_marker_corr(new_file[:, 1:], true_file[:, 1:])
+        marker_corr = get_marker_corr(
+            _comparison_slice(new_file, file_name, n_ind_per_gen, n_row_per_ind),
+            _comparison_slice(true_file, file_name, n_ind_per_gen, n_row_per_ind),
+        )
 
         file_out.write(f"{file_name},{method},marker_corr,{marker_corr}\n")
 
@@ -443,42 +575,27 @@ def assess_test_accuracy(
             ind_corr = get_ind_corr(
                 new_file[:, 1:],
                 true_file[:, 1:],
-                nIndPerGen,
+                n_ind_per_gen,
                 n_row_per_ind,
-                start_gen=2,
+                start_gen=SEG_PROB_START_GEN,
             )
         else:
             ind_corr = get_ind_corr(
                 new_file[:, 1:],
                 true_file[:, 1:],
-                nIndPerGen,
+                n_ind_per_gen,
                 n_row_per_ind,
             )
 
         file_out.write(f"{file_name},{method},ind_corr,{ind_corr}\n")
 
-        if file_name == "segregation":
-            abs_diff = get_abs_diff(
-                new_file[2 * (nIndPerGen * n_row_per_ind) :, 1:],
-                true_file[2 * (nIndPerGen * n_row_per_ind) :, 1:],
-                n_row_per_ind,
-            )
-
-        else:
-            abs_diff = get_abs_diff(
-                new_file[:, 1:],
-                true_file[:, 1:],
-                n_row_per_ind,
-            )
+        abs_diff = get_abs_diff(
+            _comparison_slice(new_file, file_name, n_ind_per_gen, n_row_per_ind),
+            _comparison_slice(true_file, file_name, n_ind_per_gen, n_row_per_ind),
+            n_row_per_ind,
+        )
 
         file_out.write(f"{file_name},{method},abs_diff,{abs_diff}\n")
-
-        if file_name == "segregation":
-            correct_rate = get_correct_rate(
-                new_file[2 * (nIndPerGen * n_row_per_ind) :, 1:],
-                true_file[2 * (nIndPerGen * n_row_per_ind) :, 1:],
-            )
-            file_out.write(f"{file_name},{method},correct_rate,{correct_rate}\n")
 
 
 def assess_accuracy(
@@ -493,66 +610,42 @@ def assess_accuracy(
 ):
     """Assess output accuracy against truth files."""
 
-    if metafounder:
-        file_to_check = [
-            "dosage",
-            "geno_prob",
-            "phased_geno_prob",
-        ]
-    else:
-        file_to_check = [
-            "dosage",
-            "geno_0.333",
-            "hap_0.5",
-            "geno_prob",
-            "phased_geno_prob",
-        ]
-    if method == "multi":
-        file_to_check.append("seg_prob")
-
-    nGen = int(get_params["nGen"])
-    nIndPerGen = int(get_params["nInd"] / nGen)
-    nLociAll = int(get_params["nLociAll"])
+    file_to_check = _accuracy_files(method, metafounder)
+    n_gen, n_ind_per_gen, n_loci_all = _accuracy_dimensions(get_params)
 
     print(" ")
     print(f"Test: {name}")
 
     for file_name in file_to_check:
-        if file_name in ["dosage", "geno_0.333"]:
-            n_row_per_ind = 1
-        elif file_name in ["phased_geno_prob", "seg_prob"]:
-            n_row_per_ind = 4
-        elif file_name == "geno_prob":
-            n_row_per_ind = 3
-        elif file_name == "hap_0.5":
-            n_row_per_ind = 2
-
+        n_row_per_ind = ROWS_PER_INDIVIDUAL[file_name]
         file_path = os.path.join(output_path, f".{file_name}.txt")
-        if metafounder:
-            true_path = os.path.join(sim_path, f"true-metafounder_{file_name}.txt")
-        elif x_chr:
-            true_path = os.path.join(sim_path, f"true-X_chr_{file_name}.txt")
-        else:
-            true_path = os.path.join(sim_path, f"true-{file_name}.txt")
+        true_path = _truth_file_path(
+            sim_path,
+            file_name,
+            metafounder=metafounder,
+            x_chr=x_chr,
+        )
 
-        new_file = np.loadtxt(file_path, usecols=np.arange(1, nLociAll + 1))
-        true_file = np.loadtxt(true_path, usecols=np.arange(1, nLociAll + 1))
+        new_file = _load_accuracy_matrix(file_path, n_loci_all)
+        true_file = _load_accuracy_matrix(true_path, n_loci_all)
 
         marker_corr = [str(get_marker_corr(new_file[:, :], true_file[:, :]))]
-        for gen in range(nGen):
+        for gen in range(n_gen):
             marker_corr.append(
                 str(
                     get_marker_corr(
-                        new_file[
-                            gen
-                            * (nIndPerGen * n_row_per_ind) : (gen + 1)
-                            * (nIndPerGen * n_row_per_ind)
-                        ],
-                        true_file[
-                            gen
-                            * (nIndPerGen * n_row_per_ind) : (gen + 1)
-                            * (nIndPerGen * n_row_per_ind)
-                        ],
+                        _generation_slice(
+                            new_file,
+                            gen,
+                            n_ind_per_gen,
+                            n_row_per_ind,
+                        ),
+                        _generation_slice(
+                            true_file,
+                            gen,
+                            n_ind_per_gen,
+                            n_row_per_ind,
+                        ),
                     )
                 )
             )
@@ -560,15 +653,15 @@ def assess_accuracy(
         file_out.write(f"{file_name},{method},marker_corr,{marker_corr}\n")
 
         ind_corr = [
-            str(get_ind_corr(new_file[:, :], true_file[:, :], nIndPerGen, None))
+            str(get_ind_corr(new_file[:, :], true_file[:, :], n_ind_per_gen, None))
         ]
-        for gen in range(nGen):
+        for gen in range(n_gen):
             ind_corr.append(
                 str(
                     get_ind_corr(
                         new_file[:, 1:],
                         true_file[:, 1:],
-                        nIndPerGen,
+                        n_ind_per_gen,
                         n_row_per_ind,
                         gen,
                         gen + 1,
@@ -579,58 +672,112 @@ def assess_accuracy(
         file_out.write(f"{file_name},{method},ind_corr,{ind_corr}\n")
 
 
-def _prepare_hybrid_seg_file(
-    get_params,
+def _read_map_marker_names(path):
+    """Return marker names from an AlphaPeel map file."""
+
+    with open(path, "r") as file:
+        return [line.split()[1] for line in file if line.strip()]
+
+
+def _subset_locus_file(source_path, target_path, columns):
+    """Write a genotype or sequence file containing only selected loci."""
+
+    data = np.loadtxt(source_path, dtype=np.int64)
+    np.savetxt(target_path, data[:, columns], fmt="%d")
+
+
+def _hybrid_multi_output_path(output_path):
+    """Return the first-stage multi-locus output directory for a hybrid case."""
+
+    return os.path.join(output_path, "multi_stage")
+
+
+def _hybrid_subset_input_dir(output_path):
+    """Return the directory for first-stage subset genotype or sequence inputs."""
+
+    return os.path.join(output_path, "subset_inputs")
+
+
+def _prepare_hybrid_multi_inputs(
     sim_path,
-    run_name,
-    est_start_alt_allele_prob,
-    est_geno_error_prob,
-    est_seq_error_prob,
     seq_file,
-    alt_allele_prob_file,
-    est_alt_allele_prob,
     metafounder,
     x_chr,
+    output_path,
 ):
-    """Create the hybrid segregation fixture from the matching multi output."""
+    """Create subset inputs for the first stage of a hybrid benchmark."""
 
-    multi_name = build_accuracy_case_name(
-        "multi",
-        est_start_alt_allele_prob,
-        est_geno_error_prob,
-        est_seq_error_prob,
-        seq_file,
-        alt_allele_prob_file,
-        est_alt_allele_prob,
-        metafounder,
-        x_chr,
+    subset_input_dir = _hybrid_subset_input_dir(output_path)
+    ensure_directory(subset_input_dir)
+
+    map_path = _fixture_file_path(
+        sim_path,
+        "map_file",
+        metafounder=metafounder,
+        x_chr=x_chr,
     )
-    multi_path = build_accuracy_output_path(multi_name, run_name)
+    seg_map_path = _fixture_file_path(
+        sim_path,
+        "seg_map_file",
+        metafounder=metafounder,
+        x_chr=x_chr,
+    )
+    full_markers = _read_map_marker_names(map_path)
+    subset_markers = _read_map_marker_names(seg_map_path)
+    marker_columns = {marker: index + 1 for index, marker in enumerate(full_markers)}
+    missing_markers = [
+        marker for marker in subset_markers if marker not in marker_columns
+    ]
+    if missing_markers:
+        raise ValueError(
+            "Hybrid seg_map_file contains markers that are not in map_file: "
+            f"{missing_markers}"
+        )
 
-    nSegMap = int(get_params["nSegMap"])
-    nLociAll = int(get_params["nLociAll"])
+    columns = [0] + [marker_columns[marker] for marker in subset_markers]
 
-    subset = np.floor(np.linspace(1, nLociAll, num=nSegMap)).astype(dtype=int)
-    subset = np.concatenate(([0], subset))
-    seg_path = os.path.join(multi_path, ".seg_prob.txt")
-    seg_file_path = os.path.join(sim_path, "seg_file.txt")
+    locus_file_name = "seq_file" if seq_file else "geno_file"
+    source_path = _fixture_file_path(
+        sim_path,
+        locus_file_name,
+        metafounder=metafounder,
+        x_chr=x_chr,
+    )
+    subset_path = os.path.join(subset_input_dir, f"{locus_file_name}.txt")
+    _subset_locus_file(source_path, subset_path, columns)
 
-    seg = np.loadtxt(seg_path)
-    np.savetxt(seg_file_path, seg[:, subset])
+    return {
+        locus_file_name: subset_path,
+        "map_file": seg_map_path,
+    }
+
+
+def _run_commands(commands):
+    """Run a sequence of shell commands."""
+
+    for command in commands:
+        run_command(command)
+
+
+def _run_tinypeel_direct_sequence(argvs):
+    """Run a sequence of direct tinypeel calls."""
+
+    for argv in argvs:
+        run_tinypeel_direct(argv)
 
 
 def run_accuracy_case(
     get_params,
     sim_path,
     method,
-    est_start_alt_allele_prob,
-    est_geno_error_prob,
-    est_seq_error_prob,
-    seq_file,
-    alt_allele_prob_file,
-    est_alt_allele_prob,
-    metafounder,
-    x_chr,
+    est_start_alt_allele_prob=False,
+    est_geno_error_prob=False,
+    est_seq_error_prob=False,
+    seq_file=False,
+    alt_allele_prob_file=False,
+    est_alt_allele_prob=False,
+    metafounder=False,
+    x_chr=False,
     benchmark=None,
     run_name="test_accu",
 ):
@@ -651,10 +798,93 @@ def run_accuracy_case(
     prepare_directory(output_path)
 
     if method == "hybrid":
-        _prepare_hybrid_seg_file(
-            get_params,
+        multi_output_path = _hybrid_multi_output_path(output_path)
+        prepare_directory(multi_output_path)
+        multi_file_overrides = _prepare_hybrid_multi_inputs(
             sim_path,
-            run_name,
+            seq_file,
+            metafounder,
+            x_chr,
+            output_path,
+        )
+        hybrid_file_overrides = {
+            "seg_file": os.path.join(multi_output_path, ".seg_prob.txt")
+        }
+
+        if run_name == "test_accu":
+            commands = [
+                generate_command(
+                    sim_path,
+                    "multi",
+                    multi_output_path,
+                    est_start_alt_allele_prob,
+                    est_geno_error_prob,
+                    est_seq_error_prob,
+                    seq_file,
+                    alt_allele_prob_file,
+                    est_alt_allele_prob,
+                    metafounder,
+                    x_chr,
+                    file_overrides=multi_file_overrides,
+                    extra_input_files=["map_file"],
+                ),
+                generate_command(
+                    sim_path,
+                    "single",
+                    output_path,
+                    est_start_alt_allele_prob,
+                    est_geno_error_prob,
+                    est_seq_error_prob,
+                    seq_file,
+                    alt_allele_prob_file,
+                    est_alt_allele_prob,
+                    metafounder,
+                    x_chr,
+                    file_overrides=hybrid_file_overrides,
+                    input_files_method="hybrid",
+                ),
+            ]
+            benchmark(_run_commands, commands)
+        else:
+            argvs = [
+                generate_accuracy_argv(
+                    sim_path,
+                    "multi",
+                    est_start_alt_allele_prob,
+                    est_geno_error_prob,
+                    est_seq_error_prob,
+                    seq_file,
+                    alt_allele_prob_file,
+                    est_alt_allele_prob,
+                    metafounder,
+                    x_chr,
+                    multi_output_path,
+                    file_overrides=multi_file_overrides,
+                    extra_input_files=["map_file"],
+                ),
+                generate_accuracy_argv(
+                    sim_path,
+                    "single",
+                    est_start_alt_allele_prob,
+                    est_geno_error_prob,
+                    est_seq_error_prob,
+                    seq_file,
+                    alt_allele_prob_file,
+                    est_alt_allele_prob,
+                    metafounder,
+                    x_chr,
+                    output_path,
+                    file_overrides=hybrid_file_overrides,
+                    input_files_method="hybrid",
+                ),
+            ]
+            _run_tinypeel_direct_sequence(argvs)
+
+    elif run_name == "test_accu":
+        command = generate_command(
+            sim_path,
+            method,
+            output_path,
             est_start_alt_allele_prob,
             est_geno_error_prob,
             est_seq_error_prob,
@@ -664,9 +894,6 @@ def run_accuracy_case(
             metafounder,
             x_chr,
         )
-
-    if run_name == "test_accu":
-        command = generate_command(sim_path, method, output_path)
         benchmark(run_command, command)
 
     else:
@@ -683,7 +910,6 @@ def run_accuracy_case(
             x_chr,
             output_path,
         )
-
         run_tinypeel_direct(argv)
 
     report_path = build_accuracy_report_path(run_name)
@@ -769,8 +995,8 @@ def get_ind_corr(output, real, nIndPerGen, n_row_per_ind, start_gen=None, end_ge
         accus = np.array(
             [np.corrcoef(real[i, :], output[i, :])[0, 1] for i in range(real.shape[0])]
         )
-        if type(start_gen) == int:
-            if type(end_gen) != int:
+        if isinstance(start_gen, int):
+            if not isinstance(end_gen, int):
                 accus = accus[start_gen * (nIndPerGen * n_row_per_ind) :]
             else:
                 accus = accus[
