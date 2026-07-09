@@ -1,6 +1,5 @@
 import argparse
 import os
-import shlex
 import shutil
 import subprocess
 import warnings
@@ -112,9 +111,10 @@ def build_accuracy_report_path(run_name="test_accu"):
 
 
 def run_command(command):
+    use_shell = isinstance(command, str)
     result = subprocess.run(
         command,
-        shell=True,
+        shell=use_shell,
         text=True,
         capture_output=True,
     )
@@ -355,12 +355,6 @@ def _add_argument(argv, key, value):
         argv.append(value)
 
 
-def _argv_to_command(executable, argv):
-    """Convert an argv-style command to a shell-safe command string."""
-
-    return " ".join(shlex.quote(arg) for arg in [executable] + argv)
-
-
 def generate_accuracy_argv(
     sim_path,
     method,
@@ -438,7 +432,7 @@ def generate_command(
     extra_input_files=None,
     input_files_method=None,
 ):
-    """Generate the shell command used to run AlphaPeel for a test case.
+    """Generate the command used to run AlphaPeel for a test case.
 
     :param sim_path: Directory containing simulation input files.
     :type sim_path: str
@@ -447,8 +441,8 @@ def generate_command(
     :type method: str
     :param output_path: Output directory for AlphaPeel results.
     :type output_path: str
-    :return: The command string to pass to ``os.system``.
-    :rtype: str
+    :return: The command argv to pass to ``subprocess.run``.
+    :rtype: list[str]
     """
 
     argv = generate_accuracy_argv(
@@ -468,7 +462,7 @@ def generate_command(
         input_files_method=input_files_method,
     )
 
-    return _argv_to_command("AlphaPeel", argv)
+    return ["AlphaPeel", *argv]
 
 
 def run_tinypeel_direct(argv):
