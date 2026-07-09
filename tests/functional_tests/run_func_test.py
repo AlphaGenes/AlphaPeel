@@ -27,17 +27,28 @@ def read_file(file_path, test_alt_allele_prob=False, **kwargs):
         MF = values[0]
         values.pop(0)
 
-    if "decimal_place" in kwargs.keys():
-        # round the data if data and rounding decimal place exist
+    decimal_place = kwargs.get("decimal_place")
+    if test_alt_allele_prob:
+        # Alt allele probability files have only numeric probability columns.
+        if decimal_place is None:
+            values = [
+                [float(data) for data in line] if line else line for line in values
+            ]
+        else:
+            values = [
+                [round(float(data), decimal_place) for data in line] if line else line
+                for line in values
+            ]
+    elif decimal_place is not None:
+        # Round the data columns while preserving the leading id column.
         values = [
-            [line[0]]
-            + [round(float(data), kwargs["decimal_place"]) for data in line[1:]]
+            [line[0]] + [round(float(data), decimal_place) for data in line[1:]]
             if line
             else line
             for line in values
         ]
     else:
-        # convert data to float for comparison if data exists
+        # Convert data columns to float for comparison while preserving ids.
         values = [
             [line[0]] + [float(data) for data in line[1:]] if line else line
             for line in values
