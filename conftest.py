@@ -40,7 +40,7 @@ def pytest_terminal_summary(terminalreporter):
                 ("value", float),
             ],
         )
-    except UserWarning:
+    except FileNotFoundError:
         return
 
     terminalreporter.write_sep("=", " Accuracy")
