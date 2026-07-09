@@ -22,7 +22,7 @@ dependencies = [
     "numpy>=1.19",
     "numba>=0.50.0"
 ]
-requires-python = ">= 3.7"
+requires-python = ">= 3.8"
 
 [project.scripts]
 # correspond to entry_points
