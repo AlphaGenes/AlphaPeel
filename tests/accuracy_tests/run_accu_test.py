@@ -7,6 +7,7 @@ from src.utils import run_accuracy_case, sim_path
     [
         ("single"),
         ("multi"),
+        ("hybrid"),
     ],
 )
 def test_accu(

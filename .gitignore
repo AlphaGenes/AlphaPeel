@@ -10,6 +10,7 @@ __pycache__/
 **/.Rhistory
 **/*.Rproj
 **/segfile.txt
+.vscode
 AlphaPeel
 AlphaPeel_env
 bin
