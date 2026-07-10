@@ -531,6 +531,188 @@ def _generation_slice(matrix, gen, n_ind_per_gen, n_row_per_ind):
     return matrix[start:end]
 
 
+def _load_accuracy_pair(output_path, sim_path, file_name, n_loci_all, **truth_kwargs):
+    """Load one output/truth matrix pair for an accuracy comparison."""
+
+    file_path = os.path.join(output_path, f".{file_name}.txt")
+    true_path = _truth_file_path(sim_path, file_name, **truth_kwargs)
+
+    return (
+        _load_accuracy_matrix(file_path, n_loci_all),
+        _load_accuracy_matrix(true_path, n_loci_all),
+    )
+
+
+def _test_truth_file_path(sim_path, file_name):
+    """Build the truth path used by the pytest accuracy report."""
+
+    return os.path.join(sim_path, f"true-{file_name}.txt")
+
+
+def _load_test_accuracy_pair(output_path, sim_path, file_name, n_loci_all):
+    """Load one output/truth matrix pair for the pytest accuracy report."""
+
+    file_path = os.path.join(output_path, f".{file_name}.txt")
+    true_path = _test_truth_file_path(sim_path, file_name)
+
+    try:
+        output = _load_accuracy_matrix(file_path, n_loci_all)
+    except ValueError:
+        print(f"Error loading {file_path}")
+        return None
+
+    try:
+        truth = _load_accuracy_matrix(true_path, n_loci_all)
+    except ValueError:
+        print(f"Error loading {true_path}")
+        return None
+
+    return output, truth
+
+
+def _mask_x_chr_hap_missing(output, truth, file_name, x_chr):
+    """Mask missing X chromosome haplotype truth values before comparison."""
+
+    if x_chr and file_name == "hap_0.5":
+        output[truth == 9] = 0
+        truth[truth == 9] = 0
+
+
+def _overall_comparison(output, truth, file_name, n_ind_per_gen, n_row_per_ind):
+    """Return output/truth slices used for whole-file metrics."""
+
+    return (
+        _comparison_slice(output, file_name, n_ind_per_gen, n_row_per_ind),
+        _comparison_slice(truth, file_name, n_ind_per_gen, n_row_per_ind),
+    )
+
+
+def _ind_corr_for_file(output, truth, file_name, n_ind_per_gen, n_row_per_ind):
+    """Return individual correlation with seg_prob generation handling."""
+
+    if file_name == "seg_prob":
+        return get_ind_corr(
+            output,
+            truth,
+            n_ind_per_gen,
+            n_row_per_ind,
+            start_gen=SEG_PROB_START_GEN,
+        )
+
+    return get_ind_corr(output, truth, n_ind_per_gen, n_row_per_ind)
+
+
+def _write_accuracy_metric(file_out, file_name, label, metric_name, value):
+    """Write one metric line to an accuracy report."""
+
+    file_out.write(f"{file_name},{label},{metric_name},{value}\n")
+
+
+def _seg_prob_generation_is_skipped(file_name, gen):
+    """Return whether a per-generation seg_prob metric should be reported as nan."""
+
+    return file_name == "seg_prob" and gen < SEG_PROB_START_GEN
+
+
+def _per_generation_metric(
+    metric_func,
+    output,
+    truth,
+    file_name,
+    n_gen,
+    n_ind_per_gen,
+    n_row_per_ind,
+    *metric_args,
+):
+    """Return a list of per-generation metric values as strings."""
+
+    values = []
+    for gen in range(n_gen):
+        if _seg_prob_generation_is_skipped(file_name, gen):
+            values.append("nan")
+            continue
+
+        values.append(
+            str(
+                metric_func(
+                    _generation_slice(output, gen, n_ind_per_gen, n_row_per_ind),
+                    _generation_slice(truth, gen, n_ind_per_gen, n_row_per_ind),
+                    *metric_args,
+                )
+            )
+        )
+
+    return values
+
+
+def _benchmark_metric_values(
+    metric_func,
+    output,
+    truth,
+    file_name,
+    n_gen,
+    n_ind_per_gen,
+    n_row_per_ind,
+    *metric_args,
+):
+    """Return whole-file and per-generation benchmark metric values."""
+
+    overall_output, overall_truth = _overall_comparison(
+        output, truth, file_name, n_ind_per_gen, n_row_per_ind
+    )
+    overall_value = metric_func(overall_output, overall_truth, *metric_args)
+
+    return [str(overall_value)] + _per_generation_metric(
+        metric_func,
+        output,
+        truth,
+        file_name,
+        n_gen,
+        n_ind_per_gen,
+        n_row_per_ind,
+        *metric_args,
+    )
+
+
+def _benchmark_ind_corr_values(
+    output,
+    truth,
+    file_name,
+    n_gen,
+    n_ind_per_gen,
+    n_row_per_ind,
+):
+    """Return whole-file and per-generation individual-correlation values."""
+
+    overall_start_gen = None
+    if file_name == "seg_prob":
+        overall_start_gen = SEG_PROB_START_GEN
+
+    values = [
+        str(
+            get_ind_corr(
+                output,
+                truth,
+                n_ind_per_gen,
+                n_row_per_ind,
+                start_gen=overall_start_gen,
+            )
+        )
+    ]
+
+    return values + _per_generation_metric(
+        get_ind_corr,
+        output,
+        truth,
+        file_name,
+        n_gen,
+        n_ind_per_gen,
+        n_row_per_ind,
+        n_ind_per_gen,
+        n_row_per_ind,
+    )
+
+
 def assess_test_accuracy(
     sim_path,
     get_params,
@@ -543,61 +725,43 @@ def assess_test_accuracy(
 
     for file_name in file_to_check:
         n_row_per_ind = ROWS_PER_INDIVIDUAL[file_name]
-        file_path = os.path.join(output_path, f".{file_name}.txt")
-        true_path = os.path.join(sim_path, f"true-{file_name}.txt")
-
-        try:
-            new_file = _load_accuracy_matrix(file_path, n_loci_all)
-        except ValueError:
-            print(f"Error loading {file_path}")
-            continue
-
-        try:
-            true_file = _load_accuracy_matrix(true_path, n_loci_all)
-        except ValueError:
-            print(f"Error loading {true_path}")
-            continue
-
-        marker_corr = get_marker_corr(
-            _comparison_slice(new_file, file_name, n_ind_per_gen, n_row_per_ind),
-            _comparison_slice(true_file, file_name, n_ind_per_gen, n_row_per_ind),
+        accuracy_pair = _load_test_accuracy_pair(
+            output_path, sim_path, file_name, n_loci_all
         )
+        if accuracy_pair is None:
+            continue
 
-        file_out.write(f"{file_name},{method},marker_corr,{marker_corr}\n")
+        new_file, true_file = accuracy_pair
+        comparison_output, comparison_truth = _overall_comparison(
+            new_file, true_file, file_name, n_ind_per_gen, n_row_per_ind
+        )
+        marker_corr = get_marker_corr(
+            comparison_output,
+            comparison_truth,
+        )
+        _write_accuracy_metric(file_out, file_name, method, "marker_corr", marker_corr)
 
-        if file_name == "seg_prob":
-            ind_corr = get_ind_corr(
-                new_file[:, :],
-                true_file[:, :],
-                n_ind_per_gen,
-                n_row_per_ind,
-                start_gen=SEG_PROB_START_GEN,
-            )
-        else:
-            ind_corr = get_ind_corr(
-                new_file[:, :],
-                true_file[:, :],
-                n_ind_per_gen,
-                n_row_per_ind,
-            )
-
-        file_out.write(f"{file_name},{method},ind_corr,{ind_corr}\n")
-
-        abs_diff = get_abs_diff(
-            _comparison_slice(new_file, file_name, n_ind_per_gen, n_row_per_ind),
-            _comparison_slice(true_file, file_name, n_ind_per_gen, n_row_per_ind),
+        ind_corr = _ind_corr_for_file(
+            new_file,
+            true_file,
+            file_name,
+            n_ind_per_gen,
             n_row_per_ind,
         )
+        _write_accuracy_metric(file_out, file_name, method, "ind_corr", ind_corr)
 
-        file_out.write(f"{file_name},{method},abs_diff,{abs_diff}\n")
+        abs_diff = get_abs_diff(
+            comparison_output,
+            comparison_truth,
+            n_row_per_ind,
+        )
+        _write_accuracy_metric(file_out, file_name, method, "abs_diff", abs_diff)
 
         if file_name == "seg_prob":
-            correct_rate = get_correct_rate(
-                _comparison_slice(new_file, file_name, n_ind_per_gen, n_row_per_ind),
-                _comparison_slice(true_file, file_name, n_ind_per_gen, n_row_per_ind),
+            correct_rate = get_correct_rate(comparison_output, comparison_truth)
+            _write_accuracy_metric(
+                file_out, file_name, method, "correct_rate", correct_rate
             )
-
-            file_out.write(f"{file_name},{method},correct_rate,{correct_rate}\n")
 
 
 def assess_accuracy(
@@ -620,178 +784,62 @@ def assess_accuracy(
 
     for file_name in file_to_check:
         n_row_per_ind = ROWS_PER_INDIVIDUAL[file_name]
-        file_path = os.path.join(output_path, f".{file_name}.txt")
-        true_path = _truth_file_path(
+        new_file, true_file = _load_accuracy_pair(
+            output_path,
             sim_path,
             file_name,
+            n_loci_all,
             metafounder=metafounder,
             x_chr=x_chr,
         )
+        _mask_x_chr_hap_missing(new_file, true_file, file_name, x_chr)
 
-        new_file = _load_accuracy_matrix(file_path, n_loci_all)
-        true_file = _load_accuracy_matrix(true_path, n_loci_all)
+        marker_corr = _benchmark_metric_values(
+            get_marker_corr,
+            new_file,
+            true_file,
+            file_name,
+            n_gen,
+            n_ind_per_gen,
+            n_row_per_ind,
+        )
+        _write_accuracy_metric(file_out, file_name, name, "marker_corr", marker_corr)
 
-        if x_chr and file_name == "hap_0.5":
-            new_file[true_file == 9] = 0
-            true_file[true_file == 9] = 0
+        ind_corr = _benchmark_ind_corr_values(
+            new_file,
+            true_file,
+            file_name,
+            n_gen,
+            n_ind_per_gen,
+            n_row_per_ind,
+        )
+        _write_accuracy_metric(file_out, file_name, name, "ind_corr", ind_corr)
 
-        marker_corr = [
-            str(
-                get_marker_corr(
-                    _comparison_slice(
-                        new_file, file_name, n_ind_per_gen, n_row_per_ind
-                    ),
-                    _comparison_slice(
-                        true_file, file_name, n_ind_per_gen, n_row_per_ind
-                    ),
-                )
-            )
-        ]
-        for gen in range(n_gen):
-            if gen in [0, 1] and file_name == "seg_prob":
-                marker_corr.append("nan")
-                continue
-            marker_corr.append(
-                str(
-                    get_marker_corr(
-                        _generation_slice(
-                            new_file,
-                            gen,
-                            n_ind_per_gen,
-                            n_row_per_ind,
-                        ),
-                        _generation_slice(
-                            true_file,
-                            gen,
-                            n_ind_per_gen,
-                            n_row_per_ind,
-                        ),
-                    )
-                )
-            )
-
-        file_out.write(f"{file_name},{name},marker_corr,{marker_corr}\n")
+        abs_diff = _benchmark_metric_values(
+            get_abs_diff,
+            new_file,
+            true_file,
+            file_name,
+            n_gen,
+            n_ind_per_gen,
+            n_row_per_ind,
+            n_row_per_ind,
+        )
+        _write_accuracy_metric(file_out, file_name, name, "abs_diff", abs_diff)
 
         if file_name == "seg_prob":
-            ind_corr = [
-                str(
-                    get_ind_corr(
-                        new_file[:, :],
-                        true_file[:, :],
-                        n_ind_per_gen,
-                        n_row_per_ind,
-                        start_gen=SEG_PROB_START_GEN,
-                    )
-                )
-            ]
-        else:
-            ind_corr = [
-                str(
-                    get_ind_corr(
-                        new_file[:, :],
-                        true_file[:, :],
-                        n_ind_per_gen,
-                        n_row_per_ind,
-                    )
-                )
-            ]
-        for gen in range(n_gen):
-            if gen in [0, 1] and file_name == "seg_prob":
-                ind_corr.append("nan")
-                continue
-            ind_corr.append(
-                str(
-                    get_ind_corr(
-                        new_file[:, :],
-                        true_file[:, :],
-                        n_ind_per_gen,
-                        n_row_per_ind,
-                        gen,
-                        gen + 1,
-                    )
-                )
+            correct_rate = _benchmark_metric_values(
+                get_correct_rate,
+                new_file,
+                true_file,
+                file_name,
+                n_gen,
+                n_ind_per_gen,
+                n_row_per_ind,
             )
-
-        file_out.write(f"{file_name},{name},ind_corr,{ind_corr}\n")
-
-        abs_diff = [
-            str(
-                get_abs_diff(
-                    _comparison_slice(
-                        new_file, file_name, n_ind_per_gen, n_row_per_ind
-                    ),
-                    _comparison_slice(
-                        true_file, file_name, n_ind_per_gen, n_row_per_ind
-                    ),
-                    n_row_per_ind,
-                )
+            _write_accuracy_metric(
+                file_out, file_name, name, "correct_rate", correct_rate
             )
-        ]
-
-        for gen in range(n_gen):
-            if gen in [0, 1] and file_name == "seg_prob":
-                abs_diff.append("nan")
-                continue
-            abs_diff.append(
-                str(
-                    get_abs_diff(
-                        _generation_slice(
-                            new_file,
-                            gen,
-                            n_ind_per_gen,
-                            n_row_per_ind,
-                        ),
-                        _generation_slice(
-                            true_file,
-                            gen,
-                            n_ind_per_gen,
-                            n_row_per_ind,
-                        ),
-                        n_row_per_ind,
-                    )
-                )
-            )
-
-        file_out.write(f"{file_name},{name},abs_diff,{abs_diff}\n")
-
-        if file_name == "seg_prob":
-            correct_rate = [
-                str(
-                    get_correct_rate(
-                        _comparison_slice(
-                            new_file, file_name, n_ind_per_gen, n_row_per_ind
-                        ),
-                        _comparison_slice(
-                            true_file, file_name, n_ind_per_gen, n_row_per_ind
-                        ),
-                    )
-                )
-            ]
-
-            for gen in range(n_gen):
-                if gen in [0, 1] and file_name == "seg_prob":
-                    correct_rate.append("nan")
-                    continue
-                correct_rate.append(
-                    str(
-                        get_correct_rate(
-                            _generation_slice(
-                                new_file,
-                                gen,
-                                n_ind_per_gen,
-                                n_row_per_ind,
-                            ),
-                            _generation_slice(
-                                true_file,
-                                gen,
-                                n_ind_per_gen,
-                                n_row_per_ind,
-                            ),
-                        )
-                    )
-                )
-
-            file_out.write(f"{file_name},{name},correct_rate,{correct_rate}\n")
 
 
 def _read_map_marker_names(path):
