@@ -48,6 +48,7 @@ ROWS_PER_INDIVIDUAL = {
     "seg_prob": 4,
 }
 SEG_PROB_START_GEN = 2
+HAP_FILE = "hap_0.5"
 
 
 def get_params():
@@ -713,6 +714,167 @@ def _benchmark_ind_corr_values(
     )
 
 
+def _safe_rate(numerator, denominator):
+    """Return a rate, or nan when the denominator is empty."""
+
+    if denominator == 0:
+        return np.nan
+
+    return numerator / denominator
+
+
+def get_hap_switch_error_metrics(called_file, true_file, n_ind, n_loci_all):
+    """Calculate switch, phase, and related haplotype call metrics."""
+
+    switch_error_count = 0
+    phase_error_count = 0
+    uncalled_count = 0
+    wrong_homo_count = 0
+    true_hetero_count = 0
+    homo_count = 0
+    hetero_count = 0
+
+    for ind in range(n_ind):
+        hap_p_new = called_file[ind * 2]
+        hap_m_new = called_file[ind * 2 + 1]
+        hap_p_true = true_file[ind * 2]
+        hap_m_true = true_file[ind * 2 + 1]
+
+        switched = False
+        for loci in range(n_loci_all):
+            if hap_p_true[loci] == hap_m_true[loci]:
+                homo_count += 1
+            else:
+                hetero_count += 1
+
+            if hap_p_new[loci] == 9 or hap_m_new[loci] == 9:
+                uncalled_count += 1
+                continue
+
+            if hap_p_true[loci] + hap_m_true[loci] == 1:
+                if hap_p_new[loci] == hap_m_new[loci]:
+                    wrong_homo_count += 1
+                    continue
+
+                true_hetero_count += 1
+                if hap_p_new[loci] != hap_p_true[loci]:
+                    phase_error_count += 1
+
+                if (hap_p_new[loci] != hap_p_true[loci] and switched is False) or (
+                    hap_p_new[loci] == hap_p_true[loci] and switched is True
+                ):
+                    switched = not switched
+                    switch_error_count += 1
+
+    genotype_count = n_ind * n_loci_all
+    switch_opportunity_count = n_ind * (n_loci_all - 1)
+
+    return [
+        (
+            "switch_error_rate",
+            _safe_rate(switch_error_count, switch_opportunity_count),
+        ),
+        ("phase_error_rate", _safe_rate(phase_error_count, genotype_count)),
+        ("uncalled_rate", _safe_rate(uncalled_count, genotype_count)),
+        ("wrong_homozygote_rate", _safe_rate(wrong_homo_count, genotype_count)),
+        (
+            "correct_heterozygote_rate",
+            _safe_rate(true_hetero_count, genotype_count),
+        ),
+        ("homozygote_count", homo_count),
+        ("heterozygote_count", hetero_count),
+        ("homo_to_hetero_ratio", _safe_rate(homo_count, hetero_count)),
+    ]
+
+
+def _benchmark_hap_switch_error_metrics(output, truth, n_gen, n_ind_per_gen):
+    """Return whole-file and per-generation switch-error metrics."""
+
+    n_loci_all = output.shape[1]
+    metric_values = [
+        (metric_name, [str(value)])
+        for metric_name, value in get_hap_switch_error_metrics(
+            output,
+            truth,
+            n_gen * n_ind_per_gen,
+            n_loci_all,
+        )
+    ]
+    values_by_metric = dict(metric_values)
+
+    for gen in range(n_gen):
+        gen_output = _generation_slice(
+            output,
+            gen,
+            n_ind_per_gen,
+            ROWS_PER_INDIVIDUAL[HAP_FILE],
+        )
+        gen_truth = _generation_slice(
+            truth,
+            gen,
+            n_ind_per_gen,
+            ROWS_PER_INDIVIDUAL[HAP_FILE],
+        )
+
+        for metric_name, value in get_hap_switch_error_metrics(
+            gen_output,
+            gen_truth,
+            n_ind_per_gen,
+            n_loci_all,
+        ):
+            values_by_metric[metric_name].append(str(value))
+
+    return [
+        (metric_name, values_by_metric[metric_name]) for metric_name, _ in metric_values
+    ]
+
+
+def _write_test_hap_switch_error_metrics(
+    file_out,
+    file_name,
+    method,
+    output,
+    truth,
+    n_gen,
+    n_ind_per_gen,
+):
+    """Write test accuracy switch-error metrics for haplotype output."""
+
+    for metric_name, value in get_hap_switch_error_metrics(
+        output,
+        truth,
+        n_gen * n_ind_per_gen,
+        output.shape[1],
+    ):
+        if metric_name in [
+            "homozygote_count",
+            "heterozygote_count",
+            "homo_to_hetero_ratio",
+        ]:
+            continue
+        _write_accuracy_metric(file_out, file_name, method, metric_name, value)
+
+
+def _write_benchmark_hap_switch_error_metrics(
+    file_out,
+    file_name,
+    name,
+    output,
+    truth,
+    n_gen,
+    n_ind_per_gen,
+):
+    """Write benchmark switch-error metrics for haplotype output."""
+
+    for metric_name, values in _benchmark_hap_switch_error_metrics(
+        output,
+        truth,
+        n_gen,
+        n_ind_per_gen,
+    ):
+        _write_accuracy_metric(file_out, file_name, name, metric_name, values)
+
+
 def assess_test_accuracy(
     sim_path,
     get_params,
@@ -721,7 +883,7 @@ def assess_test_accuracy(
     file_out,
 ):
     file_to_check = _accuracy_files(method)
-    _, n_ind_per_gen, n_loci_all = _accuracy_dimensions(get_params)
+    n_gen, n_ind_per_gen, n_loci_all = _accuracy_dimensions(get_params)
 
     for file_name in file_to_check:
         n_row_per_ind = ROWS_PER_INDIVIDUAL[file_name]
@@ -756,6 +918,17 @@ def assess_test_accuracy(
             n_row_per_ind,
         )
         _write_accuracy_metric(file_out, file_name, method, "abs_diff", abs_diff)
+
+        if file_name == "hap_0.5":
+            _write_test_hap_switch_error_metrics(
+                file_out,
+                file_name,
+                method,
+                new_file,
+                true_file,
+                n_gen,
+                n_ind_per_gen,
+            )
 
         if file_name == "seg_prob":
             correct_rate = get_correct_rate(comparison_output, comparison_truth)
@@ -826,6 +999,17 @@ def assess_accuracy(
             n_row_per_ind,
         )
         _write_accuracy_metric(file_out, file_name, name, "abs_diff", abs_diff)
+
+        if file_name == "hap_0.5":
+            _write_benchmark_hap_switch_error_metrics(
+                file_out,
+                file_name,
+                name,
+                new_file,
+                true_file,
+                n_gen,
+                n_ind_per_gen,
+            )
 
         if file_name == "seg_prob":
             correct_rate = _benchmark_metric_values(
@@ -1238,54 +1422,22 @@ def calc_switch_error_rate():
     called_file = np.loadtxt(called_path, usecols=np.arange(1, nLociAll + 1))
     true_file = np.loadtxt(true_path, usecols=np.arange(1, nLociAll + 1))
 
-    switch_error_count = 0
-    phase_error_count = 0
-    uncalled_count = 0
-    wrong_homo_count = 0
-    true_hetero_count = 0
-    homo_count = 0
-    hetero_count = 0
+    metrics = dict(get_hap_switch_error_metrics(called_file, true_file, nInd, nLociAll))
 
-    for ind in range(nInd):
-        hap_p_new = called_file[ind * 2]
-        hap_m_new = called_file[ind * 2 + 1]
-        hap_p_true = true_file[ind * 2]
-        hap_m_true = true_file[ind * 2 + 1]
-
-        switched = False
-        for loci in range(nLociAll):
-            if hap_p_true[loci] == hap_m_true[loci]:
-                homo_count += 1
-            else:
-                hetero_count += 1
-            if hap_p_new[loci] == 9 or hap_m_new[loci] == 9:
-                uncalled_count += 1
-                continue
-            if hap_p_true[loci] + hap_m_true[loci] == 1:
-                if hap_p_new[loci] == hap_m_new[loci]:
-                    wrong_homo_count += 1
-                    continue
-                true_hetero_count += 1
-                if hap_p_new[loci] != hap_p_true[loci]:
-                    phase_error_count += 1
-                if (hap_p_new[loci] != hap_p_true[loci] and switched is False) or (
-                    hap_p_new[loci] == hap_p_true[loci] and switched is True
-                ):
-                    switched = not switched
-                    switch_error_count += 1
-
-    print(f"Switch error rate: {switch_error_count / (nInd * (nLociAll - 1))}")
-    print(f"Phase error (intra) rate: {phase_error_count / (nInd * nLociAll)}")
-    print(f"Uncalled rate: {uncalled_count / (nInd * nLociAll)}")
+    print(f"Switch error rate: {metrics['switch_error_rate']}")
+    print(f"Phase error (intra) rate: {metrics['phase_error_rate']}")
+    print(f"Uncalled rate: {metrics['uncalled_rate']}")
     print(
-        f"Proportion of genotypes wrongly called as homozygote: {wrong_homo_count / (nInd * nLociAll)}"
+        "Proportion of genotypes wrongly called as homozygote: "
+        f"{metrics['wrong_homozygote_rate']}"
     )
     print(
-        f"Proportion of genotypes correctly called as heterozygote: {true_hetero_count / (nInd * nLociAll)}"
+        "Proportion of genotypes correctly called as heterozygote: "
+        f"{metrics['correct_heterozygote_rate']}"
     )
-    print(f"Homozygote count in true genotype: {homo_count}")
-    print(f"Heterozygote count in true genotype: {hetero_count}")
-    print(f"Homo to hetero ratio: {homo_count / hetero_count}")
+    print(f"Homozygote count in true genotype: {metrics['homozygote_count']}")
+    print(f"Heterozygote count in true genotype: {metrics['heterozygote_count']}")
+    print(f"Homo to hetero ratio: {metrics['homo_to_hetero_ratio']}")
 
 
 def main():
