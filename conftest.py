@@ -2,7 +2,7 @@ import pytest
 import os
 import shutil
 import numpy as np
-from src.utils import (
+from src.accuracy_core import (
     get_accuracy_benchmark_output_root,
     get_accuracy_benchmark_report_root,
     get_params,

@@ -1,5 +1,6 @@
 import pytest
-from src.utils import run_accuracy_case, sim_path
+from src.accuracy_core import sim_path
+from src.accuracy_runner import run_accuracy_case
 
 
 @pytest.mark.parametrize(
