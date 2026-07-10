@@ -591,6 +591,14 @@ def assess_test_accuracy(
 
         file_out.write(f"{file_name},{method},abs_diff,{abs_diff}\n")
 
+        if file_name == "seg_prob":
+            correct_rate = get_correct_rate(
+                _comparison_slice(new_file, file_name, n_ind_per_gen, n_row_per_ind),
+                _comparison_slice(true_file, file_name, n_ind_per_gen, n_row_per_ind),
+            )
+
+            file_out.write(f"{file_name},{method},correct_rate,{correct_rate}\n")
+
 
 def assess_accuracy(
     sim_path,
@@ -705,6 +713,85 @@ def assess_accuracy(
             )
 
         file_out.write(f"{file_name},{name},ind_corr,{ind_corr}\n")
+
+        abs_diff = [
+            str(
+                get_abs_diff(
+                    _comparison_slice(
+                        new_file, file_name, n_ind_per_gen, n_row_per_ind
+                    ),
+                    _comparison_slice(
+                        true_file, file_name, n_ind_per_gen, n_row_per_ind
+                    ),
+                    n_row_per_ind,
+                )
+            )
+        ]
+
+        for gen in range(n_gen):
+            if gen in [0, 1] and file_name == "seg_prob":
+                abs_diff.append("nan")
+                continue
+            abs_diff.append(
+                str(
+                    get_abs_diff(
+                        _generation_slice(
+                            new_file,
+                            gen,
+                            n_ind_per_gen,
+                            n_row_per_ind,
+                        ),
+                        _generation_slice(
+                            true_file,
+                            gen,
+                            n_ind_per_gen,
+                            n_row_per_ind,
+                        ),
+                        n_row_per_ind,
+                    )
+                )
+            )
+
+        file_out.write(f"{file_name},{name},abs_diff,{abs_diff}\n")
+
+        if file_name == "seg_prob":
+            correct_rate = [
+                str(
+                    get_correct_rate(
+                        _comparison_slice(
+                            new_file, file_name, n_ind_per_gen, n_row_per_ind
+                        ),
+                        _comparison_slice(
+                            true_file, file_name, n_ind_per_gen, n_row_per_ind
+                        ),
+                    )
+                )
+            ]
+
+            for gen in range(n_gen):
+                if gen in [0, 1] and file_name == "seg_prob":
+                    correct_rate.append("nan")
+                    continue
+                correct_rate.append(
+                    str(
+                        get_correct_rate(
+                            _generation_slice(
+                                new_file,
+                                gen,
+                                n_ind_per_gen,
+                                n_row_per_ind,
+                            ),
+                            _generation_slice(
+                                true_file,
+                                gen,
+                                n_ind_per_gen,
+                                n_row_per_ind,
+                            ),
+                        )
+                    )
+                )
+
+            file_out.write(f"{file_name},{name},correct_rate,{correct_rate}\n")
 
 
 def _read_map_marker_names(path):
