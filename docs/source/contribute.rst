@@ -485,17 +485,67 @@ If the tests run successfully, you are expected to see the head of the output si
 
 .. code-block::
 
-    ============================= test session starts ==============================
-    platform linux -- Python 3.11.14, pytest-9.0.2, pluggy-1.6.0
+    ============================================================================================ test session starts =============================================================================================
+    platform darwin -- Python 3.11.11, pytest-9.0.1, pluggy-1.6.0
     benchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
-    rootdir: /home/runner/work/AlphaPeel/AlphaPeel
+    rootdir: /Users/xtang3/AlphaPeel
     configfile: pyproject.toml
-    plugins: benchmark-5.2.3
-    collected 33 items
+    plugins: benchmark-5.2.3, memray-1.9.0
+    collected 16 items                                                                                                                                                                                           
 
-    tests/accuracy_tests/run_accu_test.py ....................               [ 60%]
-    tests/functional_tests/run_func_test.py .............                    [100%]
+    tests/accuracy_tests/run_accu_test.py ...                                                                                                                                                              [ 18%]
+    tests/functional_tests/run_func_test.py .............                                                                                                                                                  [100%]
     ...
+
+Run accuracy benchmarks and visualise the report
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In addition to running ``pytest``, you can run the full accuracy benchmark suite
+directly from Python. This is useful when you want to compare the impact of a
+new change on accuracy and runtime across the configured benchmark cases.
+
+From the root of the repository, run:
+
+.. code-block:: python
+
+    from src.accuracy_runner import run_full_accuracy_suite
+
+    run_full_accuracy_suite(run_name="benchmark")
+
+This writes outputs under ``tests/accuracy_tests/outputs_benchmark`` and writes
+the accuracy report to ``tests/accuracy_tests/reports_benchmark/accu_report.txt``.
+The report is a comma-separated text file with records in the form
+``file_name,label,metric_name,value``. For most accuracy metrics, ``value``
+contains the population metric followed by the metrics for generations 1 to 5.
+Runtime is written separately as ``runtime,<label>,elapsed_seconds,<seconds>``.
+
+You can then visualise the benchmark report:
+
+.. code-block:: python
+
+    from src.accuracy_visualization import create_accuracy_report_visualizations
+
+    create_accuracy_report_visualizations(
+        "tests/accuracy_tests/reports_benchmark/accu_report.txt",
+        "tests/accuracy_tests/reports_benchmark/plots",
+    )
+
+By default, this creates plots for ``marker_corr``, ``abs_diff``, and
+``correct_rate``, together with a separate runtime plot. To focus on a different
+set of metrics or methods, pass explicit selections:
+
+.. code-block:: python
+
+    create_accuracy_report_visualizations(
+        "tests/accuracy_tests/reports_benchmark/accu_report.txt",
+        "tests/accuracy_tests/reports_benchmark/plots",
+        metric_names=("marker_corr", "switch_error_rate", "phase_error_rate"),
+        labels=("single", "multi", "hybrid"),
+    )
+
+These plots are intended as a development aid. They can help you spot whether a
+new implementation improves runtime, changes accuracy, or affects some
+generations more than others before you open a pull request.
 
 .. note::
 
@@ -698,4 +748,3 @@ The above will trigger workflow actions to publish the package on PyPI and docum
 
   * `PyPI <https://pypi.org/project/AlphaPeel>`_
   * `Read the Docs <https://alphapeel.readthedocs.io/en/stable/index.html>`_
-
