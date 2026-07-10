@@ -36,7 +36,7 @@ def pytest_terminal_summary(terminalreporter):
             dtype=[
                 ("file", "U20"),
                 ("method", "U20"),
-                ("metric", "U15"),
+                ("metric", "U30"),
                 ("value", float),
             ],
         )
@@ -68,6 +68,26 @@ def pytest_terminal_summary(terminalreporter):
         elif metric == "correct_rate":
             terminalreporter.write_line(
                 "Summing up the probabilities of the true state from the output data divided by the number of loci being counted."
+            )
+        elif metric == "switch_error_rate":
+            terminalreporter.write_line(
+                "Calculation follows the definition of SER from: https://www.cell.com/hgg-advances/fulltext/S2666-2477(25)00082-X"
+            )
+        elif metric == "phase_error_rate":
+            terminalreporter.write_line(
+                "Calculation follows the definition of PER_intra from: https://www.cell.com/hgg-advances/fulltext/S2666-2477(25)00082-X"
+            )
+        elif metric == "uncalled_rate":
+            terminalreporter.write_line(
+                "The number of loci with haplotypes uncalled divided by the total number of loci."
+            )
+        elif metric == "wrong_homozygote_rate":
+            terminalreporter.write_line(
+                "The number of loci that are called homozygote but are actually heterozygote, divided by the total number of loci."
+            )
+        elif metric == "true heterozygote rate":
+            terminalreporter.write_line(
+                "The number of loci that are indeed heterozygote and imputed heterozygote, divided by the total number of loci. This is approximately the maximum possible number of switch error rate."
             )
 
         bar_char = "#"
