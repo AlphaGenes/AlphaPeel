@@ -519,7 +519,13 @@ The report is a comma-separated text file with records in the form
 contains the population metric followed by the metrics for generations 1 to 5.
 Runtime is written separately as ``runtime,<label>,elapsed_seconds,<seconds>``.
 
-You can then visualise the benchmark report:
+To assess the impact of a new change, you can run the benchmark suite on the
+version of the code before the change, copy the report to a different name, 
+and then run the benchmark suite on the modified code to generate a new report. 
+You can then compare the two reports to see if the new change improves runtime, 
+changes accuracy, or affects some generations more than others.
+
+It's possible to visualise the benchmark report:
 
 .. code-block:: python
 
