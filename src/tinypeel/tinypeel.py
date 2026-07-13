@@ -572,54 +572,47 @@ def get_multithread_options():
 # ACTUAL PROGRAM BELOW
 
 
-def build_arg_parser():
-    """Build and return the AlphaPeel argument parser.
+def _add_program_arguments(parser):
+    """Add general program options."""
 
-    :return: AlphaPeel argument parser.
-    :rtype: argparse.ArgumentParser
-    """
-    parser = argparse.ArgumentParser(description="")
-    core_parser = parser.add_argument_group("Core arguments")
-    core_parser.add_argument(
-        "-out_file",
-        required=True,
-        type=str,
-        help='The output file prefix. All file outputs will be named as "PREFIX.OUTPUT.txt", where "OUTPUT" is the type of output (for example, "dosage" and "geno_prob").',
+    program_parser = parser.add_argument_group("Program options")
+    program_parser.add_argument(
+        "-h",
+        "-help",
+        "--help",
+        action="help",
+        default=argparse.SUPPRESS,
+        help="Show this help message and exit.",
     )
-
-    core_peeling_parser = parser.add_argument_group("Mandatory peeling arguments")
-    core_peeling_parser.add_argument(
-        "-method",
+    program_parser.add_argument(
+        "-version",
         default=None,
-        required=False,
-        type=str,
-        help="Peeling method: single or multi. Default: multi.",
+        action="version",
+        version="%(prog)s " + version_version,
+        help="Show program's version number and exit.",
     )
 
-    # Input options
-    input_parser = parser.add_argument_group("Input Options")
+
+def _add_input_individual_arguments(parser):
+    """Add input options for individual-level data."""
+
+    input_parser = parser.add_argument_group("Input options: individuals")
     InputOutput.add_arguments_from_dictionary(
         input_parser,
         get_input_options(),
         options=[
-            "genotypes",
-            "phenotype",
-            "phasefile",
-            "seqfile",
             "pedigree",
-            "alt_allele_prob_file",
-            "pheno_penetrance_prob_file",
-            "startsnp",
-            "stopsnp",
-            "main_metafounder",
+            "genotypes",
+            "seqfile",
+            "phasefile",
+            "phenotype",
         ],
     )
     input_parser.add_argument(
-        "-map_file",
-        default=None,
+        "-x_chr",
+        action="store_true",
         required=False,
-        type=str,
-        help="Map file for loci in genomic data files (see format details in the docs).",
+        help="Indicate that input data is for the X chromosome (see details in the docs).",
     )
     input_parser.add_argument(
         "-phased_geno_prob_file",
@@ -630,9 +623,58 @@ def build_arg_parser():
         help="Optional external phased genotype probability file(s) (see format details in the docs). This will provide the starting internal genotype probability state. ",
     )
 
-    # Output options
-    output_parser = parser.add_argument_group("Output Options")
 
+def _add_input_marker_arguments(parser):
+    """Add input options for marker ranges and maps."""
+
+    marker_parser = parser.add_argument_group("Input options: markers")
+    marker_parser.add_argument(
+        "-map_file",
+        default=None,
+        required=False,
+        type=str,
+        help="Map file for loci in genomic data files (see format details in the docs).",
+    )
+    InputOutput.add_arguments_from_dictionary(
+        marker_parser,
+        get_input_options(),
+        options=["startsnp", "stopsnp"],
+    )
+
+
+def _add_input_model_parameter_arguments(parser):
+    """Add input options for model parameters."""
+
+    parameter_parser = parser.add_argument_group(
+        "Input options: model parameters and other"
+    )
+    InputOutput.add_arguments_from_dictionary(
+        parameter_parser,
+        get_input_options(),
+        options=[
+            "alt_allele_prob_file",
+            "main_metafounder",
+            "pheno_penetrance_prob_file",
+        ],
+    )
+    parameter_parser.add_argument(
+        "-rec_length",
+        default=1.0,
+        required=False,
+        type=float,
+        help="Recombination length of the chromosome in Morgans. Default: 1.00",
+    )
+    InputOutput.add_arguments_from_dictionary(
+        parameter_parser,
+        get_probability_options(),
+        options=["mut_prob", "geno_error_prob", "seq_error_prob"],
+    )
+
+
+def _add_output_individual_arguments(parser):
+    """Add output options for individual-level result files."""
+
+    output_parser = parser.add_argument_group("Output options: individuals")
     output_parser.add_argument(
         "-no_dosage",
         action="store_true",
@@ -712,111 +754,129 @@ def build_arg_parser():
         help="Output phenotype penetrance probabilities (see format details in the docs).",
     )
 
+
+def _add_output_io_arguments(parser):
+    """Add output prefix, ordering, and formatting options."""
+
+    output_parser = parser.add_argument_group("Output options: prefix, order, and IO")
+    output_parser.add_argument(
+        "-out_file",
+        required=True,
+        type=str,
+        help='The output file prefix. All file outputs will be named as "PREFIX.OUTPUT.txt", where "OUTPUT" is the type of output (for example, "dosage" and "geno_prob").',
+    )
     InputOutput.add_arguments_from_dictionary(
         output_parser,
         get_output_options(),
         options=["writekey", "onlykeyed", "out_digits"],
     )
 
-    # Multithreading
-    multithread_parser = parser.add_argument_group("Multithreading Options")
-    InputOutput.add_arguments_from_dictionary(
-        multithread_parser,
-        get_multithread_options(),
-        options=["maxthreads"],
-    )
 
-    peeling_parser = parser.add_argument_group("Optional peeling arguments")
-    peeling_parser.add_argument(
-        "-rec_length",
-        default=1.0,
-        required=False,
-        type=float,
-        help="Recombination length of the chromosome in Morgans. Default: 1.00",
-    )
-    peeling_parser.add_argument(
-        "-n_cycle",
-        default=5,
-        required=False,
-        type=int,
-        help="Number of peeling cycles. Default: 5.",
-    )
+def _add_peeling_method_arguments(parser):
+    """Add peeling strategy and hybrid second-stage options."""
 
-    InputOutput.add_arguments_from_dictionary(
-        peeling_parser,
-        get_probability_options(),
-        options=["geno_error_prob", "seq_error_prob", "mut_prob"],
-    )
-
-    peeling_control_parser = parser.add_argument_group("Peeling control arguments")
-    peeling_control_parser.add_argument(
-        "-x_chr",
-        action="store_true",
-        required=False,
-        help="Indicate that input data is for the X chromosome (see details in the docs).",
-    )
-    peeling_control_parser.add_argument(
-        "-est_start_alt_allele_prob",
-        action="store_true",
-        required=False,
-        help="Estimate from all inputted genomic data prior to peeling and output alternative allele probabilities (see format details in the docs).",
-    )
-    peeling_control_parser.add_argument(
-        "-est_alt_allele_prob",
-        action="store_true",
-        required=False,
-        help="Estimate after each peeling cycle and output alternative allele probabilities (see format details in the docs).",
-    )
-    peeling_control_parser.add_argument(
-        "-est_geno_error_prob",
-        action="store_true",
-        required=False,
-        help="Estimate after each peeling cycle and output genotype error probabilities (see format details in the docs).",
-    )
-    peeling_control_parser.add_argument(
-        "-est_seq_error_prob",
-        action="store_true",
-        required=False,
-        help="Estimate after each peeling cycle and output sequence error probabilities (see format details in the docs).",
-    )
-    peeling_control_parser.add_argument(
-        "-est_pheno_penetrance_prob",
-        action="store_true",
-        required=False,
-        help="Estimate after each peeling cycle and output phenotype penetrance probabilities (see format details in the docs).",
-    )
-    peeling_control_parser.add_argument(
-        "-no_phase_founder",
-        action="store_true",
-        required=False,
-        help="Suppress phasing a heterozygous allele (if such an allele can be found) in genotyped individuals without genotyped parents.",
-    )
-
-    singleLocus_parser = parser.add_argument_group("Hybrid peeling arguments")
-    singleLocus_parser.add_argument(
-        "-seg_map_file",
+    method_parser = parser.add_argument_group("Peeling methods: strategy")
+    method_parser.add_argument(
+        "-method",
         default=None,
         required=False,
         type=str,
-        help="Map file for loci in the segregation probabilities file.",
+        help="Peeling method: single or multi. Default: multi.",
     )
-    singleLocus_parser.add_argument(
+
+    hybrid_parser = parser.add_argument_group("Peeling methods: hybrid second stage")
+    hybrid_parser.add_argument(
         "-seg_file",
         default=None,
         required=False,
         type=str,
         help="Segregation probabilities file (see format details in the docs).",
     )
-    # singleLocus_parser.add_argument('-blocksize',default=100, required=False, type=int, help='The number of markers to impute at once. This changes the memory requirements of the program.')
-
-    # special handle for version argument to allow it to be called with just -version
-    parser.add_argument(
-        "-version",
+    hybrid_parser.add_argument(
+        "-seg_map_file",
         default=None,
-        action="version",
-        version="%(prog)s " + version_version,
-        help="Show program's version number and exit.",
+        required=False,
+        type=str,
+        help="Map file for loci in the segregation probabilities file.",
     )
+
+
+def _add_peeling_parameter_arguments(parser):
+    """Add peeling runtime and estimation options."""
+
+    computational_parser = parser.add_argument_group(
+        "Peeling parameters: computational"
+    )
+    computational_parser.add_argument(
+        "-n_cycle",
+        default=5,
+        required=False,
+        type=int,
+        help="Number of peeling cycles. Default: 5.",
+    )
+    InputOutput.add_arguments_from_dictionary(
+        computational_parser,
+        get_multithread_options(),
+        options=["maxthreads"],
+    )
+
+    estimation_parser = parser.add_argument_group(
+        "Peeling parameters: model estimation"
+    )
+    estimation_parser.add_argument(
+        "-est_start_alt_allele_prob",
+        action="store_true",
+        required=False,
+        help="Estimate from all inputted genomic data prior to peeling and output alternative allele probabilities (see format details in the docs).",
+    )
+    estimation_parser.add_argument(
+        "-est_alt_allele_prob",
+        action="store_true",
+        required=False,
+        help="Estimate after each peeling cycle and output alternative allele probabilities (see format details in the docs).",
+    )
+    estimation_parser.add_argument(
+        "-est_geno_error_prob",
+        action="store_true",
+        required=False,
+        help="Estimate after each peeling cycle and output genotype error probabilities (see format details in the docs).",
+    )
+    estimation_parser.add_argument(
+        "-est_seq_error_prob",
+        action="store_true",
+        required=False,
+        help="Estimate after each peeling cycle and output sequence error probabilities (see format details in the docs).",
+    )
+    estimation_parser.add_argument(
+        "-est_pheno_penetrance_prob",
+        action="store_true",
+        required=False,
+        help="Estimate after each peeling cycle and output phenotype penetrance probabilities (see format details in the docs).",
+    )
+    estimation_parser.add_argument(
+        "-no_phase_founder",
+        action="store_true",
+        required=False,
+        help="Suppress phasing a heterozygous allele (if such an allele can be found) in genotyped individuals without genotyped parents.",
+    )
+
+
+def build_arg_parser():
+    """Build and return the AlphaPeel argument parser.
+
+    :return: AlphaPeel argument parser.
+    :rtype: argparse.ArgumentParser
+    """
+    parser = argparse.ArgumentParser(description="", add_help=False)
+
+    _add_program_arguments(parser)
+    _add_input_individual_arguments(parser)
+    _add_input_marker_arguments(parser)
+    _add_input_model_parameter_arguments(parser)
+    _add_output_individual_arguments(parser)
+    _add_output_io_arguments(parser)
+    _add_peeling_method_arguments(parser)
+    _add_peeling_parameter_arguments(parser)
 
     return parser
 
@@ -884,7 +944,7 @@ def main(argv=None):
     if args.method == "multi" and args.segfile:
         warnings.warn("Running in multi-locus mode, external segfile ignored")
 
-    # For now, only support a single phenotype (will remove in future)
+    # For now, only support a single phenotype (will extend in future)
     if args.phenotype is not None and pedigree.nPheno > 1:
         warnings.warn(
             "Currently only a single phenotype is supported. Phenotype information will be ignored."
