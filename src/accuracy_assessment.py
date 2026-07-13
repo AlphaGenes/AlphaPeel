@@ -114,9 +114,21 @@ def _load_test_accuracy_pair(output_path, sim_path, file_name, n_loci_all):
 def _mask_x_chr_hap_missing(output, truth, file_name, x_chr):
     """Mask missing X chromosome haplotype truth values before comparison."""
 
-    if x_chr and file_name == "hap_0.5":
+    if x_chr and file_name == HAP_FILE:
         output[truth == 9] = 0
         truth[truth == 9] = 0
+
+
+def _normal_metric_output(output, file_name):
+    """Return output values used by non-switch accuracy metrics."""
+
+    if file_name != HAP_FILE:
+        return output
+
+    metric_output = output.astype(float, copy=True)
+    metric_output[metric_output == 9] = np.nan
+
+    return metric_output
 
 
 def _overall_comparison(output, truth, file_name, n_ind_per_gen, n_row_per_ind):
@@ -287,6 +299,10 @@ def get_hap_switch_error_metrics(called_file, true_file, n_ind, n_loci_all):
             else:
                 hetero_count += 1
 
+            if np.isnan(hap_p_new[loci]) or np.isnan(hap_m_new[loci]):
+                uncalled_count += 1
+                continue
+
             if hap_p_new[loci] == 9 or hap_m_new[loci] == 9:
                 uncalled_count += 1
                 continue
@@ -434,8 +450,10 @@ def assess_test_accuracy(
             continue
 
         new_file, true_file = accuracy_pair
+        # replace uncalled haplotype values with nan for accuracy metrics
+        metric_new_file = _normal_metric_output(new_file, file_name)
         comparison_output, comparison_truth = _overall_comparison(
-            new_file, true_file, file_name, n_ind_per_gen, n_row_per_ind
+            metric_new_file, true_file, file_name, n_ind_per_gen, n_row_per_ind
         )
         marker_corr = get_marker_corr(
             comparison_output,
@@ -444,7 +462,7 @@ def assess_test_accuracy(
         _write_accuracy_metric(file_out, file_name, method, "marker_corr", marker_corr)
 
         ind_corr = _ind_corr_for_file(
-            new_file,
+            metric_new_file,
             true_file,
             file_name,
             n_ind_per_gen,
@@ -459,7 +477,7 @@ def assess_test_accuracy(
         )
         _write_accuracy_metric(file_out, file_name, method, "abs_diff", abs_diff)
 
-        if file_name == "hap_0.5":
+        if file_name == HAP_FILE:
             _write_test_hap_switch_error_metrics(
                 file_out,
                 file_name,
@@ -506,10 +524,11 @@ def assess_accuracy(
             x_chr=x_chr,
         )
         _mask_x_chr_hap_missing(new_file, true_file, file_name, x_chr)
+        metric_new_file = _normal_metric_output(new_file, file_name)
 
         marker_corr = _benchmark_metric_values(
             get_marker_corr,
-            new_file,
+            metric_new_file,
             true_file,
             file_name,
             n_gen,
@@ -519,7 +538,7 @@ def assess_accuracy(
         _write_accuracy_metric(file_out, file_name, name, "marker_corr", marker_corr)
 
         ind_corr = _benchmark_ind_corr_values(
-            new_file,
+            metric_new_file,
             true_file,
             file_name,
             n_gen,
@@ -530,7 +549,7 @@ def assess_accuracy(
 
         abs_diff = _benchmark_metric_values(
             get_abs_diff,
-            new_file,
+            metric_new_file,
             true_file,
             file_name,
             n_gen,
@@ -540,7 +559,7 @@ def assess_accuracy(
         )
         _write_accuracy_metric(file_out, file_name, name, "abs_diff", abs_diff)
 
-        if file_name == "hap_0.5":
+        if file_name == HAP_FILE:
             _write_benchmark_hap_switch_error_metrics(
                 file_out,
                 file_name,
@@ -579,9 +598,16 @@ def get_marker_corr(output, real):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        accus = np.array(
-            [np.corrcoef(real[:, i], output[:, i])[0, 1] for i in range(real.shape[1])]
-        )
+        accus = []
+        for i in range(real.shape[1]):
+            valid = ~np.isnan(output[:, i]) & ~np.isnan(real[:, i])
+            if np.sum(valid) < 2:
+                accus.append(np.nan)
+                continue
+
+            accus.append(np.corrcoef(real[valid, i], output[valid, i])[0, 1])
+
+        accus = np.array(accus)
         return round(np.nanmean(accus), 4)
 
 
@@ -606,9 +632,16 @@ def get_ind_corr(output, real, nIndPerGen, n_row_per_ind, start_gen=None, end_ge
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        accus = np.array(
-            [np.corrcoef(real[i, :], output[i, :])[0, 1] for i in range(real.shape[0])]
-        )
+        accus = []
+        for i in range(real.shape[0]):
+            valid = ~np.isnan(output[i, :]) & ~np.isnan(real[i, :])
+            if np.sum(valid) < 2:
+                accus.append(np.nan)
+                continue
+
+            accus.append(np.corrcoef(real[i, valid], output[i, valid])[0, 1])
+
+        accus = np.array(accus)
         if isinstance(start_gen, int):
             if not isinstance(end_gen, int):
                 accus = accus[start_gen * (nIndPerGen * n_row_per_ind) :]
@@ -624,7 +657,12 @@ def get_ind_corr(output, real, nIndPerGen, n_row_per_ind, start_gen=None, end_ge
 
 def get_abs_diff(output, real, n_row_per_ind):
     """Sum of absolute difference divided by the sum of the number of loci being counted"""
-    return n_row_per_ind * np.sum(np.abs(output - real)) / real.size
+    valid = ~np.isnan(output) & ~np.isnan(real)
+    valid_count = np.sum(valid)
+    if valid_count == 0:
+        return np.nan
+
+    return n_row_per_ind * np.sum(np.abs(output[valid] - real[valid])) / valid_count
 
 
 def get_correct_rate(output, real):
