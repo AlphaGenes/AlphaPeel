@@ -26,7 +26,6 @@ def writeOutParamaters(peelingInfo):
             args.out_file + ".rec_prob.txt",
             np.empty((1, 1)),
         )  # not implemented atm, just as a placeholder
-    # np.savetxt(args.out_file + ".trans", peelingInfo.transmissionRate, fmt = "%f")
 
 
 def writeOutAltAlleleProb(pedigree):

@@ -215,27 +215,6 @@ def updateMafAfterPeeling(pedigree, peelingInfo):
             peelingInfo.anterior[ind.idn, :, :] = mafGeno
 
 
-# Commenting out the following code. This was used to do updates via grid search.
-# @jit(nopython = True)
-# def mafLoglikelihood(peelingInfo, maf, index):
-#     score = 0
-#     maf_squared = maf**2
-#     maf_one_minus_maf = maf*(1-maf)
-#     one_minus_maf_squared = (1-maf)**2
-
-#     for i in range(peelingInfo.nInd):
-#         if peelingInfo.genotyped[i, index] :
-#         # if True :
-#             genoProbs = peelingInfo.penetrance[i,:,index]
-
-#             prob = 0
-#             prob += one_minus_maf_squared*genoProbs[0]
-#             prob += maf_one_minus_maf*genoProbs[1]
-#             prob += maf_one_minus_maf*genoProbs[2]
-#             prob += maf_squared*genoProbs[3]
-#             score += math.log(prob)
-#     return score
-
 #
 # NOTE: The following code updates the genotype and sequencing error rates.
 #
@@ -414,7 +393,6 @@ def updatePhenoPenetrance(pedigree, peelingInfo):
     denominator = np.full(
         (4, pedigree.nLoci), 0, dtype=np.float32
     )  # Sum of the genotypes across individuals with any phenotype data
-    # counts = np.full(rgPheno, 0, dtype=np.float32)
     contributions = np.full((4, rgPheno), 0, dtype=np.float32)
 
     for ind in pedigree:
@@ -426,9 +404,6 @@ def updatePhenoPenetrance(pedigree, peelingInfo):
                 ind.phenotype,
                 peelingInfo.getGenoProbs(ind.idn),
             )
-
-    # mask = counts > 0
-    # pedigree.phenoPenetrance[:, mask] = contributions[:, mask] / counts[mask]
 
     for pheno in range(rgPheno):
         pedigree.phenoPenetrance[:, pheno] = contributions[:, pheno] / denominator[:, 0]
