@@ -20,6 +20,19 @@ from .Peeling import version
 
 version_version = version.version
 
+ALPHAPEEL_ARGUMENT_ALIASES = {
+    "pedigree": "ped_file",
+    "genotypes": "geno_file",
+    "seqfile": "seq_file",
+    "phenotype": "pheno_file",
+    "phenoPenetrance": "pheno_penetrance_prob_file",
+    "phasefile": "hap_file",
+    "writekey": "out_id_order",
+    "onlykeyed": "out_id_only",
+    "maxthreads": "n_thread",
+    "segfile": "seg_file",
+}
+
 
 def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     """Sets up and runs each of the peeling cycles (default is 5).
@@ -559,11 +572,11 @@ def get_multithread_options():
 # ACTUAL PROGRAM BELOW
 
 
-def getArgs(argv=None):
-    """Presents and collects the arguments from the command line.
+def build_arg_parser():
+    """Build and return the AlphaPeel argument parser.
 
-    :return: the user input arguments for the AlphaPeel program
-    :rtype: argparse.Namespace
+    :return: AlphaPeel argument parser.
+    :rtype: argparse.ArgumentParser
     """
     parser = argparse.ArgumentParser(description="")
     core_parser = parser.add_argument_group("Core arguments")
@@ -589,7 +602,6 @@ def getArgs(argv=None):
         input_parser,
         get_input_options(),
         options=[
-            "bfile",
             "genotypes",
             "phenotype",
             "phasefile",
@@ -806,13 +818,57 @@ def getArgs(argv=None):
         help="Show program's version number and exit.",
     )
 
-    args = sys.argv[1:]
+    return parser
 
-    if "-version" in args:
-        parser.parse_args(args)
+
+def _argv_contains_version(argv):
+    """Return whether argv asks only for the AlphaPeel version."""
+
+    args = sys.argv[1:] if argv is None else list(argv)
+    return "-version" in args
+
+
+def _zero_based_locus(value):
+    """Convert a user-facing 1-based locus value to Python indexing."""
+
+    if value is None:
+        return None
+
+    return value - 1
+
+
+def normalise_alphapeel_args(args):
+    """Populate tinyhouse-compatible argument names for AlphaPeel."""
+
+    for tinyhouse_name, alphapeel_name in ALPHAPEEL_ARGUMENT_ALIASES.items():
+        setattr(args, tinyhouse_name, getattr(args, alphapeel_name))
+
+    args.startsnp = _zero_based_locus(args.start_snp)
+    args.stopsnp = _zero_based_locus(args.stop_snp)
+
+    return args
+
+
+def parse_alphapeel_args(parser, argv=None):
+    """Parse AlphaPeel arguments and normalise names used by tinyhouse."""
+
+    if _argv_contains_version(argv):
+        parser.parse_args(sys.argv[1:] if argv is None else list(argv))
         sys.exit(0)
 
-    return InputOutput.parseArgs("AlphaPeel", parser, argv=argv)
+    args = InputOutput.parseArgs("AlphaPeel", parser, argv=argv)
+
+    return normalise_alphapeel_args(args)
+
+
+def getArgs(argv=None):
+    """Presents and collects the arguments from the command line.
+
+    :return: the user input arguments for the AlphaPeel program
+    :rtype: argparse.Namespace
+    """
+
+    return parse_alphapeel_args(build_arg_parser(), argv=argv)
 
 
 def main(argv=None):
@@ -820,22 +876,6 @@ def main(argv=None):
     docs_link = f"https://alphapeel.readthedocs.io/en/v{version_version}/usage.html"
     InputOutput.print_boilerplate("AlphaPeel", version=version_version, docs=docs_link)
     args = getArgs(argv=argv)
-    if args.start_snp:
-        args.start_snp -= 1
-    if args.stop_snp:
-        args.stop_snp -= 1
-    args.pedigree = args.ped_file
-    args.genotypes = args.geno_file
-    args.seqfile = args.seq_file
-    args.phenotype = args.pheno_file
-    args.startsnp = args.start_snp
-    args.stopsnp = args.stop_snp
-    args.phenoPenetrance = args.pheno_penetrance_prob_file
-    args.phasefile = args.hap_file
-    args.writekey = args.out_id_order
-    args.onlykeyed = args.out_id_only
-    args.maxthreads = args.n_thread
-    args.segfile = args.seg_file
 
     pedigree = Pedigree.Pedigree()
     InputOutput.readInPedigreeFromInputs(pedigree, args)
