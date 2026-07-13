@@ -1,89 +1,6 @@
 import numpy as np
 from numba import jit
 from ..tinyhouse import InputOutput
-import warnings
-
-
-def readInSeg(pedigree, fileName, start=None, stop=None):
-    """Reads in a segregation file and returns segregation probabilities.
-
-    :param pedigree: pedigree information container
-    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
-    :param fileName: path to the external segregation file
-    :type fileName: str
-    :param start: starting locus/marker, defaults to None
-    :type start: int, optional
-    :param stop: final locus/marker, defaults to None
-    :type stop: int, optional
-    :raises ValueError: If the length of the segregation line does not match the expected length.
-    :raises ValueError: If the length of the line subsection does not match the expected length.
-    :raises ValueError: If the individual in the segregation file is not found in the pedigree.
-    :return: segregation probabilities for each locus and individual in the pedigree
-    :rtype: 3D numpy array of float32 with shape nIndividuals x 4 x nLoci
-    """
-    print("Reading in seg file:", fileName)
-    if start is None:
-        start = 0
-    if stop is None:
-        stop = pedigree.nLoci
-    nLoci = stop - start + 1  # Contains stop.
-
-    seg = np.full((pedigree.maxIdn, 4, nLoci), 0.25, dtype=np.float32)
-
-    index = 0
-    fileNColumns = 0
-
-    indHit = np.full(pedigree.maxIdn, 0, dtype=np.int64)
-
-    with open(fileName) as f:
-        e = 0
-        currentInd = None
-        for line in f:
-            parts = line.split()
-            idx = parts[0]
-
-            if fileNColumns == 0:
-                fileNColumns = len(parts)
-            if fileNColumns != len(parts):
-                raise ValueError(
-                    f"The length of the line is not the expected length. Expected {fileNColumns} got {len(parts)} on individual {idx} and line {e}."
-                )
-
-            segLine = np.array(
-                [float(val) for val in parts[(start + 1) : (stop + 2)]],
-                dtype=np.float32,
-            )
-            if len(segLine) != nLoci:
-                raise ValueError(
-                    f"The length of the line subsection is not the expected length. Expected {nLoci} got {len(segLine)} on individual {idx} and line {e}."
-                )
-
-            if idx not in pedigree.individuals:
-                warnings.warn(
-                    f"Individual {idx} is not found in pedigree. Individual ignored.",
-                    UserWarning,
-                )
-            else:
-                ind = pedigree.individuals[idx]
-                if e == 0:
-                    currentInd = ind.idx
-                if currentInd != ind.idx:
-                    raise ValueError(
-                        f"Unexpected individual. Expecting individual {currentInd}, but got ind {ind.idx} on value {e}"
-                    )
-                seg[ind.idn, e, :] = segLine
-                e = (e + 1) % 4
-                ind.fileIndex["segregation"] = index
-                index += 1
-                indHit[ind.idn] += 1
-        for ind in pedigree:
-            if indHit[ind.idn] != 4:
-                warnings.warn(
-                    f"No segregation information found for individual {ind.idx}",
-                    UserWarning,
-                )
-
-    return seg
 
 
 def writeOutParamaters(peelingInfo):
@@ -422,20 +339,6 @@ def writeCalledPhase(pedigree, genoProbFunc, isXChr, outputFile, thresh):
 
 
 @jit(nopython=True)
-def doubleIfNotMissing(calledGenotypes):
-    """Doubles the called genotype, used for (female) sex chromosomes.
-
-    :param calledGenotypes: array of called genotypes
-    :type calledGenotypes: 2D numpy array of float32 with shape 3 x nLoci
-    :return: None. Modifies the calledGenotypes in place.
-    """
-    nLoci = len(calledGenotypes)
-    for i in range(nLoci):
-        if calledGenotypes[i] == 1:
-            calledGenotypes[i] = 2
-
-
-@jit(nopython=True)
 def setMissing(calledGenotypes, matrix, thresh):
     """Sets the called genotypes to missing if the probability is below the threshold.
 
@@ -450,42 +353,3 @@ def setMissing(calledGenotypes, matrix, thresh):
     for i in range(nLoci):
         if matrix[calledGenotypes[i], i] <= thresh:
             calledGenotypes[i] = 9
-
-
-def fullOutput(pedigree, peelingInfo, args):
-    """Writes out the full output of the peeling process (for testing purposes).
-
-    :param pedigree: pedigree information container
-    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
-    :param peelingInfo: Peeling information container.
-    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
-    :param args: argument container with configuration options for peeling
-    :type args: argparse.Namespace or similar object with attributes
-    """
-    InputOutput.writeIdnIndexedMatrix(
-        pedigree, peelingInfo.penetrance, args.out_file + ".penetrance"
-    )
-    InputOutput.writeIdnIndexedMatrix(
-        pedigree, peelingInfo.anterior, args.out_file + ".anterior"
-    )
-    InputOutput.writeIdnIndexedMatrix(
-        pedigree, peelingInfo.posterior, args.out_file + ".posterior"
-    )
-
-    InputOutput.writeFamIndexedMatrix(
-        pedigree,
-        peelingInfo.posteriorSire_minusFam,
-        args.out_file + ".posteriorSire_minusFam",
-    )
-    InputOutput.writeFamIndexedMatrix(
-        pedigree,
-        peelingInfo.posteriorDam_minusFam,
-        args.out_file + ".posteriorDam_minusFam",
-    )
-
-    InputOutput.writeFamIndexedMatrix(
-        pedigree, peelingInfo.posteriorSire_new, args.out_file + ".posteriorSire_new"
-    )
-    InputOutput.writeFamIndexedMatrix(
-        pedigree, peelingInfo.posteriorDam_new, args.out_file + ".posteriorDam_new"
-    )

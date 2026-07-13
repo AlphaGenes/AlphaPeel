@@ -229,9 +229,7 @@ def peel(family, operation, peelingInfo, singleLocusMode):
 
             # Einstien sum notation 5:
             # pointSeg[child,:,:] = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild[i,:,:,:], childValues)
-            # Option 1: Estimate without normalizing.
-            # estimateSegregation(segregationTensor, parentsMinusChild[i,:,:,:], childValues, pointSeg[child,:,:])
-            # Option 2: Estimate with normalizing. I think this is what we want.
+            # Estimate with normalizing.
             estimateSegregationWithNorm(
                 segregationTensor,
                 segregationTensor_norm,
@@ -357,28 +355,6 @@ def projectParentGenotypes(childSegs, parentValues, output):
                 for i in range(nLoci):
                     output[c, i] += childSegs[a, b, c, i] * parentValues[a, b, i]
 
-    return output
-
-
-@jit(nopython=True, nogil=True)
-def estimateSegregation(segregationTensor, parentValues, childValues, output):
-    """
-    This function estimates the segregation probabilities for each child without normalisation.
-    """
-    # NOTE: This function is not called/used - remove?
-    # pointSeg[child,:,:] = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild[i,:,:,:], childValues)
-    nLoci = childValues.shape[1]
-    output[:, :] = 0
-    for a in range(4):
-        for b in range(4):
-            for c in range(4):
-                for d in range(4):
-                    for i in range(nLoci):
-                        output[d, i] += (
-                            segregationTensor[a, b, c, d]
-                            * parentValues[a, b, i]
-                            * childValues[c, i]
-                        )
     return output
 
 
