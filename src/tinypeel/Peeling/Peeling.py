@@ -105,17 +105,9 @@ def peel(family, operation, peelingInfo, singleLocusMode):
         childValues = childValues / np.sum(childValues, axis=0)
         childValues = e1e * childValues + e4
 
-        # METHOD 1: Just use the current segregation of the child.
+        # Use the current segregation of the child.
         currentSeg[:, :] = segregation[child, :, :]
         currentSeg /= np.sum(currentSeg, 0)
-
-        # METHOD 2: Use the segregation estimate of the child minus the contribution at a particular locus.
-        # Currently do not recommend using this.
-        # if not singleLocusMode :
-        #     currentSeg[:,:] = segregation[child,:,:] / pointSeg[child,:,:]
-        #     currentSeg /= np.sum(currentSeg, 0)
-        # else:
-        #     currentSeg[:,:] = segregation[child,:,:]
 
         if isXChr and peelingInfo.sex[child] == 0:  # 0 for male, 1 for female.
             segregationTensor = peelingInfo.segregationTensorXY
@@ -137,35 +129,8 @@ def peel(family, operation, peelingInfo, singleLocusMode):
             childValues,
             childToParents[index, :, :, :],
         )
-
-    # Method 1: estimate the parents genotype and the child-specific posterior terms using iterative normalizing.
-    # for i in range(nOffspring) :
-    #     parentsMinusChild[i,:,:,:] = jointParents[:,:,:]
-
-    # for i in range(nOffspring):
-    #     allToParents *= childToParents[i,:,:,:]
-    #     allToParents /= np.sum(np.sum(allToParents, axis = 0), axis=0)
-
-    #     for j in range(nOffspring) :
-    #         if i != j :
-    #             parentsMinusChild[j,:,:,:] *= childToParents[i,:,:,:]
-    #             parentsMinusChild[j,:,:,:] /= np.sum(np.sum(parentsMinusChild[i,:,:,:], axis = 0), axis=0)
-
-    ##
-    # Method 2: estimate the parents genotype and the child-specific posterior terms using a log scale.
-    ##
-    # for i in range(nOffspring) :
-    #     parentsMinusChild[i,:,:,:] = np.log(jointParents[:,:,:])
-    # allToParents[:,:,:] = 0
-    # # #taking out post estimates.
-    # for i in range(nOffspring):
-    #     log_childToParents = np.log(childToParents[i,:,:,:])
-    #     allToParents += log_childToParents
-    #     for j in range(nOffspring) :
-    #         if i != j :
-    #             parentsMinusChild[j,:,:,:] += log_childToParents
-
-    # Method 3: estimate the parents genotype and the child-specific posterior terms using a slightly smarter log scale.
+    #
+    # Estimate the parents genotype and the child-specific posterior terms using a slightly smarter log scale.
 
     for i in range(nOffspring):
         parentsMinusChild[i, :, :, :] = np.log(jointParents[:, :, :])
@@ -571,12 +536,8 @@ def collapsePointSeg(pointSeg, transmission):
         new[2] = e2 * tmp[1] + e1e * (tmp[0] + tmp[3]) + e2i * tmp[2]
         new[3] = e2 * tmp[0] + e1e * (tmp[1] + tmp[2]) + e2i * tmp[3]
 
-        # tmp = tmp/np.sum(tmp)
-        # new = e2i*tmp + e2 + e1e*(tmp[0] + tmp[3])*same + e1e*(tmp[1] + tmp[2])*diff
-
         for j in range(4):
             seg[j, i] *= new[j]
-        # seg[:,i] *= new
         prev = new
 
     prev = np.full((4), 0.25, dtype=np.float32)
@@ -613,5 +574,4 @@ def collapsePointSeg(pointSeg, transmission):
         for j in range(4):
             seg[j, i] = seg[j, i] / sum_j
 
-    # seg = seg/np.sum(seg, 0)
     return seg

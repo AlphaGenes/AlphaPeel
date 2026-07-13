@@ -116,10 +116,6 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
         peelingCycle(pedigree, peelingInfo, args=args, singleLocusMode=singleLocusMode)
         peelingInfo.iteration += 1
 
-        # esttransitions is been disabled.
-        # if args.esttransitions:
-        #     print("Estimating the transmission rate is currently a disabled option")
-        # PeelingUpdates.updateSeg(peelingInfo) #Option currently disabled.
         if args.est_geno_error_prob or args.est_seq_error_prob:
             PeelingUpdates.updatePenetrance(pedigree, peelingInfo, args)
         if args.est_pheno_penetrance_prob:
@@ -218,8 +214,6 @@ def updatePosterior(pedigree, peelingInfo, sires, dams):
     :type dams: set of class:`tinyhouse.Pedigree.Individual`
     :return: None. The function modifies the peelingInfo object in place
     """
-    # if pedigree.mapSireToFamilies is None or pedigree.mapDamToFamilies is None:
-    #     pedigree.setupFamilyMap()
 
     for sire in sires:
         updateSire(sire, peelingInfo)

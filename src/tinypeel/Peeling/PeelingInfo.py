@@ -171,7 +171,7 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
 
         for pen in args.phased_geno_prob_file:
             addPenetranceFromExternalFile(pedigree, peelingInfo, pen, args)
-    # updateMaf(pedigree, peelingInfo)
+
     return peelingInfo
 
 
