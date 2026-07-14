@@ -66,16 +66,17 @@ def peel(family, operation, peelingInfo, singleLocusMode):
 
     # Construct the joint parent genotypes based on the parent's anterior, penetrance, and posterior terms minus this family.
 
-    probSire = (
-        anterior[sire, :, :]
-        * penetrance[sire, :, :]
-        * peelingInfo.posteriorSire_minusFam[fam, :, :]
+    probSireMinusFamily = np.log(posterior[sire, :, :]) - np.log(
+        peelingInfo.posteriorSireContribution[fam, :, :]
     )
-    probDam = (
-        anterior[dam, :, :]
-        * penetrance[dam, :, :]
-        * peelingInfo.posteriorDam_minusFam[fam, :, :]
+    probDamMinusFamily = np.log(posterior[dam, :, :]) - np.log(
+        peelingInfo.posteriorDamContribution[fam, :, :]
     )
+    probSireMinusFamily = expNorm1D(probSireMinusFamily)
+    probDamMinusFamily = expNorm1D(probDamMinusFamily)
+
+    probSire = anterior[sire, :, :] * penetrance[sire, :, :] * probSireMinusFamily
+    probDam = anterior[dam, :, :] * penetrance[dam, :, :] * probDamMinusFamily
 
     probSire = probSire / np.sum(probSire, 0)
     probDam = probDam / np.sum(probDam, 0)
@@ -168,12 +169,12 @@ def peel(family, operation, peelingInfo, singleLocusMode):
         sirePosterior = combineAndReduceAxis1(allToParents, probDam)
         sirePosterior /= np.sum(sirePosterior, axis=0)
         sirePosterior = sirePosterior * e1e + e4
-        peelingInfo.posteriorSire_new[fam, :, :] = sirePosterior
+        peelingInfo.posteriorSireContribution[fam, :, :] = sirePosterior
 
         damPosterior = combineAndReduceAxis0(allToParents, probSire)
         damPosterior /= np.sum(damPosterior, axis=0)
         damPosterior = damPosterior * e1e + e4
-        peelingInfo.posteriorDam_new[fam, :, :] = damPosterior
+        peelingInfo.posteriorDamContribution[fam, :, :] = damPosterior
 
     if (not singleLocusMode) and (operation == PEEL_DOWN):
         # Estimate the segregation probabilities for each child.

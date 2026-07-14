@@ -190,22 +190,12 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
         for family in generation.families:
             sires.add(family.sire)
             dams.add(family.dam)
-        updatePosterior(pedigree, peelingInfo, sires, dams)
+        updatePosterior(peelingInfo, sires, dams)
 
 
-# updatePosterior updates the posterior term for a specific set of sires and dams.
-# The updateSire and updateDam functions perform the updates for a specific sire
-# and specific dam by including all of the information from all of their families.
-# This update is currently not multithreaded. It is also currently not ideal --
-# right now the posterior term is updated for all of the sires/dams no matter
-# whether or not they have been changed since the last update.
-
-
-def updatePosterior(pedigree, peelingInfo, sires, dams):
+def updatePosterior(peelingInfo, sires, dams):
     """Updates the posterior term for a specific set of sires and dams.
 
-    :param pedigree: pedigree information container
-    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param peelingInfo: Peeling information container
     :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
     :param sires: collection of sires to update
@@ -235,28 +225,14 @@ def updateSire(sire, peelingInfo):
     sire = sire.idn
     peelingInfo.posterior[sire, :, :] = 0
     for famId in famList:
-        log_update = np.log(peelingInfo.posteriorSire_new[famId, :, :])
+        log_update = np.log(peelingInfo.posteriorSireContribution[famId, :, :])
         peelingInfo.posterior[sire, :, :] += log_update
-        peelingInfo.posteriorSire_minusFam[famId, :, :] = -log_update
-
-    for famId in famList:
-        peelingInfo.posteriorSire_minusFam[famId, :, :] += peelingInfo.posterior[
-            sire, :, :
-        ]
 
     # Rescale values.
     peelingInfo.posterior[sire, :, :] = Peeling.expNorm1D(
         peelingInfo.posterior[sire, :, :]
     )
     peelingInfo.posterior[sire, :, :] /= np.sum(peelingInfo.posterior[sire, :, :], 0)
-
-    for famId in famList:
-        peelingInfo.posteriorSire_minusFam[famId, :, :] = Peeling.expNorm1D(
-            peelingInfo.posteriorSire_minusFam[famId, :, :]
-        )
-        peelingInfo.posteriorSire_minusFam[famId, :, :] /= np.sum(
-            peelingInfo.posteriorSire_minusFam[famId, :, :], 0
-        )
 
 
 def updateDam(dam, peelingInfo):
@@ -272,26 +248,13 @@ def updateDam(dam, peelingInfo):
     dam = dam.idn
     peelingInfo.posterior[dam, :, :] = 0
     for famId in famList:
-        log_update = np.log(peelingInfo.posteriorDam_new[famId, :, :])
+        log_update = np.log(peelingInfo.posteriorDamContribution[famId, :, :])
         peelingInfo.posterior[dam, :, :] += log_update
-        peelingInfo.posteriorDam_minusFam[famId, :, :] = -log_update
-
-    for famId in famList:
-        peelingInfo.posteriorDam_minusFam[famId, :, :] += peelingInfo.posterior[
-            dam, :, :
-        ]
 
     peelingInfo.posterior[dam, :, :] = Peeling.expNorm1D(
         peelingInfo.posterior[dam, :, :]
     )
     peelingInfo.posterior[dam, :, :] /= np.sum(peelingInfo.posterior[dam, :, :], 0)
-    for famId in famList:
-        peelingInfo.posteriorDam_minusFam[famId, :, :] = Peeling.expNorm1D(
-            peelingInfo.posteriorDam_minusFam[famId, :, :]
-        )
-        peelingInfo.posteriorDam_minusFam[famId, :, :] /= np.sum(
-            peelingInfo.posteriorDam_minusFam[famId, :, :], 0
-        )
 
 
 def getLociAndDistance(snpMap, segMap):
