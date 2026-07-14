@@ -257,11 +257,9 @@ spec["posterior"] = float32[:, :, :]
 spec["penetrance"] = float32[:, :, :]
 spec["segregation"] = optional(float32[:, :, :])
 
-# Family terms. Each will be nFam x 4 x nLoci
-spec["posteriorSire_minusFam"] = float32[:, :, :]
-spec["posteriorDam_minusFam"] = float32[:, :, :]
-spec["posteriorSire_new"] = float32[:, :, :]
-spec["posteriorDam_new"] = float32[:, :, :]
+# Family posterior contributions. Each will be nFam x 4 x nLoci.
+spec["posteriorSireContribution"] = float32[:, :, :]
+spec["posteriorDamContribution"] = float32[:, :, :]
 
 # Segregation tensors. Each of these will be either 4x4x4x4 or 4x4x4
 spec["segregationTensor"] = optional(float32[:, :, :, :])
@@ -337,17 +335,10 @@ class jit_peelingInformation(object):
             (self.nInd, 4, self.nLoci), baseValue, dtype=np.float32
         )
 
-        self.posteriorSire_minusFam = np.full(
+        self.posteriorSireContribution = np.full(
             (self.nFam, 4, self.nLoci), baseValue, dtype=np.float32
         )
-        self.posteriorDam_minusFam = np.full(
-            (self.nFam, 4, self.nLoci), baseValue, dtype=np.float32
-        )
-
-        self.posteriorSire_new = np.full(
-            (self.nFam, 4, self.nLoci), baseValue, dtype=np.float32
-        )
-        self.posteriorDam_new = np.full(
+        self.posteriorDamContribution = np.full(
             (self.nFam, 4, self.nLoci), baseValue, dtype=np.float32
         )
 
