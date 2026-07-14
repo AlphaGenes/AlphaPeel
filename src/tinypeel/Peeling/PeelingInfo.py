@@ -16,7 +16,7 @@ from ..tinyhouse import InputOutput
 #####################################################################
 
 
-def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
+def createPeelingInfo(pedigree, args, phaseFounder=False):
     """Creates the peeling information object. It sets up the
     genotype probabilities, the segregation tensors, and the transmission
     rates. It also sets up the genotype status for each individual.
@@ -25,18 +25,15 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param args: argument container with configuration options for peeling
     :type args: argparse.Namespace or similar object with attributes
-    :param createSeg: whether to create and store segregation probabilities, defaults to True
-    :type createSeg: bool, optional
     :param phaseFounder: whether to phase genotyped founders using heterozygous loci, defaults to False
     :type phaseFounder: bool, optional
     :return: peelingInfo: a peeling information object containing all the necessary information for peeling
     :rtype: jit_peelingInformation
     """
-    # NOTE: createSeg is added as an option to decrease memory usage during the single locus peeling steps.
     nLoci = pedigree.nLoci
 
     peelingInfo = jit_peelingInformation(
-        nInd=pedigree.maxIdn, nFam=pedigree.maxFam, nLoci=nLoci, createSeg=createSeg
+        nInd=pedigree.maxIdn, nFam=pedigree.maxFam, nLoci=nLoci
     )
 
     peelingInfo.isXChr = args.x_chr
@@ -103,20 +100,12 @@ def createPeelingInfo(pedigree, args, createSeg=True, phaseFounder=False):
         if peelingInfo.isXChr:
             if ind.sex == 0:
                 # male the segregation probabilities are 0.5 for pp and pm
-                peelingInfo.pointSeg[ind.idn, 0, :] = 0.5
-                peelingInfo.pointSeg[ind.idn, 1, :] = 0.5
-                peelingInfo.pointSeg[ind.idn, 2, :] = 0
-                peelingInfo.pointSeg[ind.idn, 3, :] = 0
                 peelingInfo.segregation[ind.idn, 0, :] = 0.5
                 peelingInfo.segregation[ind.idn, 1, :] = 0.5
                 peelingInfo.segregation[ind.idn, 2, :] = 0
                 peelingInfo.segregation[ind.idn, 3, :] = 0
             else:
                 # female the segregation probabilities are 0.5 for mp and mm
-                peelingInfo.pointSeg[ind.idn, 0, :] = 0
-                peelingInfo.pointSeg[ind.idn, 1, :] = 0
-                peelingInfo.pointSeg[ind.idn, 2, :] = 0.5
-                peelingInfo.pointSeg[ind.idn, 3, :] = 0.5
                 peelingInfo.segregation[ind.idn, 0, :] = 0
                 peelingInfo.segregation[ind.idn, 1, :] = 0
                 peelingInfo.segregation[ind.idn, 2, :] = 0.5
@@ -278,8 +267,6 @@ def addPenetranceFromExternalFile(pedigree, peelingInfo, fileName, args):
             else:
                 ind = pedigree.individuals[idx]
                 peelingInfo.penetrance[ind.idn, e, :] *= penetranceLine
-                # Normalizing in terms of SNPs seems like a really bad idea.
-                # peelingInfo.penetrance[ind.idn,e,:] /= np.sum(peelingInfo.penetrance[ind.idn,e,:], 0) # Normalization added, just in case.
                 e = (e + 1) % 4
 
 
@@ -320,7 +307,6 @@ spec["anterior"] = float32[:, :, :]
 spec["posterior"] = float32[:, :, :]
 spec["penetrance"] = float32[:, :, :]
 spec["segregation"] = optional(float32[:, :, :])
-spec["pointSeg"] = optional(float32[:, :, :])
 
 # Family terms. Each will be nFam x 4 x nLoci
 spec["posteriorSire_minusFam"] = float32[:, :, :]
@@ -342,7 +328,6 @@ spec["segregationTensorXY_norm"] = optional(float32[:, :, :])
 spec["genoError"] = optional(float32[:])
 spec["seqError"] = optional(float32[:])
 spec["transmissionRate"] = optional(float32[:])
-spec["maf"] = optional(float32[:])
 
 spec["positions"] = optional(int64[:])
 spec["iteration"] = int64
@@ -357,7 +342,7 @@ class jit_peelingInformation(object):
     :type object: class:`jit_peelingInformation`
     """
 
-    def __init__(self, nInd, nFam, nLoci, createSeg=True):
+    def __init__(self, nInd, nFam, nLoci):
         """Initialize the peeling information object.
 
         :param nInd: number of individuals in the pedigree
@@ -366,8 +351,6 @@ class jit_peelingInformation(object):
         :type nFam: int
         :param nLoci: number of loci in genotype input
         :type nLoci: int
-        :param createSeg: whether to create and store segregation probabilities, defaults to True
-        :type createSeg: bool, optional
         """
         self.iteration = 0
         self.nInd = nInd
@@ -376,7 +359,7 @@ class jit_peelingInformation(object):
 
         self.isXChr = False
 
-        self.construct(createSeg)
+        self.construct()
 
         # These are filled in from createPeelingInfo, above.
         self.positions = None
@@ -388,12 +371,8 @@ class jit_peelingInformation(object):
         self.segregationTensorXX = None
         self.segregationTensorXX_norm = None
 
-    def construct(self, createSeg=True):
-        """Sets up the peeling information object.
-
-        :param createSeg: whether to create and store segregation probabilities, defaults to True
-        :type createSeg: bool, optional
-        """
+    def construct(self):
+        """Sets up the peeling information object."""
         baseValue = 0.25
         self.sex = np.full(self.nInd, 0, dtype=np.int64)
 
@@ -411,15 +390,6 @@ class jit_peelingInformation(object):
             (self.nInd, 4, self.nLoci), baseValue, dtype=np.float32
         )
 
-        if (
-            createSeg
-        ):  # Only removes the point seg term since this is not used for single locus peeling.
-            self.pointSeg = np.full(
-                (self.nInd, 4, self.nLoci), baseValue, dtype=np.float32
-            )
-        else:
-            self.pointSeg = None
-
         self.posteriorSire_minusFam = np.full(
             (self.nFam, 4, self.nLoci), baseValue, dtype=np.float32
         )
@@ -436,7 +406,6 @@ class jit_peelingInformation(object):
 
         self.genoError = np.full((self.nLoci), 0, dtype=np.float32)
         self.seqError = np.full((self.nLoci), 0, dtype=np.float32)
-        self.maf = np.full((self.nLoci), 0.5, dtype=np.float32)
         self.transmissionRate = np.full((self.nLoci - 1), 0, dtype=np.float32)
 
     def getGenoProbs(self, idn, sex=None):

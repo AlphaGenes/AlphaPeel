@@ -40,7 +40,6 @@ def peel(family, operation, peelingInfo, singleLocusMode):
     posterior = peelingInfo.posterior
     segregation = peelingInfo.segregation
 
-    pointSeg = peelingInfo.pointSeg
     segregationTensor = peelingInfo.segregationTensor
     segregationTensor_norm = peelingInfo.segregationTensor_norm
 
@@ -58,11 +57,12 @@ def peel(family, operation, peelingInfo, singleLocusMode):
 
     childToParents = np.full((nOffspring, 4, 4, nLoci), 0, dtype=np.float32)
     childSegTensor = np.full((nOffspring, 4, 4, 4, nLoci), 0, dtype=np.float32)
-    allToParents = np.full((4, 4, nLoci), 1.0, dtype=np.float32)
+    allToParents = np.full((4, 4, nLoci), 1, dtype=np.float32)
     parentsMinusChild = np.full((nOffspring, 4, 4, nLoci), 1, dtype=np.float32)
 
     # Some local variables. currentSeg is the segregation estimate of a child (but may be modified).
     currentSeg = np.full((4, nLoci), 1, dtype=np.float32)
+    forwardSeg = np.full((4, nLoci), 1, dtype=np.float32)
 
     # Construct the joint parent genotypes based on the parent's anterior, penetrance, and posterior terms minus this family.
 
@@ -193,19 +193,24 @@ def peel(family, operation, peelingInfo, singleLocusMode):
                 segregationTensor_norm = peelingInfo.segregationTensorXX_norm
 
             # Einstien sum notation 5:
-            # pointSeg[child,:,:] = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild[i,:,:,:], childValues)
+            # segregation[child,:,:] = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild[i,:,:,:], childValues)
             # Estimate with normalizing.
             estimateSegregationWithNorm(
                 segregationTensor,
                 segregationTensor_norm,
                 parentsMinusChild[i, :, :, :],
                 childValues,
-                pointSeg[child, :, :],
+                segregation[child, :, :],
             )
 
-            segregation[child, :, :] = (1 - e) * collapsePointSeg(
-                pointSeg[child, :, :], peelingInfo.transmissionRate
-            ) + e / 4
+            collapseSegregationInPlace(
+                segregation[child, :, :], peelingInfo.transmissionRate, forwardSeg
+            )
+            for locus in range(nLoci):
+                for state in range(4):
+                    segregation[child, state, locus] = (
+                        e1e * segregation[child, state, locus] + e4
+                    )
 
 
 #
@@ -349,7 +354,7 @@ def estimateSegregationWithNorm(
         (P(seg))
     :type output: 2D numpy array of float32 with size 4 x nLoci
     """
-    # pointSeg[child,:,:] = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild[i,:,:,:], childValues)
+    # output = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild, childValues)
     nLoci = childValues.shape[1]
     output[:, :] = 0
     for a in range(4):
@@ -488,39 +493,38 @@ def expNorm1D(mat):
     nogil=True,
     locals={"e": float32, "e2": float32, "e1e": float32, "e2i": float32},
 )
-def collapsePointSeg(pointSeg, transmission):
+def collapseSegregationInPlace(segregation, transmission, forward):
     """Using Baum-Welch algorithm to calculate the segregation probabilities.
 
-    :param pointSeg: the probability of each segregation states of each locus of the current child
+    :param segregation: the probability of each segregation states of each locus of the current child
         given the information of later and current generations from previous peeling cycle
-        (P(seg))
+        (P(seg)). This is updated in place with the collapsed probabilities.
         the segregation state ordering: pp, pm, mp, mm
-    :type pointSeg: 2D numpy array of float32 with size 4 x nLoci
+    :type segregation: 2D numpy array of float32 with size 4 x nLoci
     :param transmission: transmission function based on the distance between adjacent loci
     :type transmission: 1D numpy array of float32 with size (nLoci - 1)
-    :return: the probability of each segregation states of each locus of the current child
-        after the implemtation of Baum-Welch algorithm
+    :param forward: work array for forward messages.
+    :type forward: 2D numpy array of float32 with size 4 x nLoci
+    :return: None. The function updates segregation in place with the collapsed probabilities.
     """
     # This is the forward backward algorithm.
     # Segregation estimate state ordering: pp, pm, mp, mm
-    nLoci = pointSeg.shape[1]
-
-    seg = np.full(pointSeg.shape, 0.25, dtype=np.float32)
-    for i in range(nLoci):
-        for j in range(4):
-            seg[j, i] = pointSeg[j, i]
+    nLoci = segregation.shape[1]
 
     tmp = np.full((4), 0, dtype=np.float32)
     new = np.full((4), 0, dtype=np.float32)
 
-    prev = np.full((4), 0.25, dtype=np.float32)
+    prev = np.full((4), 1, dtype=np.float32)
+    for j in range(4):
+        forward[j, 0] = 1
+
     for i in range(1, nLoci):
         e = transmission[i - 1]
         e2 = e**2
         e1e = e * (1 - e)
         e2i = (1.0 - e) ** 2
         for j in range(4):
-            tmp[j] = prev[j] * pointSeg[j, i - 1]
+            tmp[j] = prev[j] * segregation[j, i - 1]
 
         sum_j = 0
         for j in range(4):
@@ -537,10 +541,12 @@ def collapsePointSeg(pointSeg, transmission):
         new[3] = e2 * tmp[0] + e1e * (tmp[1] + tmp[2]) + e2i * tmp[3]
 
         for j in range(4):
-            seg[j, i] *= new[j]
-        prev = new
+            forward[j, i] = new[j]
+            prev[j] = new[j]
 
-    prev = np.full((4), 0.25, dtype=np.float32)
+    for j in range(4):
+        prev[j] = 1
+
     for i in range(
         nLoci - 2, -1, -1
     ):  # zero indexed then minus one since we skip the boundary.
@@ -550,7 +556,7 @@ def collapsePointSeg(pointSeg, transmission):
         e2i = (1.0 - e) ** 2
 
         for j in range(4):
-            tmp[j] = prev[j] * pointSeg[j, i + 1]
+            tmp[j] = prev[j] * segregation[j, i + 1]
 
         sum_j = 0
         for j in range(4):
@@ -563,15 +569,19 @@ def collapsePointSeg(pointSeg, transmission):
         new[2] = e2 * tmp[1] + e1e * (tmp[0] + tmp[3]) + e2i * tmp[2]
         new[3] = e2 * tmp[0] + e1e * (tmp[1] + tmp[2]) + e2i * tmp[3]
 
-        for j in range(4):
-            seg[j, i] *= new[j]
-        prev = new
-
-    for i in range(nLoci):
         sum_j = 0
         for j in range(4):
-            sum_j += seg[j, i]
+            segregation[j, i + 1] = segregation[j, i + 1] * forward[j, i + 1] * prev[j]
+            sum_j += segregation[j, i + 1]
         for j in range(4):
-            seg[j, i] = seg[j, i] / sum_j
+            segregation[j, i + 1] = segregation[j, i + 1] / sum_j
+            prev[j] = new[j]
 
-    return seg
+    sum_j = 0
+    for j in range(4):
+        segregation[j, 0] = segregation[j, 0] * forward[j, 0] * prev[j]
+        sum_j += segregation[j, 0]
+    for j in range(4):
+        segregation[j, 0] = segregation[j, 0] / sum_j
+
+    return
