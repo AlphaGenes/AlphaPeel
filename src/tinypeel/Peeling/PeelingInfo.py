@@ -19,7 +19,7 @@ from ..tinyhouse import InputOutput
 def createPeelingInfo(pedigree, args, phaseFounder=False):
     """Creates the peeling information object. It sets up the
     genotype probabilities, the segregation tensors, and the transmission
-    rates. It also sets up the genotype status for each individual.
+    rates.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
@@ -121,13 +121,6 @@ def createPeelingInfo(pedigree, args, phaseFounder=False):
                 pedigree.phenoPenetrance,
             )
 
-        # Set the genotyping/read status for each individual. This will be used for, e.g., estimating the minor allele frequency.
-        if ind.genotypes is not None:
-            setGenotypeStatusGenotypes(ind.idn, ind.genotypes, peelingInfo)
-
-        if ind.reads is not None:
-            setGenotypeStatusReads(ind.idn, ind.reads[0], ind.reads[1], peelingInfo)
-
         if ind.isGenotypedFounder() and phaseFounder and ind.genotypes is not None:
             loci = getHetMidpoint(ind.genotypes)
             if loci is not None:
@@ -184,49 +177,6 @@ def setupTransmission(length, peelingInfo):
         distance = localMap[i + 1] - localMap[i]
         distance = distance * length
         peelingInfo.transmissionRate[i] = distance
-
-
-@jit(nopython=True)
-def setGenotypeStatusGenotypes(idn, genotypes, peelingInfo):
-    """Sets the genotype status for each individual based on the genotypes provided.
-    It is used to determine if an individual is genotyped or not.
-
-    :param idn: Internal number for an individual in the pedigree.
-    :type idn: int
-    :param genotypes: observed genotypes for an individual collected via the geno_file input option.
-    :type genotypes: 1D numpy array of Int8 with length nLoci
-    :param peelingInfo: Peeling information container.
-    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
-    :return: None. The function updates the genotyped attribute of peelingInfo object in place
-    """
-    nLoci = len(genotypes)
-    if genotypes is not None:
-        for i in range(nLoci):
-            peelingInfo.genotyped[idn, i] = (
-                peelingInfo.genotyped[idn, i] or genotypes[i] != 9
-            )
-
-
-@jit(nopython=True)
-def setGenotypeStatusReads(idn, reads0, reads1, peelingInfo):
-    """Sets the genotype status for each individual based on the reads provided.
-
-    :param idn: Internal number for an individual in the pedigree
-    :type idn: int
-    :param reads0: the number of sequencing reads supporting the reference allele at each locus
-    :type reads0: 1D numpy array of int64 with length nLoci
-    :param reads1: the number of sequencing reads supporting the alternative allele at each locus
-    :type reads1: 1D numpy array of int64 with length nLoci
-    :param peelingInfo: Peeling information container
-    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
-    :return: None. The function updates the genotyped attribute of peelingInfo object in place
-    """
-    nLoci = len(reads0)
-    if reads0 is not None and reads1 is not None:
-        for i in range(nLoci):
-            peelingInfo.genotyped[idn, i] = (
-                peelingInfo.genotyped[idn, i] or reads0[i] != 0 or reads1[i] != 0
-            )
 
 
 def addPenetranceFromExternalFile(pedigree, peelingInfo, fileName, args):
@@ -300,7 +250,6 @@ spec["nLoci"] = int64
 
 spec["isXChr"] = boolean
 spec["sex"] = int64[:]
-spec["genotyped"] = boolean[:, :]  # Maybe this should be removed?
 
 # Individual terms: Each will be nInd x 4 x nLoci
 spec["anterior"] = float32[:, :, :]
@@ -375,8 +324,6 @@ class jit_peelingInformation(object):
         """Sets up the peeling information object."""
         baseValue = 0.25
         self.sex = np.full(self.nInd, 0, dtype=np.int64)
-
-        self.genotyped = np.full((self.nInd, self.nLoci), False, dtype=np.bool_)
 
         self.anterior = np.full((self.nInd, 4, self.nLoci), baseValue, dtype=np.float32)
         self.posterior = np.full(
