@@ -36,11 +36,14 @@ def updateMaf(pedigree, peelingInfo):
             "Updating error rates and alternative allele frequencies for X chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
     MF = list(pedigree.AAP.keys())
+    for i in range(peelingInfo.nLoci):
+        genotyped = getGenotypedStatusForLocus(pedigree, peelingInfo.nInd, i)
+        for mfx in MF:
+            AAP = pedigree.AAP[mfx]
+            AAP[i] = newtonMafUpdates(peelingInfo, AAP, i, genotyped)
+
     for mfx in MF:
-        AAP = pedigree.AAP[mfx]
-        for i in range(peelingInfo.nLoci):
-            AAP[i] = newtonMafUpdates(peelingInfo, AAP, i)
-        pedigree.AAP[mfx] = AAP.astype(np.float32)
+        pedigree.AAP[mfx] = pedigree.AAP[mfx].astype(np.float32)
 
     for ind in pedigree:
         if ind.MetaFounder is not None and ind.isFounder():
@@ -57,7 +60,29 @@ def updateMaf(pedigree, peelingInfo):
             peelingInfo.anterior[ind.idn, :, :] = mafGeno
 
 
-def newtonMafUpdates(peelingInfo, AAP, index):
+def individualHasObservedDataAtLocus(ind, index):
+    """Return whether an individual has genotype or read data at one locus."""
+
+    if ind.genotypes is not None and ind.genotypes[index] != 9:
+        return True
+
+    if ind.reads is not None:
+        return ind.reads[0][index] != 0 or ind.reads[1][index] != 0
+
+    return False
+
+
+def getGenotypedStatusForLocus(pedigree, nInd, index):
+    """Build the observed-data status vector for one locus."""
+
+    genotyped = np.full(nInd, False, dtype=np.bool_)
+    for ind in pedigree:
+        genotyped[ind.idn] = individualHasObservedDataAtLocus(ind, index)
+
+    return genotyped
+
+
+def newtonMafUpdates(peelingInfo, AAP, index, genotyped):
     """Iterative approximation for the prior alternative allele frequency.
     Currently limits all AAP to be between 0.001 and 0.999.
 
@@ -67,6 +92,8 @@ def newtonMafUpdates(peelingInfo, AAP, index):
     :type AAP: 1D numpy array with length equal to the number of loci
     :param index: the marker index for which to update the alternative allele frequency
     :type index: int
+    :param genotyped: whether each individual has observed data for this locus
+    :type genotyped: 1D numpy array of bool
     :return: the updated alternative allele frequency for the given marker index
     :rtype: float
     """
@@ -82,7 +109,7 @@ def newtonMafUpdates(peelingInfo, AAP, index):
     converged = False
     while not converged:
         maf_old = maf
-        delta = getNewtonUpdate(maf_old, peelingInfo, index)
+        delta = getNewtonUpdate(maf_old, peelingInfo, index, genotyped)
         maf = maf_old + delta
         if maf < 0.001:
             maf = 0.001
@@ -97,7 +124,7 @@ def newtonMafUpdates(peelingInfo, AAP, index):
 
 
 @jit(nopython=True)
-def getNewtonUpdate(p, peelingInfo, index):
+def getNewtonUpdate(p, peelingInfo, index, genotyped):
     """Calculates the alternative allele frequency using Newton's method of optimisation.
 
     :param p: the current alternative allele frequency estimate
@@ -106,6 +133,8 @@ def getNewtonUpdate(p, peelingInfo, index):
     :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
     :param index: the marker index for which to update the alternative allele frequency
     :type index: int
+    :param genotyped: whether each individual has observed data for this locus
+    :type genotyped: 1D numpy array of bool
     :return: ratio of the first and second derivatives of the log likelihood function to be added to the current alternative allele frequency estimate.
     :rtype: float
     """
@@ -127,7 +156,7 @@ def getNewtonUpdate(p, peelingInfo, index):
         np.array([0, 0, 0, 1], dtype=np.float32), p, LLp, LLpp
     )
     for i in range(peelingInfo.nInd):
-        if peelingInfo.genotyped[i, index]:
+        if genotyped[i]:
             d = peelingInfo.penetrance[i, :, index]
             LLp, LLpp = addIndividualToUpdate(d, p, LLp, LLpp)
     if LLp == 0 or LLpp == 0:
