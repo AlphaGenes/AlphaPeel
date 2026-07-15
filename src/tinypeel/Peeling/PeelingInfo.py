@@ -104,7 +104,7 @@ def createPeelingInfo(pedigree, args, phaseFounder=False):
                 peelingInfo.segregation[ind.idn, 1, :] = 0.5
                 peelingInfo.segregation[ind.idn, 2, :] = 0
                 peelingInfo.segregation[ind.idn, 3, :] = 0
-            else:
+            elif ind.sex == 1:
                 # female the segregation probabilities are 0.5 for mp and mm
                 peelingInfo.segregation[ind.idn, 0, :] = 0
                 peelingInfo.segregation[ind.idn, 1, :] = 0

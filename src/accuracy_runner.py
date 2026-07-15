@@ -24,6 +24,7 @@ from src.accuracy_core import (
     run_tinypeel_direct,
     sim_path,
     ensure_directory,
+    warmup_tinypeel_direct,
 )
 
 
@@ -135,6 +136,7 @@ def run_accuracy_case(
     x_chr=False,
     benchmark=None,
     run_name="test_accu",
+    TINYPEEL_DIRECT_IS_WARMED_UP=False,
 ):
     """Run AlphaPeel and evaluate outputs based on the specified parameters."""
 
@@ -266,7 +268,11 @@ def run_accuracy_case(
             x_chr,
             output_path,
         )
-        runtime_seconds = benchmark_tinypeel_direct(argv, output_path=output_path)
+
+        if not TINYPEEL_DIRECT_IS_WARMED_UP:
+            warmup_tinypeel_direct(argv, output_path=output_path)
+
+        runtime_seconds = benchmark_tinypeel_direct(argv)
 
     report_path = build_accuracy_report_path(run_name)
     ensure_directory(os.path.dirname(report_path))
@@ -304,6 +310,8 @@ def run_accuracy_case(
 def run_full_accuracy_suite(run_name="benchmark"):
     """Run the full direct-call accuracy benchmark suite."""
 
+    TINYPEEL_DIRECT_IS_WARMED_UP = False
+
     prepare_directory(get_accuracy_benchmark_output_root(run_name))
     prepare_directory(get_accuracy_benchmark_report_root(run_name))
 
@@ -314,4 +322,7 @@ def run_full_accuracy_suite(run_name="benchmark"):
             *case,
             benchmark=None,
             run_name=run_name,
+            TINYPEEL_DIRECT_IS_WARMED_UP=TINYPEEL_DIRECT_IS_WARMED_UP,
         )
+        if not TINYPEEL_DIRECT_IS_WARMED_UP:
+            TINYPEEL_DIRECT_IS_WARMED_UP = True
