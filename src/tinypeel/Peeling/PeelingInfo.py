@@ -1,4 +1,4 @@
-from numba import jit, float32, int64, optional, boolean
+from numba import jit, optional, boolean, int8, uint32, float32
 from numba.experimental import jitclass
 import numpy as np
 from collections import OrderedDict
@@ -45,11 +45,11 @@ def createPeelingInfo(pedigree, args, phaseFounder=False):
                 InputOutput.readMapFile(args.map_file, args.startsnp, args.stopsnp + 1)[
                     2
                 ],
-                dtype=np.int64,
+                dtype=np.uint32,
             )
         else:
             peelingInfo.positions = np.array(
-                InputOutput.readMapFile(args.map_file)[2], dtype=np.int64
+                InputOutput.readMapFile(args.map_file)[2], dtype=np.uint32
             )
 
     mut_prob = args.mut_prob
@@ -244,12 +244,12 @@ def getHetMidpoint(geno):
 
 
 spec = OrderedDict()
-spec["nInd"] = int64
-spec["nFam"] = int64
-spec["nLoci"] = int64
+spec["nInd"] = uint32
+spec["nFam"] = uint32
+spec["nLoci"] = uint32
 
 spec["isXChr"] = boolean
-spec["sex"] = int64[:]
+spec["sex"] = int8[:]
 
 # Individual terms: Each will be nInd x 4 x nLoci
 spec["anterior"] = float32[:, :, :]
@@ -276,8 +276,8 @@ spec["genoError"] = optional(float32[:])
 spec["seqError"] = optional(float32[:])
 spec["transmissionRate"] = optional(float32[:])
 
-spec["positions"] = optional(int64[:])
-spec["iteration"] = int64
+spec["positions"] = optional(uint32[:])
+spec["iteration"] = uint32
 
 
 @jitclass(spec)
@@ -321,7 +321,7 @@ class jit_peelingInformation(object):
     def construct(self):
         """Sets up the peeling information object."""
         baseValue = 0.25
-        self.sex = np.full(self.nInd, 0, dtype=np.int64)
+        self.sex = np.full(self.nInd, 0, dtype=np.int8)
 
         self.anterior = np.full((self.nInd, 4, self.nLoci), baseValue, dtype=np.float32)
         self.posterior = np.full(

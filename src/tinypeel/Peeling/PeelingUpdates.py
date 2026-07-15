@@ -392,9 +392,9 @@ def updateSeqError_ind(counts, errors, refReads, altReads, genoProbs):
     :param errors: vector of errors for each locus, initialized to 0.001
     :type errors: 1D numpy array with length equal to the number of loci
     :param refReads: the number of sequencing reads supporting the reference allele at each locus
-    :type refReads: 1D numpy array of int64 with length nLoci
+    :type refReads: 1D numpy array of uint16 with length nLoci
     :param altReads: the number of sequencing reads supporting the alternative allele at each locus
-    :type altReads: 1D numpy array of int64 with length nLoci
+    :type altReads: 1D numpy array of uint16 with length nLoci
     :param genoProbs: genotype probabilities for each genotype state at each locus for the individual.
     :type genoProbs: 2D numpy array with shape 4 x nLoci
     :return: None. The function updates the counts and errors arrays in place.
