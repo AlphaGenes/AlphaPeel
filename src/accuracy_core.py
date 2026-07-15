@@ -46,7 +46,6 @@ ROWS_PER_INDIVIDUAL = {
 }
 SEG_PROB_START_GEN = 2
 HAP_FILE = "hap_0.5"
-TINYPEEL_DIRECT_IS_WARMED_UP = False
 DEFAULT_VISUALIZATION_METRICS = ("marker_corr", "abs_diff", "correct_rate")
 ACCURACY_REPORT_VALUE_NAMES = (
     "population",
@@ -479,16 +478,16 @@ def run_tinypeel_direct(argv):
     tinypeel.main(argv=argv)
 
 
-def benchmark_tinypeel_direct(argv, output_path=None, warmup=True):
-    """Warm up JIT compilation, then run AlphaPeel and return elapsed seconds."""
+def warmup_tinypeel_direct(argv, output_path=None):
+    """Warm up JIT compilation."""
 
-    global TINYPEEL_DIRECT_IS_WARMED_UP
+    run_tinypeel_direct(argv)
+    if output_path is not None:
+        prepare_directory(output_path)
 
-    if warmup and not TINYPEEL_DIRECT_IS_WARMED_UP:
-        run_tinypeel_direct(argv)
-        TINYPEEL_DIRECT_IS_WARMED_UP = True
-        if output_path is not None:
-            prepare_directory(output_path)
+
+def benchmark_tinypeel_direct(argv):
+    """Run AlphaPeel and return elapsed seconds."""
 
     start_time = time.perf_counter()
     run_tinypeel_direct(argv)

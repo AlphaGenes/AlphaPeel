@@ -57,7 +57,7 @@ def peel(family, operation, peelingInfo, singleLocusMode):
 
     childToParents = np.full((nOffspring, 4, 4, nLoci), 0, dtype=np.float32)
     childSegTensor = np.full((nOffspring, 4, 4, 4, nLoci), 0, dtype=np.float32)
-    allToParents = np.full((4, 4, nLoci), 1, dtype=np.float32)
+    allToParents = np.full((4, 4, nLoci), 0, dtype=np.float32)
     parentsMinusChild = np.full((nOffspring, 4, 4, nLoci), 1, dtype=np.float32)
 
     # Some local variables. currentSeg is the segregation estimate of a child (but may be modified).
@@ -135,7 +135,6 @@ def peel(family, operation, peelingInfo, singleLocusMode):
 
     for i in range(nOffspring):
         parentsMinusChild[i, :, :, :] = np.log(jointParents[:, :, :])
-    allToParents[:, :, :] = 0
     for i in range(nOffspring):
         log_childToParents = np.log(childToParents[i, :, :, :])
         allToParents += log_childToParents
