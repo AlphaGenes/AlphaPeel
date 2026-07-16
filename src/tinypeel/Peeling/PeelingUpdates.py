@@ -36,8 +36,9 @@ def updateMaf(pedigree, peelingInfo):
             "Updating error rates and alternative allele frequencies for X chromosomes are not well test and will break in interesting ways. Recommend running without that option."
         )
     MF = list(pedigree.AAP.keys())
+    genotypedByLocus = getGenotypedStatus(pedigree, peelingInfo.nInd, peelingInfo.nLoci)
     for i in range(peelingInfo.nLoci):
-        genotyped = getGenotypedStatusForLocus(pedigree, peelingInfo.nInd, i)
+        genotyped = genotypedByLocus[:, i]
         for mfx in MF:
             AAP = pedigree.AAP[mfx]
             AAP[i] = newtonMafUpdates(peelingInfo, AAP, i, genotyped)
@@ -45,18 +46,12 @@ def updateMaf(pedigree, peelingInfo):
     for mfx in MF:
         pedigree.AAP[mfx] = pedigree.AAP[mfx].astype(np.float32)
 
+    mafGenoCache = {}
     for ind in pedigree:
         if ind.MetaFounder is not None and ind.isFounder():
-            AAP = {
-                k: np.zeros(peelingInfo.nLoci, dtype=np.float32)
-                for k in ind.MetaFounder
-            }
-            for mfx in ind.MetaFounder:
-                AAP[mfx] = pedigree.AAP[mfx]
-            if len(ind.MetaFounder) == 2:
-                mafGeno = ProbMath.getGenotypesFromMultiMaf(AAP)
-            else:
-                mafGeno = ProbMath.getGenotypesFromMaf(AAP[mfx])
+            mafGeno = getMafGenotypesForMetaFounder(
+                ind.MetaFounder, pedigree, peelingInfo.nLoci, mafGenoCache
+            )
             peelingInfo.anterior[ind.idn, :, :] = mafGeno
 
 
@@ -80,6 +75,36 @@ def getGenotypedStatusForLocus(pedigree, nInd, index):
         genotyped[ind.idn] = individualHasObservedDataAtLocus(ind, index)
 
     return genotyped
+
+
+def getGenotypedStatus(pedigree, nInd, nLoci):
+    """Build the observed-data status matrix for all loci."""
+
+    genotyped = np.full((nInd, nLoci), False, dtype=np.bool_)
+    for ind in pedigree:
+        indGenotyped = genotyped[ind.idn, :]
+        if ind.genotypes is not None:
+            indGenotyped |= ind.genotypes != 9
+        if ind.reads is not None:
+            indGenotyped |= (ind.reads[0] != 0) | (ind.reads[1] != 0)
+
+    return genotyped
+
+
+def getMafGenotypesForMetaFounder(metaFounder, pedigree, nLoci, cache):
+    """Return the MAF genotype prior for a metafounder tuple."""
+
+    key = tuple(metaFounder)
+    if key not in cache:
+        if len(metaFounder) == 2:
+            AAP = {k: np.zeros(nLoci, dtype=np.float32) for k in metaFounder}
+            for mfx in metaFounder:
+                AAP[mfx] = pedigree.AAP[mfx]
+            cache[key] = ProbMath.getGenotypesFromMultiMaf(AAP)
+        else:
+            cache[key] = ProbMath.getGenotypesFromMaf(pedigree.AAP[metaFounder[0]])
+
+    return cache[key]
 
 
 def newtonMafUpdates(peelingInfo, AAP, index, genotyped):
@@ -229,26 +254,17 @@ def updateMafAfterPeeling(pedigree, peelingInfo):
                 indMF[metaFounder] += 1
 
     for mfx in MF:
-        for i in range(peelingInfo.nLoci):
-            AAP[mfx][i] = AAP[mfx][i] / indMF[mfx]
-            if AAP[mfx][i] < 0.001:
-                AAP[mfx][i] = 0.001
-            elif AAP[mfx][i] > 0.999:
-                AAP[mfx][i] = 0.999
-        pedigree.AAP[mfx] = AAP[mfx].astype(np.float32)
+        currentAAP = AAP[mfx]
+        currentAAP /= indMF[mfx]
+        currentAAP = np.maximum(np.minimum(currentAAP, 0.999), 0.001)
+        pedigree.AAP[mfx] = currentAAP.astype(np.float32)
 
+    mafGenoCache = {}
     for ind in pedigree:
         if ind.MetaFounder is not None and ind.isFounder():
-            AAP = {
-                k: np.zeros(peelingInfo.nLoci, dtype=np.float32)
-                for k in ind.MetaFounder
-            }
-            for mfx in ind.MetaFounder:
-                AAP[mfx] = pedigree.AAP[mfx]
-            if len(ind.MetaFounder) == 2:
-                mafGeno = ProbMath.getGenotypesFromMultiMaf(AAP)
-            else:
-                mafGeno = ProbMath.getGenotypesFromMaf(AAP[mfx])
+            mafGeno = getMafGenotypesForMetaFounder(
+                ind.MetaFounder, pedigree, peelingInfo.nLoci, mafGenoCache
+            )
             peelingInfo.anterior[ind.idn, :, :] = mafGeno
 
 
