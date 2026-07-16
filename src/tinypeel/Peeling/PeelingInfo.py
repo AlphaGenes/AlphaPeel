@@ -217,8 +217,8 @@ def addPenetranceFromExternalFile(pedigree, peelingInfo, fileName, args):
                 )
             else:
                 ind = pedigree.individuals[idx]
-                penetranceState = peelingInfo.penetrance[ind.idn, e, :]
-                penetranceState *= penetranceLine
+                penetranceProb = peelingInfo.penetrance[ind.idn, e, :]
+                penetranceProb *= penetranceLine
                 e = (e + 1) % 4
 
 
