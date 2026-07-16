@@ -143,22 +143,19 @@ def getNewtonUpdate(p, peelingInfo, index, genotyped):
     LLpp = 0
 
     # I want to add priors. Should be 1 individual of each of the four states.
-    LLp, LLpp = addIndividualToUpdate(
-        np.array([1, 0, 0, 0], dtype=np.float32), p, LLp, LLpp
-    )
-    LLp, LLpp = addIndividualToUpdate(
-        np.array([0, 1, 0, 0], dtype=np.float32), p, LLp, LLpp
-    )
-    LLp, LLpp = addIndividualToUpdate(
-        np.array([0, 0, 1, 0], dtype=np.float32), p, LLp, LLpp
-    )
-    LLp, LLpp = addIndividualToUpdate(
-        np.array([0, 0, 0, 1], dtype=np.float32), p, LLp, LLpp
-    )
+    LLp, LLpp = addIndividualScalarsToUpdate(1, 0, 0, p, LLp, LLpp)
+    LLp, LLpp = addIndividualScalarsToUpdate(0, 1, 0, p, LLp, LLpp)
+    LLp, LLpp = addIndividualScalarsToUpdate(0, 1, 0, p, LLp, LLpp)
+    LLp, LLpp = addIndividualScalarsToUpdate(0, 0, 1, p, LLp, LLpp)
     for i in range(peelingInfo.nInd):
         if genotyped[i]:
-            d = peelingInfo.penetrance[i, :, index]
-            LLp, LLpp = addIndividualToUpdate(d, p, LLp, LLpp)
+            d0 = peelingInfo.penetrance[i, 0, index]
+            d1 = (
+                peelingInfo.penetrance[i, 1, index]
+                + peelingInfo.penetrance[i, 2, index]
+            )
+            d2 = peelingInfo.penetrance[i, 3, index]
+            LLp, LLpp = addIndividualScalarsToUpdate(d0, d1, d2, p, LLp, LLpp)
     if LLp == 0 or LLpp == 0:
         return 0  # Could be a case where no one has data.
     return -LLp / LLpp
@@ -182,6 +179,13 @@ def addIndividualToUpdate(d, p, LLp, LLpp):
     d0 = d[0]
     d1 = d[1] + d[2]
     d2 = d[3]
+
+    return addIndividualScalarsToUpdate(d0, d1, d2, p, LLp, LLpp)
+
+
+@jit(nopython=True)
+def addIndividualScalarsToUpdate(d0, d1, d2, p, LLp, LLpp):
+    """Adds pre-collapsed genotype probabilities to the Newton update terms."""
 
     f = d0 * (1 - p) ** 2 + d1 * p * (1 - p) + d2 * p**2
     fp = (d1 - 2 * d0) + 2 * p * (d0 + d2 - d1)
@@ -209,16 +213,20 @@ def updateMafAfterPeeling(pedigree, peelingInfo):
     for ind in pedigree:
         if ind.MetaFounder is not None and ind.isFounder():
             ind_genotype = peelingInfo.getGenoProbs(ind.idn)
+            genotype1 = ind_genotype[1, :]
+            genotype2 = ind_genotype[2, :]
+            genotype3 = ind_genotype[3, :]
             if len(ind.MetaFounder) == 2:
-                AAP[ind.MetaFounder[0]] += 0.5 * ind_genotype[3, :] + ind_genotype[2, :]
-                AAP[ind.MetaFounder[1]] += 0.5 * ind_genotype[3, :] + ind_genotype[1, :]
-                indMF[ind.MetaFounder[0]] += 1
-                indMF[ind.MetaFounder[1]] += 1
+                metaFounder0 = ind.MetaFounder[0]
+                metaFounder1 = ind.MetaFounder[1]
+                AAP[metaFounder0] += 0.5 * genotype3 + genotype2
+                AAP[metaFounder1] += 0.5 * genotype3 + genotype1
+                indMF[metaFounder0] += 1
+                indMF[metaFounder1] += 1
             else:
-                AAP[ind.MetaFounder[0]] += (
-                    0.5 * (ind_genotype[2, :] + ind_genotype[1, :]) + ind_genotype[3, :]
-                )
-                indMF[ind.MetaFounder[0]] += 1
+                metaFounder = ind.MetaFounder[0]
+                AAP[metaFounder] += 0.5 * (genotype2 + genotype1) + genotype3
+                indMF[metaFounder] += 1
 
     for mfx in MF:
         for i in range(peelingInfo.nLoci):
@@ -274,7 +282,7 @@ def updatePenetrance(pedigree, peelingInfo, args):
         XChrMaleFlag = (
             peelingInfo.isXChr and ind.sex == 0
         )  # This is the X chromosome and the individual is male.
-        peelingInfo.penetrance[ind.idn, :, :] = ProbMath.getGenotypeProbabilities(
+        ind_penetrance = ProbMath.getGenotypeProbabilities(
             peelingInfo.nLoci,
             ind.genotypes,
             ind.reads,
@@ -284,10 +292,8 @@ def updatePenetrance(pedigree, peelingInfo, args):
         )
 
         if ind.phenotype is not None:
-            peelingInfo.penetrance[
-                ind.idn, :, :
-            ] = ProbMath.updateGenoProbsFromPhenotype(
-                peelingInfo.penetrance[ind.idn, :, :],
+            ind_penetrance = ProbMath.updateGenoProbsFromPhenotype(
+                ind_penetrance,
                 ind.phenotype,
                 pedigree.phenoPenetrance,
             )
@@ -297,9 +303,11 @@ def updatePenetrance(pedigree, peelingInfo, args):
             if loci is not None:
                 error = peelingInfo.genoError[loci]
                 if not XChrMaleFlag:
-                    peelingInfo.penetrance[ind.idn, :, loci] = np.array(
+                    ind_penetrance[:, loci] = np.array(
                         [error / 3, error / 3, 1 - error, error / 3], dtype=np.float32
                     )
+
+        peelingInfo.penetrance[ind.idn, :, :] = ind_penetrance
 
 
 def updateGenoError(pedigree, peelingInfo):
@@ -344,12 +352,16 @@ def updateGenoError_ind(counts, errors, genotypes, genoProbs):
     for i in range(len(counts)):
         if genotypes[i] != 9:  # Only include non-missing genotypes.
             counts[i] += 1
+            genotypeProb0 = genoProbs[0, i]
+            genotypeProb1 = genoProbs[1, i]
+            genotypeProb2 = genoProbs[2, i]
+            genotypeProb3 = genoProbs[3, i]
             if genotypes[i] == 0:
-                errors[i] += genoProbs[1, i] + genoProbs[2, i] + genoProbs[3, i]
+                errors[i] += genotypeProb1 + genotypeProb2 + genotypeProb3
             if genotypes[i] == 1:
-                errors[i] += genoProbs[0, i] + genoProbs[3, i]
+                errors[i] += genotypeProb0 + genotypeProb3
             if genotypes[i] == 2:
-                errors[i] += genoProbs[0, i] + genoProbs[1, i] + genoProbs[2, i]
+                errors[i] += genotypeProb0 + genotypeProb1 + genotypeProb2
 
 
 def updateSeqError(pedigree, peelingInfo):
@@ -403,9 +415,11 @@ def updateSeqError_ind(counts, errors, refReads, altReads, genoProbs):
     # Errors occur when genotype is 2 (coded as 3) and a reference allele happens.
     # Number of observations is number of reads * probability the individual is homozygous.
     for i in range(len(counts)):
-        counts[i] += (genoProbs[0, i] + genoProbs[3, i]) * (altReads[i] + refReads[i])
-        errors[i] += genoProbs[0, i] * altReads[i]
-        errors[i] += genoProbs[3, i] * refReads[i]
+        genotypeProb0 = genoProbs[0, i]
+        genotypeProb3 = genoProbs[3, i]
+        counts[i] += (genotypeProb0 + genotypeProb3) * (altReads[i] + refReads[i])
+        errors[i] += genotypeProb0 * altReads[i]
+        errors[i] += genotypeProb3 * refReads[i]
 
 
 def updatePhenoPenetrance(pedigree, peelingInfo):
@@ -463,8 +477,9 @@ def updatePhenoPenetrance_ind(
     # For now, assuming only single locus genotype input
     # Handles multiple phenotype record as another count
 
+    genoProbsFirstLocus = genoProbs[:, 0]
     for pheno in phenotype:
         pheno = int(pheno)
         if 0 <= pheno < rgPheno:
             denominator += genoProbs
-            contributions[:, pheno] += genoProbs[:, 0]
+            contributions[:, pheno] += genoProbsFirstLocus

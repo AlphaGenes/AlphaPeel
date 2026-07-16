@@ -73,16 +73,18 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
                                 peelingInfo.nLoci, 0.5, dtype=np.float32
                             )
                         else:
+                            aap = pedigree.AAP[mfx]
                             for i in range(peelingInfo.nLoci):
-                                if pedigree.AAP[mfx][i] > 1 or pedigree.AAP[mfx][i] < 0:
+                                aapValue = aap[i]
+                                if aapValue > 1 or aapValue < 0:
                                     # Throw an error (equivalent to if value is missing as set in tinyhouse)
                                     raise ValueError(
-                                        f"Invalid value {pedigree.AAP[mfx][i]} for alternative allele probability for metafounder {mfx} at locus {i}. \nValues must be between 0 and 1. Set to 0.5 (default) if unknown."
+                                        f"Invalid value {aapValue} for alternative allele probability for metafounder {mfx} at locus {i}. \nValues must be between 0 and 1. Set to 0.5 (default) if unknown."
                                     )
-                                elif pedigree.AAP[mfx][i] < 0.001:
-                                    pedigree.AAP[mfx][i] = 0.001
-                                elif pedigree.AAP[mfx][i] > 0.999:
-                                    pedigree.AAP[mfx][i] = 0.999
+                                elif aapValue < 0.001:
+                                    aap[i] = 0.001
+                                elif aapValue > 0.999:
+                                    aap[i] = 0.999
                     AAP[mfx] = pedigree.AAP[mfx]
                 if len(ind.MetaFounder) == 2:
                     mafGeno = ProbMath.getGenotypesFromMultiMaf(AAP)
@@ -223,16 +225,15 @@ def updateSire(sire, peelingInfo):
     """
     famList = [fam.idn for fam in sire.families]
     sire = sire.idn
-    peelingInfo.posterior[sire, :, :] = 0
+    sirePosterior = peelingInfo.posterior[sire, :, :]
+    sirePosterior[:, :] = 0
     for famId in famList:
         log_update = np.log(peelingInfo.posteriorSireContribution[famId, :, :])
-        peelingInfo.posterior[sire, :, :] += log_update
+        sirePosterior += log_update
 
     # Rescale values.
-    peelingInfo.posterior[sire, :, :] = Peeling.expNorm1D(
-        peelingInfo.posterior[sire, :, :]
-    )
-    peelingInfo.posterior[sire, :, :] /= np.sum(peelingInfo.posterior[sire, :, :], 0)
+    sirePosterior[:, :] = Peeling.expNorm1D(sirePosterior)
+    sirePosterior /= np.sum(sirePosterior, 0)
 
 
 def updateDam(dam, peelingInfo):
@@ -246,15 +247,14 @@ def updateDam(dam, peelingInfo):
     """
     famList = [fam.idn for fam in dam.families]
     dam = dam.idn
-    peelingInfo.posterior[dam, :, :] = 0
+    damPosterior = peelingInfo.posterior[dam, :, :]
+    damPosterior[:, :] = 0
     for famId in famList:
         log_update = np.log(peelingInfo.posteriorDamContribution[famId, :, :])
-        peelingInfo.posterior[dam, :, :] += log_update
+        damPosterior += log_update
 
-    peelingInfo.posterior[dam, :, :] = Peeling.expNorm1D(
-        peelingInfo.posterior[dam, :, :]
-    )
-    peelingInfo.posterior[dam, :, :] /= np.sum(peelingInfo.posterior[dam, :, :], 0)
+    damPosterior[:, :] = Peeling.expNorm1D(damPosterior)
+    damPosterior /= np.sum(damPosterior, 0)
 
 
 def getLociAndDistance(snpMap, segMap):
@@ -283,13 +283,16 @@ def getLociAndDistance(snpMap, segMap):
         # Now that positions are known, choose the neighboring markers and the distance to those markers.
         # First two if statements handle the begining and ends of the chromosome.
         if segIndex == 0 and segMap[segIndex] > pos:
-            loci[i, :] = (segIndex, segIndex)
+            loci[i, 0] = segIndex
+            loci[i, 1] = segIndex
             distance[i] = 0
         elif segIndex == (len(segMap) - 1) and segMap[segIndex] <= pos:
-            loci[i, :] = (segIndex, segIndex)
+            loci[i, 0] = segIndex
+            loci[i, 1] = segIndex
             distance[i] = 0
         else:
-            loci[i, :] = (segIndex, segIndex + 1)
+            loci[i, 0] = segIndex
+            loci[i, 1] = segIndex + 1
             gap = segMap[segIndex + 1] - segMap[segIndex]
             distance[i] = (
                 1.0 - (pos - segMap[segIndex]) / gap
@@ -326,13 +329,14 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
 
         seg = InputOutput.readInSeg(pedigree, args.seg_file, start=start, stop=stop)
         loci -= start  # Re-align to seg file.
+        segregation = peelingInfo.segregation
         for i in range(len(distance)):
             segLoc0 = loci[i, 0]
             segLoc1 = loci[i, 1]
-            peelingInfo.segregation[:, :, i] = (
-                distance[i] * seg[:, :, segLoc0]
-                + (1 - distance[i]) * seg[:, :, segLoc1]
-            )
+            segregationAtLocus = segregation[:, :, i]
+            seg0 = seg[:, :, segLoc0]
+            seg1 = seg[:, :, segLoc1]
+            segregationAtLocus[:, :] = distance[i] * seg0 + (1 - distance[i]) * seg1
 
 
 def get_probability_options():

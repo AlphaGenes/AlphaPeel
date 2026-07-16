@@ -158,17 +158,14 @@ def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
     :return: None. Writes to the specified output file.
     """
     args = InputOutput.args
+    formatter = f"{{:.{args.out_digits}f}}".format
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn, ind.sex)
             f.write("\n")
             for i in range(matrix.shape[0]):
-                f.write(
-                    ind.idx
-                    + " "
-                    + " ".join(map(f"{{:.{args.out_digits}f}}".format, matrix[i, :]))
-                    + "\n"
-                )
+                matrixRow = matrix[i, :]
+                f.write(ind.idx + " " + " ".join(map(formatter, matrixRow)) + "\n")
 
 
 def writeGenoProbs(pedigree, genoProbFunc, outputFile):
@@ -183,9 +180,14 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
     :return: None. Writes to the specified output file.
     """
     args = InputOutput.args
+    formatter = f"{{:.{args.out_digits}f}}".format
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn, ind.sex)
+            matrix0 = matrix[0, :]
+            matrix1 = matrix[1, :]
+            matrix2 = matrix[2, :]
+            matrix3 = matrix[3, :]
             for i in range(matrix.shape[0]):
                 if i == 1:  # Add up probabilities for aA and Aa
                     f.write(
@@ -193,21 +195,17 @@ def writeGenoProbs(pedigree, genoProbFunc, outputFile):
                         + " "
                         + " ".join(
                             map(
-                                f"{{:.{args.out_digits}f}}".format,
-                                matrix[i, :] + matrix[i + 1, :],
+                                formatter,
+                                matrix1 + matrix2,
                             )
                         )
                         + "\n"
                     )
                 elif i != 2:  # Print probabilities for aa and AA
-                    f.write(
-                        ind.idx
-                        + " "
-                        + " ".join(
-                            map(f"{{:.{args.out_digits}f}}".format, matrix[i, :])
-                        )
-                        + "\n"
-                    )
+                    matrixRow = matrix0
+                    if i == 3:
+                        matrixRow = matrix3
+                    f.write(ind.idx + " " + " ".join(map(formatter, matrixRow)) + "\n")
 
 
 def writePhenoProbs(pedigree, phenoProbFunc):
@@ -220,17 +218,14 @@ def writePhenoProbs(pedigree, phenoProbFunc):
     :return: None. Writes to the specified output file.
     """
     args = InputOutput.args
+    formatter = f"{{:.{args.out_digits}f}}".format
     with open(args.out_file + ".pheno_prob.txt", "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = phenoProbFunc(ind.idn, pedigree.phenoPenetrance)
             f.write("\n")
             for i in range(matrix.shape[0]):
-                f.write(
-                    ind.idx
-                    + " "
-                    + " ".join(map(f"{{:.{args.out_digits}f}}".format, matrix[i, :]))
-                    + "\n"
-                )
+                matrixRow = matrix[i, :]
+                f.write(ind.idx + " " + " ".join(map(formatter, matrixRow)) + "\n")
 
 
 def writeDosages(pedigree, genoProbFunc, isXChr, outputFile):
@@ -247,19 +242,17 @@ def writeDosages(pedigree, genoProbFunc, isXChr, outputFile):
     :return: None. Writes to the specified output file.
     """
     args = InputOutput.args
+    formatter = f"{{:.{args.out_digits}f}}".format
+    xChrMaleDosageWeights = np.array([0, 0, 0, 1])
+    autosomeDosageWeights = np.array([0, 1, 1, 2])
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             if isXChr and ind.sex == 0:
-                tmp = np.array([0, 0, 0, 1])
+                tmp = xChrMaleDosageWeights
             else:
-                tmp = np.array([0, 1, 1, 2])
+                tmp = autosomeDosageWeights
             matrix = np.dot(tmp, genoProbFunc(ind.idn, ind.sex))
-            f.write(
-                ind.idx
-                + " "
-                + " ".join(map(f"{{:.{args.out_digits}f}}".format, matrix))
-                + "\n"
-            )
+            f.write(ind.idx + " " + " ".join(map(formatter, matrix)) + "\n")
 
 
 def writeCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
@@ -280,16 +273,19 @@ def writeCalledGenotypes(pedigree, genoProbFunc, isXChr, outputFile, thresh):
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn, ind.sex)
+            matrix0 = matrix[0, :]
+            matrix1 = matrix[1, :]
+            matrix2 = matrix[2, :]
+            matrix3 = matrix[3, :]
             if isXChr and ind.sex == 0:
-                matrixCollapsedHets = np.array(
-                    [matrix[0, :] + matrix[2, :], matrix[1, :] + matrix[3, :]],
-                    dtype=np.float32,
-                )
+                matrixCollapsedHets = np.empty((2, matrix.shape[1]), dtype=np.float32)
+                matrixCollapsedHets[0, :] = matrix0 + matrix2
+                matrixCollapsedHets[1, :] = matrix1 + matrix3
             else:
-                matrixCollapsedHets = np.array(
-                    [matrix[0, :], matrix[1, :] + matrix[2, :], matrix[3, :]],
-                    dtype=np.float32,
-                )
+                matrixCollapsedHets = np.empty((3, matrix.shape[1]), dtype=np.float32)
+                matrixCollapsedHets[0, :] = matrix0
+                matrixCollapsedHets[1, :] = matrix1 + matrix2
+                matrixCollapsedHets[2, :] = matrix3
 
             calledGenotypes = np.argmax(matrixCollapsedHets, axis=0)
             setMissing(calledGenotypes, matrixCollapsedHets, thresh)
@@ -312,26 +308,26 @@ def writeCalledPhase(pedigree, genoProbFunc, isXChr, outputFile, thresh):
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn, ind.sex)
+            matrix0 = matrix[0, :]
+            matrix1 = matrix[1, :]
+            matrix2 = matrix[2, :]
+            matrix3 = matrix[3, :]
 
             # Paternal
             if isXChr and ind.sex == 0:
-                paternal_haplotype = np.array(
-                    9 * np.ones(matrix.shape[1]), dtype=np.int8
-                )
+                paternal_haplotype = np.full(matrix.shape[1], 9, dtype=np.int8)
             else:
-                paternal_probs = np.array(
-                    [matrix[0, :] + matrix[1, :], matrix[2, :] + matrix[3, :]],
-                    dtype=np.float32,
-                )
+                paternal_probs = np.empty((2, matrix.shape[1]), dtype=np.float32)
+                paternal_probs[0, :] = matrix0 + matrix1
+                paternal_probs[1, :] = matrix2 + matrix3
                 paternal_haplotype = np.argmax(paternal_probs, axis=0)
                 setMissing(paternal_haplotype, paternal_probs, thresh)
             f.write(ind.idx + " " + " ".join(map(str, paternal_haplotype)) + "\n")
 
             # Maternal
-            maternal_probs = np.array(
-                [matrix[0, :] + matrix[2, :], matrix[1, :] + matrix[3, :]],
-                dtype=np.float32,
-            )
+            maternal_probs = np.empty((2, matrix.shape[1]), dtype=np.float32)
+            maternal_probs[0, :] = matrix0 + matrix2
+            maternal_probs[1, :] = matrix1 + matrix3
             maternal_haplotype = np.argmax(maternal_probs, axis=0)
             setMissing(maternal_haplotype, maternal_probs, thresh)
             f.write(ind.idx + " " + " ".join(map(str, maternal_haplotype)) + "\n")
