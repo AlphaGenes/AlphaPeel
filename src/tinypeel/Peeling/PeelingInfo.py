@@ -88,7 +88,7 @@ def createPeelingInfo(pedigree, args, phaseFounder=False):
             peelingInfo.isXChr and ind.sex == 0
         )  # This is the X chromosome and the individual is male.
 
-        peelingInfo.penetrance[ind.idn, :, :] = ProbMath.getGenotypeProbabilities(
+        ind_penetrance = ProbMath.getGenotypeProbabilities(
             peelingInfo.nLoci,
             ind.genotypes,
             ind.reads,
@@ -98,25 +98,24 @@ def createPeelingInfo(pedigree, args, phaseFounder=False):
         )
 
         if peelingInfo.isXChr:
+            ind_segregation = peelingInfo.segregation[ind.idn, :, :]
             if ind.sex == 0:
                 # male the segregation probabilities are 0.5 for pp and pm
-                peelingInfo.segregation[ind.idn, 0, :] = 0.5
-                peelingInfo.segregation[ind.idn, 1, :] = 0.5
-                peelingInfo.segregation[ind.idn, 2, :] = 0
-                peelingInfo.segregation[ind.idn, 3, :] = 0
+                ind_segregation[0, :] = 0.5
+                ind_segregation[1, :] = 0.5
+                ind_segregation[2, :] = 0
+                ind_segregation[3, :] = 0
             elif ind.sex == 1:
                 # female the segregation probabilities are 0.5 for mp and mm
-                peelingInfo.segregation[ind.idn, 0, :] = 0
-                peelingInfo.segregation[ind.idn, 1, :] = 0
-                peelingInfo.segregation[ind.idn, 2, :] = 0.5
-                peelingInfo.segregation[ind.idn, 3, :] = 0.5
+                ind_segregation[0, :] = 0
+                ind_segregation[1, :] = 0
+                ind_segregation[2, :] = 0.5
+                ind_segregation[3, :] = 0.5
         if ind.phenotype is not None:
             # If penetrance is yet updated by genotype inputs, use uniform distribution of 0.25 for all genotypes established in initialisation.
             # TODO: Update for if multiple phenotypes in input or multiple loci in genotypes.
-            peelingInfo.penetrance[
-                ind.idn, :, :
-            ] = ProbMath.updateGenoProbsFromPhenotype(
-                peelingInfo.penetrance[ind.idn, :, :],
+            ind_penetrance = ProbMath.updateGenoProbsFromPhenotype(
+                ind_penetrance,
                 ind.phenotype,
                 pedigree.phenoPenetrance,
             )
@@ -126,9 +125,11 @@ def createPeelingInfo(pedigree, args, phaseFounder=False):
             if loci is not None:
                 error = args.geno_error_prob
                 if (not peelingInfo.isXChr) or (ind.sex != 0):  # sex = 0 is male
-                    peelingInfo.penetrance[ind.idn, :, loci] = np.array(
+                    ind_penetrance[:, loci] = np.array(
                         [error / 3, error / 3, 1 - error, error / 3], dtype=np.float32
                     )
+
+        peelingInfo.penetrance[ind.idn, :, :] = ind_penetrance
 
     if args.phased_geno_prob_file is not None:
         if peelingInfo.isXChr:
@@ -216,7 +217,8 @@ def addPenetranceFromExternalFile(pedigree, peelingInfo, fileName, args):
                 )
             else:
                 ind = pedigree.individuals[idx]
-                peelingInfo.penetrance[ind.idn, e, :] *= penetranceLine
+                penetranceState = peelingInfo.penetrance[ind.idn, e, :]
+                penetranceState *= penetranceLine
                 e = (e + 1) % 4
 
 
@@ -356,18 +358,21 @@ class jit_peelingInformation(object):
         :return: genoProbs: the genotype probabilities for the individual
         :rtype: 2D numpy array of float32 with shape 4 x nLoci
         """
-        genoProbs = (
-            self.anterior[idn, :, :]
-            * self.posterior[idn, :, :]
-            * self.penetrance[idn, :, :]
-        )
+        anterior = self.anterior[idn, :, :]
+        posterior = self.posterior[idn, :, :]
+        penetrance = self.penetrance[idn, :, :]
+        genoProbs = anterior * posterior * penetrance
         if self.isXChr and sex == 0:  # male
-            genoProbs[0, :] = genoProbs[0, :] + genoProbs[2, :]
-            genoProbs[3, :] = genoProbs[1, :] + genoProbs[3, :]
-            genoProbs[1, :] = 0
-            genoProbs[2, :] = 0
+            genoProbs0 = genoProbs[0, :]
+            genoProbs1 = genoProbs[1, :]
+            genoProbs2 = genoProbs[2, :]
+            genoProbs3 = genoProbs[3, :]
+            genoProbs0 += genoProbs2
+            genoProbs3 += genoProbs1
+            genoProbs1[:] = 0
+            genoProbs2[:] = 0
 
-        genoProbs = genoProbs / np.sum(genoProbs, 0)
+        genoProbs /= np.sum(genoProbs, 0)
         return genoProbs
 
     def getPhenoProbs(self, idn, phenoPenetrance):
@@ -385,10 +390,12 @@ class jit_peelingInformation(object):
         i = 0
         phenoProbs = np.zeros((rgPheno, 1), dtype=np.float32)
         while i < rgPheno:
-            penetrance = np.zeros((4, 1), dtype=np.float32)
-            penetrance[:, 0] = phenoPenetrance[:, i]
-            tmp = genoProbs * penetrance
-            phenoProbs[i, 0] = np.sum(tmp)
+            total = 0.0
+            for genotype in range(4):
+                penetrance = phenoPenetrance[genotype, i]
+                for locus in range(self.nLoci):
+                    total += genoProbs[genotype, locus] * penetrance
+            phenoProbs[i, 0] = total
             i += 1
 
         phenoProbs /= np.sum(phenoProbs, 0)
