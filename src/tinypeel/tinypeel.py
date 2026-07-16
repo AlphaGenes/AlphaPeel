@@ -5,7 +5,6 @@ import warnings
 
 from .tinyhouse import Pedigree
 from .tinyhouse import InputOutput
-from .tinyhouse import ProbMath
 
 from .Peeling import Peeling
 from .Peeling import PeelingIO
@@ -59,12 +58,9 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
     # Right now maf _only_ uses the penetrance so can be estimated once.
     if args.alt_allele_prob_file is not None:
         mf_pedigree = []
+        mafGenoCache = {}
         for ind in pedigree:
             if ind.isFounder() and ind.MetaFounder is not None:
-                AAP = {
-                    k: np.zeros(peelingInfo.nLoci, dtype=np.float32)
-                    for k in ind.MetaFounder
-                }
                 for mfx in ind.MetaFounder:
                     if mfx not in mf_pedigree:
                         mf_pedigree.append(mfx)
@@ -85,11 +81,9 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
                                     aap[i] = 0.001
                                 elif aapValue > 0.999:
                                     aap[i] = 0.999
-                    AAP[mfx] = pedigree.AAP[mfx]
-                if len(ind.MetaFounder) == 2:
-                    mafGeno = ProbMath.getGenotypesFromMultiMaf(AAP)
-                else:
-                    mafGeno = ProbMath.getGenotypesFromMaf(AAP[mfx])
+                mafGeno = PeelingUpdates.getMafGenotypesForMetaFounder(
+                    ind.MetaFounder, pedigree, peelingInfo.nLoci, mafGenoCache
+                )
                 peelingInfo.anterior[ind.idn, :, :] = mafGeno
         mf_input = pedigree.AAP.copy()
         # removal of any metafounders not in pedigree
