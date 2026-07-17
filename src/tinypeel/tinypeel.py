@@ -107,9 +107,19 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
                 "-est_start_alt_allele_prob will overwrite any differences between metafounders. To avoid this, please use -est_alt_allele_prob instead"
             )
         PeelingUpdates.updateMaf(pedigree, peelingInfo)
+    jitGenerations = None
+    if args.n_cycle > 0:
+        jitGenerations = getJitFamiliesByGeneration(pedigree)
+
     for i in range(args.n_cycle):
         print("Cycle ", i)
-        peelingCycle(pedigree, peelingInfo, args=args, singleLocusMode=singleLocusMode)
+        peelingCycle(
+            pedigree,
+            peelingInfo,
+            args=args,
+            singleLocusMode=singleLocusMode,
+            jitGenerations=jitGenerations,
+        )
         peelingInfo.iteration += 1
 
         if args.est_geno_error_prob or args.est_seq_error_prob:
@@ -127,7 +137,18 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
             PeelingUpdates.updateMafAfterPeeling(pedigree, peelingInfo)
 
 
-def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
+def getJitFamiliesByGeneration(pedigree):
+    """Build reusable jit family containers for each generation."""
+
+    return [
+        [family.toJit() for family in generation.families]
+        for generation in pedigree.generations
+    ]
+
+
+def peelingCycle(
+    pedigree, peelingInfo, args, singleLocusMode=False, jitGenerations=None
+):
     """Runs a single peeling cycle.
     Starts with peeling down, then peeling up.
 
@@ -139,47 +160,48 @@ def peelingCycle(pedigree, peelingInfo, args, singleLocusMode=False):
     :type args: argparse.Namespace or similar object with attributes
     :param singleLocusMode: whether method is single locus or not, defaults to False
     :type singleLocusMode: bool, optional
+    :param jitGenerations: prebuilt jit family containers for each generation, defaults to None
+    :type jitGenerations: list, optional
     :return: None. The function modifies the peelingInfo and pedigree object in place
     """
     nWorkers = args.maxthreads
+    if jitGenerations is None:
+        jitGenerations = getJitFamiliesByGeneration(pedigree)
 
-    for index, generation in enumerate(pedigree.generations):
+    for index, jit_families in enumerate(jitGenerations):
         print("Peeling Down, Generation", index)
-        jit_families = [family.toJit() for family in generation.families]
 
         if args.maxthreads > 1:
             with concurrent.futures.ThreadPoolExecutor(
                 max_workers=nWorkers
             ) as executor:
                 executor.map(
-                    Peeling.peel,
+                    Peeling.peelDown,
                     jit_families,
-                    repeat(Peeling.PEEL_DOWN),
                     repeat(peelingInfo),
                     repeat(singleLocusMode),
                 )
         else:
             for family in jit_families:
-                Peeling.peel(family, Peeling.PEEL_DOWN, peelingInfo, singleLocusMode)
+                Peeling.peelDown(family, peelingInfo, singleLocusMode)
 
     for index, generation in enumerate(reversed(pedigree.generations)):
-        print("Peeling Up, Generation", len(pedigree.generations) - index - 1)
-        jit_families = [family.toJit() for family in generation.families]
+        print("Peeling Up, Generation", pedigree.nGenerations - index - 1)
+        jit_families = jitGenerations[pedigree.nGenerations - index - 1]
 
         if args.maxthreads > 1:
             with concurrent.futures.ThreadPoolExecutor(
                 max_workers=nWorkers
             ) as executor:
                 executor.map(
-                    Peeling.peel,
+                    Peeling.peelUp,
                     jit_families,
-                    repeat(Peeling.PEEL_UP),
                     repeat(peelingInfo),
                     repeat(singleLocusMode),
                 )
         else:
             for family in jit_families:
-                Peeling.peel(family, Peeling.PEEL_UP, peelingInfo, singleLocusMode)
+                Peeling.peelUp(family, peelingInfo, singleLocusMode)
 
         sires = set()
         dams = set()
@@ -226,7 +248,7 @@ def updateSire(sire, peelingInfo):
         sirePosterior += log_update
 
     # Rescale values.
-    sirePosterior[:, :] = Peeling.expNorm1D(sirePosterior)
+    sirePosterior[:, :] = Peeling.expNorm1D(sirePosterior, peelingInfo.nLoci)
     sirePosterior /= np.sum(sirePosterior, 0)
 
 
@@ -247,7 +269,7 @@ def updateDam(dam, peelingInfo):
         log_update = np.log(peelingInfo.posteriorDamContribution[famId, :, :])
         damPosterior += log_update
 
-    damPosterior[:, :] = Peeling.expNorm1D(damPosterior)
+    damPosterior[:, :] = Peeling.expNorm1D(damPosterior, peelingInfo.nLoci)
     damPosterior /= np.sum(damPosterior, 0)
 
 

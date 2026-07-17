@@ -162,7 +162,6 @@ def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
     with open(outputFile, "w+") as f:
         for idx, ind in pedigree.writeOrder():
             matrix = genoProbFunc(ind.idn, ind.sex)
-            f.write("\n")
             for i in range(matrix.shape[0]):
                 matrixRow = matrix[i, :]
                 f.write(ind.idx + " " + " ".join(map(formatter, matrixRow)) + "\n")
