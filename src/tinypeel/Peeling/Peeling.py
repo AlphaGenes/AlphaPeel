@@ -7,19 +7,6 @@ PEEL_UP = 0
 PEEL_DOWN = 1
 
 
-@jit(
-    nopython=True,
-    nogil=True,
-)
-def peel(family, operation, peelingInfo, singleLocusMode):
-    """Compatibility dispatcher for the direction-specific peeling kernels."""
-
-    if operation == PEEL_DOWN:
-        peelDown(family, peelingInfo, singleLocusMode)
-    else:
-        peelUp(family, peelingInfo, singleLocusMode)
-
-
 # This is the main peeling down function.
 @jit(
     nopython=True,
@@ -103,42 +90,68 @@ def peelDown(family, peelingInfo, singleLocusMode):
 
     # Now construct the parental genotypes based on within-family information.
 
-    for index in range(nOffspring):
-        child = family.offspring[index]
+    if isXChr:
+        for index in range(nOffspring):
+            child = family.offspring[index]
+            childSegs = childSegTensor[index, :, :, :, :]
+            projectChildForPeelXChr(
+                posterior,
+                penetrance,
+                segregation,
+                peelingInfo.sex,
+                peelingInfo.segregationTensorXY,
+                peelingInfo.segregationTensorXX,
+                child,
+                childValuesCurrent,
+                currentSeg,
+                childSegs,
+                childToParentsCurrent,
+                nLoci,
+                e1e,
+                e4,
+            )
+            if needsSegregationUpdate:
+                childValuesTensor[index, :, :] = childValuesCurrent
 
-        # Einstien sum notation 2: Create the child-specific segregation tensor using the child's currrent segregation estimate.
-        # childSegTensor[index,:,:,:,:] = np.einsum("abcd, di -> abci", segregationTensor, currentSeg)
-        childSegs = childSegTensor[index, :, :, :, :]
+            addLogChildToParentsAndSubtractCurrent(
+                childToParentsCurrent,
+                allToParents,
+                parentsMinusChild[index, :, :, :],
+                nLoci,
+            )
+    else:
+        for index in range(nOffspring):
+            child = family.offspring[index]
 
-        # Einstien sum notation 3: Estimate the parental genotypes based on the child's genotypes and their segregation tensor.
-        # childToParents[index,:,:,:] = np.einsum("abci, ci -> abi", childSegTensor[index,:,:,:,:], childValues)
-        projectChildForPeel(
-            posterior,
-            penetrance,
-            segregation,
-            peelingInfo.sex,
-            peelingInfo.segregationTensor,
-            peelingInfo.segregationTensorXY,
-            peelingInfo.segregationTensorXX,
-            child,
-            childValuesCurrent,
-            currentSeg,
-            childSegs,
-            childToParentsCurrent,
-            isXChr,
-            nLoci,
-            e1e,
-            e4,
-        )
-        if needsSegregationUpdate:
-            childValuesTensor[index, :, :] = childValuesCurrent
+            # Einstien sum notation 2: Create the child-specific segregation tensor using the child's currrent segregation estimate.
+            # childSegTensor[index,:,:,:,:] = np.einsum("abcd, di -> abci", segregationTensor, currentSeg)
+            childSegs = childSegTensor[index, :, :, :, :]
 
-        addLogChildToParentsAndSubtractCurrent(
-            childToParentsCurrent,
-            allToParents,
-            parentsMinusChild[index, :, :, :],
-            nLoci,
-        )
+            # Einstien sum notation 3: Estimate the parental genotypes based on the child's genotypes and their segregation tensor.
+            # childToParents[index,:,:,:] = np.einsum("abci, ci -> abi", childSegTensor[index,:,:,:,:], childValues)
+            projectChildForPeelAutosome(
+                posterior,
+                penetrance,
+                segregation,
+                peelingInfo.segregationTensor,
+                child,
+                childValuesCurrent,
+                currentSeg,
+                childSegs,
+                childToParentsCurrent,
+                nLoci,
+                e1e,
+                e4,
+            )
+            if needsSegregationUpdate:
+                childValuesTensor[index, :, :] = childValuesCurrent
+
+            addLogChildToParentsAndSubtractCurrent(
+                childToParentsCurrent,
+                allToParents,
+                parentsMinusChild[index, :, :, :],
+                nLoci,
+            )
 
     # Estimate the parents genotype and the child-specific posterior terms using a slightly smarter log scale.
     addJointParentsAndAllToMinus(
@@ -165,14 +178,14 @@ def peelDown(family, peelingInfo, singleLocusMode):
         normalize4ByLocus(childAnterior, nLoci)
 
     if needsSegregationUpdate:
-        # Estimate the segregation probabilities for each child.
+        if isXChr:
+            # Estimate the segregation probabilities for each child.
 
-        for i in range(nOffspring):
-            # Child values is the same as in the posterior estimation step above.
-            child = family.offspring[i]
-            childValues = childValuesTensor[i, :, :]
+            for i in range(nOffspring):
+                # Child values is the same as in the posterior estimation step above.
+                child = family.offspring[i]
+                childValues = childValuesTensor[i, :, :]
 
-            if isXChr:
                 if peelingInfo.sex[child] == 0:  # 0 for male, 1 for female.
                     segregationTensor = peelingInfo.segregationTensorXY
                     segregationTensor_norm = peelingInfo.segregationTensorXY_norm
@@ -180,29 +193,60 @@ def peelDown(family, peelingInfo, singleLocusMode):
                     segregationTensor = peelingInfo.segregationTensorXX
                     segregationTensor_norm = peelingInfo.segregationTensorXX_norm
 
-            # Einstien sum notation 5:
-            # segregation[child,:,:] = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild[i,:,:,:], childValues)
-            # Estimate with normalizing.
-            estimateSegregationWithNorm(
-                segregationTensor,
-                segregationTensor_norm,
-                parentsMinusChild[i, :, :, :],
-                childValues,
-                segregation[child, :, :],
-                nLoci,
-            )
+                # Einstien sum notation 5:
+                # segregation[child,:,:] = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild[i,:,:,:], childValues)
+                # Estimate with normalizing.
+                estimateSegregationWithNorm(
+                    segregationTensor,
+                    segregationTensor_norm,
+                    parentsMinusChild[i, :, :, :],
+                    childValues,
+                    segregation[child, :, :],
+                    nLoci,
+                )
 
-            collapseSegregationInPlace(
-                segregation[child, :, :],
-                peelingInfo.transmissionRate,
-                forwardSeg,
-                nLoci,
-            )
-            for locus in range(nLoci):
-                for state in range(4):
-                    segregation[child, state, locus] = (
-                        e1e * segregation[child, state, locus] + e4
-                    )
+                collapseSegregationInPlace(
+                    segregation[child, :, :],
+                    peelingInfo.transmissionRate,
+                    forwardSeg,
+                    nLoci,
+                )
+                for locus in range(nLoci):
+                    for state in range(4):
+                        segregation[child, state, locus] = (
+                            e1e * segregation[child, state, locus] + e4
+                        )
+        else:
+            # Estimate the segregation probabilities for each child.
+
+            for i in range(nOffspring):
+                # Child values is the same as in the posterior estimation step above.
+                child = family.offspring[i]
+                childValues = childValuesTensor[i, :, :]
+
+                # Einstien sum notation 5:
+                # segregation[child,:,:] = np.einsum("abcd, abi, ci-> di", segregationTensor, parentsMinusChild[i,:,:,:], childValues)
+                # Estimate with normalizing.
+                estimateSegregationWithNorm(
+                    segregationTensor,
+                    segregationTensor_norm,
+                    parentsMinusChild[i, :, :, :],
+                    childValues,
+                    segregation[child, :, :],
+                    nLoci,
+                )
+
+                collapseSegregationInPlace(
+                    segregation[child, :, :],
+                    peelingInfo.transmissionRate,
+                    forwardSeg,
+                    nLoci,
+                )
+                for locus in range(nLoci):
+                    for state in range(4):
+                        segregation[child, state, locus] = (
+                            e1e * segregation[child, state, locus] + e4
+                        )
 
 
 @jit(
@@ -263,28 +307,46 @@ def peelUp(family, peelingInfo, singleLocusMode):
     smooth4ByLocus(probSire, e1e, e4, nLoci)
     smooth4ByLocus(probDam, e1e, e4, nLoci)
 
-    for index in range(nOffspring):
-        child = family.offspring[index]
+    if isXChr:
+        for index in range(nOffspring):
+            child = family.offspring[index]
 
-        projectChildForPeel(
-            posterior,
-            penetrance,
-            segregation,
-            peelingInfo.sex,
-            peelingInfo.segregationTensor,
-            peelingInfo.segregationTensorXY,
-            peelingInfo.segregationTensorXX,
-            child,
-            childValuesCurrent,
-            currentSeg,
-            childSegsCurrent,
-            childToParentsCurrent,
-            isXChr,
-            nLoci,
-            e1e,
-            e4,
-        )
-        addLogChildToParents(childToParentsCurrent, allToParents, nLoci)
+            projectChildForPeelXChr(
+                posterior,
+                penetrance,
+                segregation,
+                peelingInfo.sex,
+                peelingInfo.segregationTensorXY,
+                peelingInfo.segregationTensorXX,
+                child,
+                childValuesCurrent,
+                currentSeg,
+                childSegsCurrent,
+                childToParentsCurrent,
+                nLoci,
+                e1e,
+                e4,
+            )
+            addLogChildToParents(childToParentsCurrent, allToParents, nLoci)
+    else:
+        for index in range(nOffspring):
+            child = family.offspring[index]
+
+            projectChildForPeelAutosome(
+                posterior,
+                penetrance,
+                segregation,
+                peelingInfo.segregationTensor,
+                child,
+                childValuesCurrent,
+                currentSeg,
+                childSegsCurrent,
+                childToParentsCurrent,
+                nLoci,
+                e1e,
+                e4,
+            )
+            addLogChildToParents(childToParentsCurrent, allToParents, nLoci)
 
     allToParents = expNorm2D(allToParents, nLoci)
 
@@ -349,25 +411,21 @@ def setupParentGenotypeProbs(
     nogil=True,
     locals={"e4": float32, "e1e": float32},
 )
-def projectChildForPeel(
+def projectChildForPeelAutosome(
     posterior,
     penetrance,
     segregation,
-    sex,
-    segregationTensorDefault,
-    segregationTensorXY,
-    segregationTensorXX,
+    segregationTensor,
     child,
     childValues,
     currentSeg,
     childSegs,
     childToParents,
-    isXChr,
     nLoci,
     e1e,
     e4,
 ):
-    """Project one child onto parental genotypes for either peeling direction."""
+    """Project one autosomal child onto parental genotypes."""
 
     for state in range(4):
         for locus in range(nLoci):
@@ -380,12 +438,48 @@ def projectChildForPeel(
     smooth4ByLocus(childValues, e1e, e4, nLoci)
     normalize4ByLocus(currentSeg, nLoci)
 
-    segregationTensor = segregationTensorDefault
-    if isXChr:
-        if sex[child] == 0:  # 0 for male, 1 for female.
-            segregationTensor = segregationTensorXY
-        elif sex[child] == 1:  # 0 for male, 1 for female.
-            segregationTensor = segregationTensorXX
+    createChildSegs(segregationTensor, currentSeg, childSegs, nLoci)
+    projectChildGenotypes(childSegs, childValues, childToParents, nLoci)
+
+
+@jit(
+    nopython=True,
+    nogil=True,
+    locals={"e4": float32, "e1e": float32},
+)
+def projectChildForPeelXChr(
+    posterior,
+    penetrance,
+    segregation,
+    sex,
+    segregationTensorXY,
+    segregationTensorXX,
+    child,
+    childValues,
+    currentSeg,
+    childSegs,
+    childToParents,
+    nLoci,
+    e1e,
+    e4,
+):
+    """Project one X-chromosome child onto parental genotypes."""
+
+    for state in range(4):
+        for locus in range(nLoci):
+            childValues[state, locus] = (
+                posterior[child, state, locus] * penetrance[child, state, locus]
+            )
+            currentSeg[state, locus] = segregation[child, state, locus]
+
+    normalize4ByLocus(childValues, nLoci)
+    smooth4ByLocus(childValues, e1e, e4, nLoci)
+    normalize4ByLocus(currentSeg, nLoci)
+
+    if sex[child] == 0:  # 0 for male, 1 for female.
+        segregationTensor = segregationTensorXY
+    else:
+        segregationTensor = segregationTensorXX
 
     createChildSegs(segregationTensor, currentSeg, childSegs, nLoci)
     projectChildGenotypes(childSegs, childValues, childToParents, nLoci)

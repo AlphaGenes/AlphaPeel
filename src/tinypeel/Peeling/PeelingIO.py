@@ -1,5 +1,6 @@
 import numpy as np
 from numba import jit
+from contextlib import ExitStack
 from ..tinyhouse import InputOutput
 
 
@@ -91,6 +92,149 @@ def writeGenotypes(pedigree, genoProbFunc, isXChr):
     :return: None. Writes to files specified in the InputOutput.args.
     """
     args = InputOutput.args
+    formatter = f"{{:.{args.out_digits}f}}".format
+    xChrMaleDosageWeights = np.array([0, 0, 0, 1])
+    autosomeDosageWeights = np.array([0, 1, 1, 2])
+
+    geno_threshold_list = []
+    if args.geno:
+        if args.geno_threshold:
+            for thresh in args.geno_threshold:
+                if thresh < 1 / 3:
+                    geno_threshold_list.append(1 / 3)
+                else:
+                    geno_threshold_list.append(thresh)
+        else:
+            geno_threshold_list.append(1 / 3)
+
+    hap_threshold_list = []
+    if args.hap:
+        if args.hap_threshold:
+            for thresh in args.hap_threshold:
+                if thresh < 1 / 2:
+                    hap_threshold_list.append(1 / 2)
+                else:
+                    hap_threshold_list.append(thresh)
+        else:
+            hap_threshold_list.append(1 / 2)
+
+    hasOutput = (
+        (not args.no_dosage)
+        or args.phased_geno_prob
+        or args.geno_prob
+        or len(geno_threshold_list) != 0
+        or len(hap_threshold_list) != 0
+    )
+    if not hasOutput:
+        return
+
+    with ExitStack() as stack:
+        dosageFile = None
+        if not args.no_dosage:
+            dosageFile = stack.enter_context(open(args.out_file + ".dosage.txt", "w+"))
+
+        phasedGenoProbFile = None
+        if args.phased_geno_prob:
+            phasedGenoProbFile = stack.enter_context(
+                open(args.out_file + ".phased_geno_prob.txt", "w+")
+            )
+
+        genoProbFile = None
+        if args.geno_prob:
+            genoProbFile = stack.enter_context(
+                open(args.out_file + ".geno_prob.txt", "w+")
+            )
+
+        genoFiles = []
+        for threshold in geno_threshold_list:
+            outputFile = args.out_file + ".geno_" + str(round(threshold, 3)) + ".txt"
+            print(
+                f"Writing called genotypes with threshold {threshold} to {outputFile}"
+            )
+            genoFiles.append((threshold, stack.enter_context(open(outputFile, "w+"))))
+
+        hapFiles = []
+        for threshold in hap_threshold_list:
+            outputFile = args.out_file + ".hap_" + str(round(threshold, 3)) + ".txt"
+            print(
+                f"Writing called haplotypes with threshold {threshold} to {outputFile}"
+            )
+            hapFiles.append((threshold, stack.enter_context(open(outputFile, "w+"))))
+
+        if isXChr:
+            for idx, ind in pedigree.writeOrder():
+                matrix = genoProbFunc(ind.idn, ind.sex)
+
+                if dosageFile is not None:
+                    writeDosageFromMatrix(
+                        dosageFile,
+                        ind,
+                        matrix,
+                        True,
+                        formatter,
+                        xChrMaleDosageWeights,
+                        autosomeDosageWeights,
+                    )
+
+                if phasedGenoProbFile is not None:
+                    writePhasedGenoProbsFromMatrix(
+                        phasedGenoProbFile, ind, matrix, formatter
+                    )
+
+                if genoProbFile is not None:
+                    writeGenoProbsFromMatrix(genoProbFile, ind, matrix, formatter)
+
+                if genoFiles:
+                    matrixCollapsedHets = getCollapsedGenotypes(matrix, True, ind.sex)
+                    for threshold, outputHandle in genoFiles:
+                        writeCalledGenotypesFromCollapsed(
+                            outputHandle, ind, matrixCollapsedHets, threshold
+                        )
+
+                if hapFiles:
+                    for threshold, outputHandle in hapFiles:
+                        writeCalledPhaseFromMatrix(
+                            outputHandle, ind, matrix, True, threshold
+                        )
+        else:
+            for idx, ind in pedigree.writeOrder():
+                matrix = genoProbFunc(ind.idn, ind.sex)
+
+                if dosageFile is not None:
+                    writeAutosomeDosageFromMatrix(
+                        dosageFile,
+                        ind,
+                        matrix,
+                        formatter,
+                        autosomeDosageWeights,
+                    )
+
+                if phasedGenoProbFile is not None:
+                    writePhasedGenoProbsFromMatrix(
+                        phasedGenoProbFile, ind, matrix, formatter
+                    )
+
+                if genoProbFile is not None:
+                    writeGenoProbsFromMatrix(genoProbFile, ind, matrix, formatter)
+
+                if genoFiles:
+                    matrixCollapsedHets = getAutosomeCollapsedGenotypes(matrix)
+                    for threshold, outputHandle in genoFiles:
+                        writeCalledGenotypesFromCollapsed(
+                            outputHandle, ind, matrixCollapsedHets, threshold
+                        )
+
+                if hapFiles:
+                    for threshold, outputHandle in hapFiles:
+                        writeAutosomeCalledPhaseFromMatrix(
+                            outputHandle, ind, matrix, threshold
+                        )
+
+
+def writeGenotypesSeparatePasses(pedigree, genoProbFunc, isXChr):
+    """Writes genotype outputs with one full pedigree pass per output file."""
+
+    args = InputOutput.args
     if not args.no_dosage:
         writeDosages(pedigree, genoProbFunc, isXChr, args.out_file + ".dosage.txt")
     if args.phased_geno_prob:
@@ -144,6 +288,143 @@ def writeGenotypes(pedigree, genoProbFunc, isXChr):
                 args.out_file + ".hap_" + str(round(threshold, 3)) + ".txt",
                 threshold,
             )
+
+
+def writePhasedGenoProbsFromMatrix(f, ind, matrix, formatter):
+    """Writes one individual's phased genotype probabilities."""
+
+    for i in range(matrix.shape[0]):
+        matrixRow = matrix[i, :]
+        f.write(ind.idx + " " + " ".join(map(formatter, matrixRow)) + "\n")
+
+
+def writeGenoProbsFromMatrix(f, ind, matrix, formatter):
+    """Writes one individual's unphased genotype probabilities."""
+
+    matrix0 = matrix[0, :]
+    matrix1 = matrix[1, :]
+    matrix2 = matrix[2, :]
+    matrix3 = matrix[3, :]
+    for i in range(matrix.shape[0]):
+        if i == 1:  # Add up probabilities for aA and Aa
+            f.write(ind.idx + " " + " ".join(map(formatter, matrix1 + matrix2)) + "\n")
+        elif i != 2:  # Print probabilities for aa and AA
+            matrixRow = matrix0
+            if i == 3:
+                matrixRow = matrix3
+            f.write(ind.idx + " " + " ".join(map(formatter, matrixRow)) + "\n")
+
+
+def writeDosageFromMatrix(
+    f,
+    ind,
+    matrix,
+    isXChr,
+    formatter,
+    xChrMaleDosageWeights,
+    autosomeDosageWeights,
+):
+    """Writes one individual's allele dosage."""
+
+    if isXChr and ind.sex == 0:
+        tmp = xChrMaleDosageWeights
+    else:
+        tmp = autosomeDosageWeights
+    dosage = np.dot(tmp, matrix)
+    f.write(ind.idx + " " + " ".join(map(formatter, dosage)) + "\n")
+
+
+def writeAutosomeDosageFromMatrix(f, ind, matrix, formatter, dosageWeights):
+    """Writes one individual's autosomal allele dosage."""
+
+    dosage = np.dot(dosageWeights, matrix)
+    f.write(ind.idx + " " + " ".join(map(formatter, dosage)) + "\n")
+
+
+def getCollapsedGenotypes(matrix, isXChr, sex):
+    """Collapse phased genotype probabilities into called-genotype states."""
+
+    matrix0 = matrix[0, :]
+    matrix1 = matrix[1, :]
+    matrix2 = matrix[2, :]
+    matrix3 = matrix[3, :]
+    if isXChr and sex == 0:
+        matrixCollapsedHets = np.empty((2, matrix.shape[1]), dtype=np.float32)
+        matrixCollapsedHets[0, :] = matrix0 + matrix2
+        matrixCollapsedHets[1, :] = matrix1 + matrix3
+    else:
+        matrixCollapsedHets = np.empty((3, matrix.shape[1]), dtype=np.float32)
+        matrixCollapsedHets[0, :] = matrix0
+        matrixCollapsedHets[1, :] = matrix1 + matrix2
+        matrixCollapsedHets[2, :] = matrix3
+    return matrixCollapsedHets
+
+
+def getAutosomeCollapsedGenotypes(matrix):
+    """Collapse autosomal phased genotype probabilities into called-genotype states."""
+
+    matrixCollapsedHets = np.empty((3, matrix.shape[1]), dtype=np.float32)
+    matrixCollapsedHets[0, :] = matrix[0, :]
+    matrixCollapsedHets[1, :] = matrix[1, :] + matrix[2, :]
+    matrixCollapsedHets[2, :] = matrix[3, :]
+    return matrixCollapsedHets
+
+
+def writeCalledGenotypesFromCollapsed(f, ind, matrixCollapsedHets, thresh):
+    """Writes one individual's called genotypes from collapsed probabilities."""
+
+    calledGenotypes = np.argmax(matrixCollapsedHets, axis=0)
+    setMissing(calledGenotypes, matrixCollapsedHets, thresh)
+    f.write(ind.idx + " " + " ".join(map(str, calledGenotypes)) + "\n")
+
+
+def writeCalledPhaseFromMatrix(f, ind, matrix, isXChr, thresh):
+    """Writes one individual's called haplotypes."""
+
+    matrix0 = matrix[0, :]
+    matrix1 = matrix[1, :]
+    matrix2 = matrix[2, :]
+    matrix3 = matrix[3, :]
+
+    if isXChr and ind.sex == 0:
+        paternal_haplotype = np.full(matrix.shape[1], 9, dtype=np.int8)
+    else:
+        paternal_probs = np.empty((2, matrix.shape[1]), dtype=np.float32)
+        paternal_probs[0, :] = matrix0 + matrix1
+        paternal_probs[1, :] = matrix2 + matrix3
+        paternal_haplotype = np.argmax(paternal_probs, axis=0)
+        setMissing(paternal_haplotype, paternal_probs, thresh)
+    f.write(ind.idx + " " + " ".join(map(str, paternal_haplotype)) + "\n")
+
+    maternal_probs = np.empty((2, matrix.shape[1]), dtype=np.float32)
+    maternal_probs[0, :] = matrix0 + matrix2
+    maternal_probs[1, :] = matrix1 + matrix3
+    maternal_haplotype = np.argmax(maternal_probs, axis=0)
+    setMissing(maternal_haplotype, maternal_probs, thresh)
+    f.write(ind.idx + " " + " ".join(map(str, maternal_haplotype)) + "\n")
+
+
+def writeAutosomeCalledPhaseFromMatrix(f, ind, matrix, thresh):
+    """Writes one individual's autosomal called haplotypes."""
+
+    matrix0 = matrix[0, :]
+    matrix1 = matrix[1, :]
+    matrix2 = matrix[2, :]
+    matrix3 = matrix[3, :]
+
+    paternal_probs = np.empty((2, matrix.shape[1]), dtype=np.float32)
+    paternal_probs[0, :] = matrix0 + matrix1
+    paternal_probs[1, :] = matrix2 + matrix3
+    paternal_haplotype = np.argmax(paternal_probs, axis=0)
+    setMissing(paternal_haplotype, paternal_probs, thresh)
+    f.write(ind.idx + " " + " ".join(map(str, paternal_haplotype)) + "\n")
+
+    maternal_probs = np.empty((2, matrix.shape[1]), dtype=np.float32)
+    maternal_probs[0, :] = matrix0 + matrix2
+    maternal_probs[1, :] = matrix1 + matrix3
+    maternal_haplotype = np.argmax(maternal_probs, axis=0)
+    setMissing(maternal_haplotype, maternal_probs, thresh)
+    f.write(ind.idx + " " + " ".join(map(str, maternal_haplotype)) + "\n")
 
 
 def writePhasedGenoProbs(pedigree, genoProbFunc, outputFile):
