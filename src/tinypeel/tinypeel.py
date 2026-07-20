@@ -33,7 +33,7 @@ ALPHAPEEL_ARGUMENT_ALIASES = {
 }
 
 
-def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
+def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
     """Sets up and runs each of the peeling cycles (default is 5).
     The set up includes:
     - saving the alternative allele probabilities for each metafounder
@@ -47,18 +47,18 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
-    :param peelingInfo: Peeling information container
-    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param peeling_info: Peeling information container
+    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
     :param args: argument container with configuration options for peeling
     :type args: argparse.Namespace or similar object with attributes
-    :param singleLocusMode: whether method is single locus or not, defaults to False
-    :type singleLocusMode: bool, optional
-    :return: None. The function modifies the peelingInfo and pedigree object in place
+    :param single_locus_mode: whether method is single locus or not, defaults to False
+    :type single_locus_mode: bool, optional
+    :return: None. The function modifies the peeling_info and pedigree object in place
     """
     # Right now maf _only_ uses the penetrance so can be estimated once.
     if args.alt_allele_prob_file is not None:
         mf_pedigree = []
-        mafGenoCache = {}
+        maf_geno_cache = {}
         for ind in pedigree:
             if ind.isFounder() and ind.MetaFounder is not None:
                 for mfx in ind.MetaFounder:
@@ -66,25 +66,25 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
                         mf_pedigree.append(mfx)
                         if pedigree.AAP.get(mfx) is None:
                             pedigree.AAP[mfx] = np.full(
-                                peelingInfo.nLoci, 0.5, dtype=np.float32
+                                peeling_info.n_loci, 0.5, dtype=np.float32
                             )
                         else:
                             aap = pedigree.AAP[mfx]
-                            for i in range(peelingInfo.nLoci):
-                                aapValue = aap[i]
-                                if aapValue > 1 or aapValue < 0:
+                            for i in range(peeling_info.n_loci):
+                                aap_value = aap[i]
+                                if aap_value > 1 or aap_value < 0:
                                     # Throw an error (equivalent to if value is missing as set in tinyhouse)
                                     raise ValueError(
-                                        f"Invalid value {aapValue} for alternative allele probability for metafounder {mfx} at locus {i}. \nValues must be between 0 and 1. Set to 0.5 (default) if unknown."
+                                        f"Invalid value {aap_value} for alternative allele probability for metafounder {mfx} at locus {i}. \nValues must be between 0 and 1. Set to 0.5 (default) if unknown."
                                     )
-                                elif aapValue < 0.001:
+                                elif aap_value < 0.001:
                                     aap[i] = 0.001
-                                elif aapValue > 0.999:
+                                elif aap_value > 0.999:
                                     aap[i] = 0.999
-                mafGeno = PeelingUpdates.getMafGenotypesForMetaFounder(
-                    ind.MetaFounder, pedigree, peelingInfo.nLoci, mafGenoCache
+                maf_geno = PeelingUpdates.get_maf_genotypes_for_meta_founder(
+                    ind.MetaFounder, pedigree, peeling_info.n_loci, maf_geno_cache
                 )
-                peelingInfo.anterior[ind.idn, :, :] = mafGeno
+                peeling_info.anterior[ind.idn, :, :] = maf_geno
         mf_input = pedigree.AAP.copy()
         # removal of any metafounders not in pedigree
         for mfx in mf_input:
@@ -99,31 +99,31 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
                 for mfx in ind.MetaFounder:
                     if pedigree.AAP.get(mfx) is None:
                         pedigree.AAP[mfx] = np.full(
-                            peelingInfo.nLoci, 0.5, dtype=np.float32
+                            peeling_info.n_loci, 0.5, dtype=np.float32
                         )
     if args.est_start_alt_allele_prob:
         if args.alt_allele_prob_file is not None and len(pedigree.AAP) > 1:
             warnings.warn(
                 "-est_start_alt_allele_prob will overwrite any differences between metafounders. To avoid this, please use -est_alt_allele_prob instead"
             )
-        PeelingUpdates.updateMaf(pedigree, peelingInfo)
-    jitGenerations = None
+        PeelingUpdates.update_maf(pedigree, peeling_info)
+    jit_generations = None
     if args.n_cycle > 0:
-        jitGenerations = getJitFamiliesByGeneration(pedigree)
+        jit_generations = get_jit_families_by_generation(pedigree)
 
     for i in range(args.n_cycle):
         print("Cycle ", i)
-        peelingCycle(
+        peeling_cycle(
             pedigree,
-            peelingInfo,
+            peeling_info,
             args=args,
-            singleLocusMode=singleLocusMode,
-            jitGenerations=jitGenerations,
+            single_locus_mode=single_locus_mode,
+            jit_generations=jit_generations,
         )
-        peelingInfo.iteration += 1
+        peeling_info.iteration += 1
 
         if args.est_geno_error_prob or args.est_seq_error_prob:
-            PeelingUpdates.updatePenetrance(pedigree, peelingInfo, args)
+            PeelingUpdates.update_penetrance(pedigree, peeling_info, args)
         if args.est_pheno_penetrance_prob:
             if args.phenoPenetrance is None or args.phenotype is None:
                 warnings.warn(
@@ -131,13 +131,13 @@ def runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=False):
                 )
             else:
                 print("Updating Phenotype Penetrance")
-                PeelingUpdates.updatePhenoPenetrance(pedigree, peelingInfo)
+                PeelingUpdates.update_pheno_penetrance(pedigree, peeling_info)
         if args.est_alt_allele_prob:
             print("Updating Alternative Allele Frequencies")
-            PeelingUpdates.updateMafAfterPeeling(pedigree, peelingInfo)
+            PeelingUpdates.update_maf_after_peeling(pedigree, peeling_info)
 
 
-def getJitFamiliesByGeneration(pedigree):
+def get_jit_families_by_generation(pedigree):
     """Build reusable jit family containers for each generation."""
 
     return [
@@ -146,178 +146,178 @@ def getJitFamiliesByGeneration(pedigree):
     ]
 
 
-def peelingCycle(
-    pedigree, peelingInfo, args, singleLocusMode=False, jitGenerations=None
+def peeling_cycle(
+    pedigree, peeling_info, args, single_locus_mode=False, jit_generations=None
 ):
     """Runs a single peeling cycle.
     Starts with peeling down, then peeling up.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
-    :param peelingInfo: Peeling information container
-    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param peeling_info: Peeling information container
+    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
     :param args: argument container with configuration options for peeling
     :type args: argparse.Namespace or similar object with attributes
-    :param singleLocusMode: whether method is single locus or not, defaults to False
-    :type singleLocusMode: bool, optional
-    :param jitGenerations: prebuilt jit family containers for each generation, defaults to None
-    :type jitGenerations: list, optional
-    :return: None. The function modifies the peelingInfo and pedigree object in place
+    :param single_locus_mode: whether method is single locus or not, defaults to False
+    :type single_locus_mode: bool, optional
+    :param jit_generations: prebuilt jit family containers for each generation, defaults to None
+    :type jit_generations: list, optional
+    :return: None. The function modifies the peeling_info and pedigree object in place
     """
-    nWorkers = args.maxthreads
-    if jitGenerations is None:
-        jitGenerations = getJitFamiliesByGeneration(pedigree)
+    n_workers = args.maxthreads
+    if jit_generations is None:
+        jit_generations = get_jit_families_by_generation(pedigree)
 
-    for index, jit_families in enumerate(jitGenerations):
+    for index, jit_families in enumerate(jit_generations):
         print("Peeling Down, Generation", index)
 
         if args.maxthreads > 1:
             with concurrent.futures.ThreadPoolExecutor(
-                max_workers=nWorkers
+                max_workers=n_workers
             ) as executor:
                 executor.map(
-                    Peeling.peelDown,
+                    Peeling.peel_down,
                     jit_families,
-                    repeat(peelingInfo),
-                    repeat(singleLocusMode),
+                    repeat(peeling_info),
+                    repeat(single_locus_mode),
                 )
         else:
             for family in jit_families:
-                Peeling.peelDown(family, peelingInfo, singleLocusMode)
+                Peeling.peel_down(family, peeling_info, single_locus_mode)
 
     for index, generation in enumerate(reversed(pedigree.generations)):
         print("Peeling Up, Generation", pedigree.nGenerations - index - 1)
-        jit_families = jitGenerations[pedigree.nGenerations - index - 1]
+        jit_families = jit_generations[pedigree.nGenerations - index - 1]
 
         if args.maxthreads > 1:
             with concurrent.futures.ThreadPoolExecutor(
-                max_workers=nWorkers
+                max_workers=n_workers
             ) as executor:
                 executor.map(
-                    Peeling.peelUp,
+                    Peeling.peel_up,
                     jit_families,
-                    repeat(peelingInfo),
-                    repeat(singleLocusMode),
+                    repeat(peeling_info),
+                    repeat(single_locus_mode),
                 )
         else:
             for family in jit_families:
-                Peeling.peelUp(family, peelingInfo, singleLocusMode)
+                Peeling.peel_up(family, peeling_info)
 
         sires = set()
         dams = set()
         for family in generation.families:
             sires.add(family.sire)
             dams.add(family.dam)
-        updatePosterior(peelingInfo, sires, dams)
+        update_posterior(peeling_info, sires, dams)
 
 
-def updatePosterior(peelingInfo, sires, dams):
+def update_posterior(peeling_info, sires, dams):
     """Updates the posterior term for a specific set of sires and dams.
 
-    :param peelingInfo: Peeling information container
-    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param peeling_info: Peeling information container
+    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
     :param sires: collection of sires to update
     :type sires: set of class:`tinyhouse.Pedigree.Individual`
     :param dams: collection of dams to update
     :type dams: set of class:`tinyhouse.Pedigree.Individual`
-    :return: None. The function modifies the peelingInfo object in place
+    :return: None. The function modifies the peeling_info object in place
     """
 
     for sire in sires:
-        updateSire(sire, peelingInfo)
+        update_sire(sire, peeling_info)
 
     for dam in dams:
-        updateDam(dam, peelingInfo)
+        update_dam(dam, peeling_info)
 
 
-def updateSire(sire, peelingInfo):
+def update_sire(sire, peeling_info):
     """Updates the posterior term for a specific sire.
 
     :param sire: the sire to update
     :type sire: class: `tinyhouse.Pedigree.Individual`
-    :param peelingInfo: Peeling information container
-    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
-    :return: None. The function modifies the peelingInfo object in place
+    :param peeling_info: Peeling information container
+    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :return: None. The function modifies the peeling_info object in place
     """
-    famList = [fam.idn for fam in sire.families]
+    fam_list = [fam.idn for fam in sire.families]
     sire = sire.idn
-    sirePosterior = peelingInfo.posterior[sire, :, :]
-    sirePosterior[:, :] = 0
-    for famId in famList:
-        log_update = np.log(peelingInfo.posteriorSireContribution[famId, :, :])
-        sirePosterior += log_update
+    sire_posterior = peeling_info.posterior[sire, :, :]
+    sire_posterior[:, :] = 0
+    for fam_id in fam_list:
+        log_update = np.log(peeling_info.posterior_sire_contribution[fam_id, :, :])
+        sire_posterior += log_update
 
     # Rescale values.
-    sirePosterior[:, :] = Peeling.expNorm1D(sirePosterior, peelingInfo.nLoci)
-    sirePosterior /= np.sum(sirePosterior, 0)
+    sire_posterior[:, :] = Peeling.exp_norm_1d(sire_posterior, peeling_info.n_loci)
+    sire_posterior /= np.sum(sire_posterior, 0)
 
 
-def updateDam(dam, peelingInfo):
+def update_dam(dam, peeling_info):
     """Updates the posterior term for a specific dam.
 
     :param dam: the dam to update
     :type dam: class: `tinyhouse.Pedigree.Individual`
-    :param peelingInfo: Peeling information container
-    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
-    :return: None. The function modifies the peelingInfo object in place
+    :param peeling_info: Peeling information container
+    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :return: None. The function modifies the peeling_info object in place
     """
-    famList = [fam.idn for fam in dam.families]
+    fam_list = [fam.idn for fam in dam.families]
     dam = dam.idn
-    damPosterior = peelingInfo.posterior[dam, :, :]
-    damPosterior[:, :] = 0
-    for famId in famList:
-        log_update = np.log(peelingInfo.posteriorDamContribution[famId, :, :])
-        damPosterior += log_update
+    dam_posterior = peeling_info.posterior[dam, :, :]
+    dam_posterior[:, :] = 0
+    for fam_id in fam_list:
+        log_update = np.log(peeling_info.posterior_dam_contribution[fam_id, :, :])
+        dam_posterior += log_update
 
-    damPosterior[:, :] = Peeling.expNorm1D(damPosterior, peelingInfo.nLoci)
-    damPosterior /= np.sum(damPosterior, 0)
+    dam_posterior[:, :] = Peeling.exp_norm_1d(dam_posterior, peeling_info.n_loci)
+    dam_posterior /= np.sum(dam_posterior, 0)
 
 
-def getLociAndDistance(snpMap, segMap):
-    """Takes the snpMap and segMap and returns the loci and distance for each snp.
+def get_loci_and_distance(snp_map, seg_map):
+    """Takes the snp_map and seg_map and returns the loci and distance for each snp.
 
-    :param snpMap: matrix for the position of the SNPs across and on the chromosome.
-    :type snpMap: 1D numpy array with length of nLoci
-    :param segMap: matrix for the position of the segregation markers across and on the chromosome.
-    :type segMap: 1D numpy array with length of nLoci
+    :param snp_map: matrix for the position of the SNPs across and on the chromosome.
+    :type snp_map: 1D numpy array with length of n_loci
+    :param seg_map: matrix for the position of the segregation markers across and on the chromosome.
+    :type seg_map: 1D numpy array with length of n_loci
     :return: loci and distance for each SNP
     :rtype: tuple of (loci, distance)
     """
-    nSnp = len(snpMap)
-    distance = np.full(nSnp, 0, dtype=np.float32)
-    loci = np.full((nSnp, 2), 0, dtype=np.int64)
+    n_snp = len(snp_map)
+    distance = np.full(n_snp, 0, dtype=np.float32)
+    loci = np.full((n_snp, 2), 0, dtype=np.uint32)
 
-    # Assume snp map and segMap are sorted.
-    segIndex = 0
-    for i in range(nSnp):
-        pos = snpMap[i]
-        # Move along the segMap until we reach a point where we are either at the end of the map, or where the next seg marker occurs after the position in the genotype file.
+    # Assume snp map and seg_map are sorted.
+    seg_index = 0
+    for i in range(n_snp):
+        pos = snp_map[i]
+        # Move along the seg_map until we reach a point where we are either at the end of the map, or where the next seg marker occurs after the position in the genotype file.
         # This assumes sorting pretty heavily. Alternative would be to find the neighboring positions in the seg file for each marker in the genotype file.
-        while segIndex < (len(segMap) - 1) and segMap[segIndex + 1] < pos:
-            segIndex += 1
+        while seg_index < (len(seg_map) - 1) and seg_map[seg_index + 1] < pos:
+            seg_index += 1
 
         # Now that positions are known, choose the neighboring markers and the distance to those markers.
         # First two if statements handle the begining and ends of the chromosome.
-        if segIndex == 0 and segMap[segIndex] > pos:
-            loci[i, 0] = segIndex
-            loci[i, 1] = segIndex
+        if seg_index == 0 and seg_map[seg_index] > pos:
+            loci[i, 0] = seg_index
+            loci[i, 1] = seg_index
             distance[i] = 0
-        elif segIndex == (len(segMap) - 1) and segMap[segIndex] <= pos:
-            loci[i, 0] = segIndex
-            loci[i, 1] = segIndex
+        elif seg_index == (len(seg_map) - 1) and seg_map[seg_index] <= pos:
+            loci[i, 0] = seg_index
+            loci[i, 1] = seg_index
             distance[i] = 0
         else:
-            loci[i, 0] = segIndex
-            loci[i, 1] = segIndex + 1
-            gap = segMap[segIndex + 1] - segMap[segIndex]
+            loci[i, 0] = seg_index
+            loci[i, 1] = seg_index + 1
+            gap = seg_map[seg_index + 1] - seg_map[seg_index]
             distance[i] = (
-                1.0 - (pos - segMap[segIndex]) / gap
-            )  # At distance 0, only use segIndex. At distance 1, use segIndex + 1.
+                1.0 - (pos - seg_map[seg_index]) / gap
+            )  # At distance 0, only use seg_index. At distance 1, use seg_index + 1.
     return (loci, distance)
 
 
-def generateSingleLocusSegregation(peelingInfo, pedigree, args):
-    """Generates the segregation probabilities for each locus in the peelingInfo object.
+def generate_single_locus_segregation(peeling_info, pedigree, args):
+    """Generates the segregation probabilities for each locus in the peeling_info object.
         If the -seg_file option is used,
         - collects the segregation file,
         - reads in the SNP and segregation map files,
@@ -326,33 +326,33 @@ def generateSingleLocusSegregation(peelingInfo, pedigree, args):
         - interpolates the segregation probabilities based on the distance and segregation probabilities at the two neighbouring markers.
         Otherwise, the segregation probabilities are set to 0.25.
 
-    :param peelingInfo: Peeling information container
-    :type peelingInfo: class:`PeelingInfo.jit_peelingInformation`
+    :param peeling_info: Peeling information container
+    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param args: argument container with configuration options for peeling
     :type args: argparse.Namespace or similar object with attributes
-    :return: None. The function modifies the peelingInfo object in place
+    :return: None. The function modifies the peeling_info object in place
     """
     if args.segfile is not None:
         # This just gets the locations in the map files.
-        snpMap = peelingInfo.positions
-        segMap = np.array(InputOutput.readMapFile(args.seg_map_file)[2])
+        snp_map = peeling_info.positions
+        seg_map = np.array(InputOutput.readMapFile(args.seg_map_file)[2])
 
-        loci, distance = getLociAndDistance(snpMap, segMap)
+        loci, distance = get_loci_and_distance(snp_map, seg_map)
         start = np.min(loci)
         stop = np.max(loci)
 
         seg = InputOutput.readInSeg(pedigree, args.seg_file, start=start, stop=stop)
         loci -= start  # Re-align to seg file.
-        segregation = peelingInfo.segregation
+        segregation = peeling_info.segregation
         for i in range(len(distance)):
-            segLoc0 = loci[i, 0]
-            segLoc1 = loci[i, 1]
-            segregationAtLocus = segregation[:, :, i]
-            seg0 = seg[:, :, segLoc0]
-            seg1 = seg[:, :, segLoc1]
-            segregationAtLocus[:, :] = distance[i] * seg0 + (1 - distance[i]) * seg1
+            seg_loc0 = loci[i, 0]
+            seg_loc1 = loci[i, 1]
+            segregation_at_locus = segregation[:, :, i]
+            seg0 = seg[:, :, seg_loc0]
+            seg1 = seg[:, :, seg_loc1]
+            segregation_at_locus[:, :] = distance[i] * seg0 + (1 - distance[i]) * seg1
 
 
 def get_probability_options():
@@ -898,7 +898,7 @@ def parse_alphapeel_args(parser, argv=None):
     return normalise_alphapeel_args(args)
 
 
-def getArgs(argv=None):
+def get_args(argv=None):
     """Presents and collects the arguments from the command line.
 
     :return: the user input arguments for the AlphaPeel program
@@ -912,12 +912,12 @@ def main(argv=None):
     """Main function for the AlphaPeel program. This function collects the arguments from the command line and runs the peeling algorithm."""
     docs_link = f"https://alphapeel.readthedocs.io/en/v{version_version}/usage.html"
     InputOutput.print_boilerplate("AlphaPeel", version=version_version, docs=docs_link)
-    args = getArgs(argv=argv)
+    args = get_args(argv=argv)
 
     pedigree = Pedigree.Pedigree()
     InputOutput.readInPedigreeFromInputs(pedigree, args)
 
-    singleLocusMode = args.method == "single"
+    single_locus_mode = args.method == "single"
     if args.method == "multi" and args.segfile:
         warnings.warn("Running in multi-locus mode, external segfile ignored")
 
@@ -931,44 +931,48 @@ def main(argv=None):
         for ind in pedigree:
             ind.phenotype = None
 
-    peelingInfo = PeelingInfo.createPeelingInfo(
-        pedigree, args, phaseFounder=(not args.no_phase_founder)
+    peeling_info = PeelingInfo.create_peeling_info(
+        pedigree, args, phase_founder=(not args.no_phase_founder)
     )
 
-    if singleLocusMode:
+    if single_locus_mode:
         print("Generating seg estimates")
-        generateSingleLocusSegregation(peelingInfo, pedigree, args)
-    runPeelingCycles(pedigree, peelingInfo, args, singleLocusMode=singleLocusMode)
-
-    PeelingIO.writeGenotypes(
-        pedigree,
-        genoProbFunc=peelingInfo.getGenoProbs,
-        isXChr=peelingInfo.isXChr,
+        generate_single_locus_segregation(peeling_info, pedigree, args)
+    run_peeling_cycles(
+        pedigree, peeling_info, args, single_locus_mode=single_locus_mode
     )
-    PeelingIO.writeOutParamaters(peelingInfo)
+
+    PeelingIO.write_genotypes(
+        pedigree,
+        geno_prob_func=peeling_info.get_geno_probs,
+        is_x_chr=peeling_info.is_x_chr,
+    )
+    PeelingIO.write_out_parameters(peeling_info)
     if (
         args.est_alt_allele_prob
         or args.est_start_alt_allele_prob
         or args.alt_allele_prob
     ):
-        PeelingIO.writeOutAltAlleleProb(pedigree)
+        PeelingIO.write_out_alt_allele_prob(pedigree)
     if args.pheno_prob:
         if args.phenoPenetrance is None:
             warnings.warn(
                 "Phenotype probabilities are not available. Please provide a penetrance file with -pheno_penetrance_file. -pheno_prob will be ignored."
             )
         else:
-            PeelingIO.writePhenoProbs(pedigree, phenoProbFunc=peelingInfo.getPhenoProbs)
+            PeelingIO.write_pheno_probs(
+                pedigree, pheno_prob_func=peeling_info.get_pheno_probs
+            )
     if args.est_pheno_penetrance_prob or args.pheno_penetrance_prob:
         if pedigree.phenoPenetrance is None:
             warnings.warn(
                 "Phenotype penetrance is not available. Please provide a penetrance file with -pheno_penetrance_file. -pheno_penetrance will be ignored."
             )
         else:
-            PeelingIO.writePhenoPenetrance(pedigree)
-    if not singleLocusMode and args.seg_prob:
+            PeelingIO.write_pheno_penetrance(pedigree)
+    if not single_locus_mode and args.seg_prob:
         InputOutput.writeIdnIndexedMatrix(
-            pedigree, peelingInfo.segregation, args.out_file + ".seg_prob.txt"
+            pedigree, peeling_info.segregation, args.out_file + ".seg_prob.txt"
         )
 
 
