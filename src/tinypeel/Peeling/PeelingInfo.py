@@ -1,3 +1,5 @@
+"""Peeling information setup and the JIT container used by peeling cycles."""
+
 from numba import jit, optional, boolean, int8, uint32, float32
 from numba.experimental import jitclass
 import numpy as np
@@ -9,17 +11,8 @@ from ..tinyhouse import HaplotypeOperations
 from ..tinyhouse import InputOutput
 
 
-#####################################################################
-# In this module we define the peeling info object.                 #
-# This is a just in time container for the various                  #
-# peeling probability calculations.                                 #
-#####################################################################
-
-
 def create_peeling_info(pedigree, args, phase_founder=False):
-    """Creates the peeling information object. It sets up the
-    genotype probabilities, the segregation tensors, and the transmission
-    rates.
+    """Create the peeling information object and initialize model probabilities.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
@@ -37,7 +30,7 @@ def create_peeling_info(pedigree, args, phase_founder=False):
     )
 
     peeling_info.is_x_chr = args.x_chr
-    # Information about the peeling positions are handled elsewhere.
+    # Positions are only needed when map-aware transmission rates are used.
     peeling_info.positions = None
     if args.map_file:
         if args.stopsnp is not None:
@@ -53,11 +46,13 @@ def create_peeling_info(pedigree, args, phase_founder=False):
             )
 
     mut_prob = args.mut_prob
-    # Generate the segregation tensors.
+
+    # Segregation tensors encode P(parent genotypes, child genotype, segregation state).
+    # The *_norm tensors are partial tensors used as normalizing constants.
     peeling_info.segregation_tensor = ProbMath.generateSegregation(mu=mut_prob)
     peeling_info.segregation_tensor_norm = ProbMath.generateSegregation(
         mu=mut_prob, partial=True
-    )  # Partial gives the normalizing constant.
+    )
     if peeling_info.is_x_chr:
         peeling_info.segregation_tensor_xy = ProbMath.generateSegregationXYChrom(
             mu=mut_prob
@@ -74,9 +69,7 @@ def create_peeling_info(pedigree, args, phase_founder=False):
 
     peeling_info.geno_error[:] = args.geno_error_prob
     peeling_info.seq_error[:] = args.seq_error_prob
-    setup_transmission(
-        args.rec_length, peeling_info
-    )  # Sets up the transmission rates using a custom position list and a total chromosome length.
+    setup_transmission(args.rec_length, peeling_info)
 
     for ind in pedigree:
         peeling_info.sex[ind.idn] = ind.sex
@@ -84,9 +77,7 @@ def create_peeling_info(pedigree, args, phase_founder=False):
         if ind.genotypes is not None and ind.haplotypes is not None:
             HaplotypeOperations.ind_fillInGenotypesFromPhase(ind)
 
-        x_chr_male_flag = (
-            peeling_info.is_x_chr and ind.sex == 0
-        )  # This is the X chromosome and the individual is male.
+        x_chr_male_flag = peeling_info.is_x_chr and ind.sex == 0
 
         ind_penetrance = ProbMath.getGenotypeProbabilities(
             peeling_info.n_loci,
@@ -100,20 +91,21 @@ def create_peeling_info(pedigree, args, phase_founder=False):
         if peeling_info.is_x_chr:
             ind_segregation = peeling_info.segregation[ind.idn, :, :]
             if ind.sex == 0:
-                # male the segregation probabilities are 0.5 for pp and pm
+                # Males use the paternal X states.
                 ind_segregation[0, :] = 0.5
                 ind_segregation[1, :] = 0.5
                 ind_segregation[2, :] = 0
                 ind_segregation[3, :] = 0
             elif ind.sex == 1:
-                # female the segregation probabilities are 0.5 for mp and mm
+                # Females use the maternal X states.
                 ind_segregation[0, :] = 0
                 ind_segregation[1, :] = 0
                 ind_segregation[2, :] = 0.5
                 ind_segregation[3, :] = 0.5
         if ind.phenotype is not None:
-            # If penetrance is yet updated by genotype inputs, use uniform distribution of 0.25 for all genotypes established in initialisation.
-            # TODO: Update for if multiple phenotypes in input or multiple loci in genotypes.
+            # Phenotypes further weight genotype penetrance.
+            # Phenotype updates currently assume the existing single-locus phenotype model;
+            # multi-phenotype or multi-locus phenotype handling needs an explicit extension.
             ind_penetrance = ProbMath.updateGenoProbsFromPhenotype(
                 ind_penetrance,
                 ind.phenotype,
@@ -124,7 +116,7 @@ def create_peeling_info(pedigree, args, phase_founder=False):
             loci = get_het_midpoint(ind.genotypes)
             if loci is not None:
                 error = args.geno_error_prob
-                if (not peeling_info.is_x_chr) or (ind.sex != 0):  # sex = 0 is male
+                if (not peeling_info.is_x_chr) or (ind.sex != 0):
                     ind_penetrance[:, loci] = np.array(
                         [error / 3, error / 3, 1 - error, error / 3], dtype=np.float32
                     )
@@ -159,13 +151,16 @@ def create_peeling_info(pedigree, args, phase_founder=False):
 
 
 def setup_transmission(length, peeling_info):
-    """Sets up the transmission rate for each locus based on the distance between paired neighbouring loci
+    """Set transmission rates from the distance between neighbouring loci.
+
+    If no map positions are provided, loci are spaced evenly along the chromosome.
+    Otherwise positions are rescaled to [0, 1] and multiplied by chromosome length.
 
     :param length: Estimated recombination length of the chromosome in Morgans. Default = 1.00
     :type length: float
     :param peeling_info: Peeling information container.
     :type peeling_info: class:`PeelingInfo.jit_peeling_information`
-    :return: None. The function updates the transmission_rate attribute of peeling_info object in place
+    :return: None. Updates peeling_info.transmission_rate in place
     """
     # Relative positions of the loci on a chromosome, scaled between 0 and 1.
     if peeling_info.positions is None:
@@ -181,7 +176,7 @@ def setup_transmission(length, peeling_info):
 
 
 def add_penetrance_from_external_file(pedigree, peeling_info, file_name, args):
-    """Allows external genotype penetrance files to be read in and added to the gentoype probabilities for an individual.
+    """Read external genotype penetrance values and multiply them into penetrance.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
@@ -191,7 +186,7 @@ def add_penetrance_from_external_file(pedigree, peeling_info, file_name, args):
     :type file_name: str
     :param args: argument container with configuration options for peeling set up, including startsnp and stopsnp.
     :type args: argparse.Namespace or similar object with attributes
-    :return: None. The function updates the penetrance attribute of peeling_info object in place
+    :return: None. Updates peeling_info.penetrance in place
     """
     print("Reading in penetrance file:", file_name)
     with open(file_name) as f:
@@ -202,9 +197,7 @@ def add_penetrance_from_external_file(pedigree, peeling_info, file_name, args):
             parts = parts[1:]
 
             if args.startsnp is not None:
-                parts = parts[
-                    args.startsnp : args.stopsnp + 1
-                ]  # Offset 1 to include stopsnp
+                parts = parts[args.startsnp : args.stopsnp + 1]
 
             penetrance_line = np.array([float(val) for val in parts], dtype=np.float32)
 
@@ -265,9 +258,7 @@ spec["posterior_dam_contribution"] = float32[:, :, :]
 
 # Segregation tensors. Each of these will be either 4x4x4x4 or 4x4x4
 spec["segregation_tensor"] = optional(float32[:, :, :, :])
-spec["segregation_tensor_norm"] = optional(
-    float32[:, :, :]
-)  # Note: This one is a bit smaller.
+spec["segregation_tensor_norm"] = optional(float32[:, :, :])
 spec["segregation_tensor_xx"] = optional(float32[:, :, :, :])
 spec["segregation_tensor_xy"] = optional(float32[:, :, :, :])
 spec["segregation_tensor_xx_norm"] = optional(float32[:, :, :])
@@ -321,7 +312,7 @@ class jit_peeling_information(object):
         self.segregation_tensor_xx_norm = None
 
     def construct(self):
-        """Sets up the peeling information object."""
+        """Allocate the probability arrays with uniform starting values."""
         base_value = 0.25
         self.sex = np.full(self.n_ind, 0, dtype=np.int8)
 
@@ -377,24 +368,24 @@ class jit_peeling_information(object):
         geno_probs /= np.sum(geno_probs, 0)
         return geno_probs
 
-    def get_pheno_probs(self, idn, phenoPenetrance):
+    def get_pheno_probs(self, idn, pheno_penetrance):
         """Estimates the phenotype probabilities for a given individual.
 
         :param idn: Internal number for an individual in the pedigree.
         :type idn: int
-        :param phenoPenetrance: the phenotype penetrance for the give phenotype data
-        :type phenoPenetrance: 2D numpy array of float32 with shape 4 x number of columns in phenoPenetrance
+        :param pheno_penetrance: phenotype penetrance values
+        :type pheno_penetrance: 2D numpy array of float32 with shape 4 x number of phenotype categories
         :return: pheno_probs: the phenotype probabilities for the individual
-        :rtype: 2D numpy array of float32 with shape number of columns in phenoPenetrance x 1
+        :rtype: 2D numpy array of float32 with shape number of phenotype categories x 1
         """
         geno_probs = self.get_geno_probs(idn)
-        rg_pheno = phenoPenetrance.shape[1]
+        rg_pheno = pheno_penetrance.shape[1]
         i = 0
         pheno_probs = np.zeros((rg_pheno, 1), dtype=np.float32)
         while i < rg_pheno:
             total = 0.0
             for genotype in range(4):
-                penetrance = phenoPenetrance[genotype, i]
+                penetrance = pheno_penetrance[genotype, i]
                 for locus in range(self.n_loci):
                     total += geno_probs[genotype, locus] * penetrance
             pheno_probs[i, 0] = total
