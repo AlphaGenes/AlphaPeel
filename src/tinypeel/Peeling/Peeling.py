@@ -567,7 +567,6 @@ def project_parent_genotypes(child_segs, parent_values, output, n_loci):
     :type output: 2D numpy array of float32 with size 4 x n_loci
     """
     # Equivalent einsum: output = np.einsum("abci, abi -> ci", child_segs, parent_values)
-
     for c in range(4):
         for i in range(n_loci):
             total = 0
