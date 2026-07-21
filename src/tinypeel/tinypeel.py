@@ -9,7 +9,7 @@ from .tinyhouse import InputOutput
 from .Peeling import Peeling
 from .Peeling import PeelingIO
 from .Peeling import PeelingInfo
-from .Peeling import PeelingUpdates
+from .Peeling import peeling_updates
 
 import concurrent.futures
 from itertools import repeat
@@ -78,7 +78,7 @@ def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
                                     aap[i] = 0.001
                                 elif aap_value > 0.999:
                                     aap[i] = 0.999
-                maf_geno = PeelingUpdates.get_maf_genotypes_for_meta_founder(
+                maf_geno = peeling_updates.get_maf_genotypes_for_meta_founder(
                     ind.MetaFounder, pedigree, peeling_info.n_loci, maf_geno_cache
                 )
                 peeling_info.anterior[ind.idn, :, :] = maf_geno
@@ -103,7 +103,7 @@ def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
             warnings.warn(
                 "-est_start_alt_allele_prob will overwrite any differences between metafounders. To avoid this, please use -est_alt_allele_prob instead"
             )
-        PeelingUpdates.update_maf(pedigree, peeling_info)
+        peeling_updates.update_maf(pedigree, peeling_info)
     jit_generations = None
     if args.n_cycle > 0:
         jit_generations = get_jit_families_by_generation(pedigree)
@@ -120,7 +120,7 @@ def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
         peeling_info.iteration += 1
 
         if args.est_geno_error_prob or args.est_seq_error_prob:
-            PeelingUpdates.update_penetrance(pedigree, peeling_info, args)
+            peeling_updates.update_penetrance(pedigree, peeling_info, args)
         if args.est_pheno_penetrance_prob:
             if args.phenoPenetrance is None or args.phenotype is None:
                 warnings.warn(
@@ -128,10 +128,10 @@ def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
                 )
             else:
                 print("Updating Phenotype Penetrance")
-                PeelingUpdates.update_pheno_penetrance(pedigree, peeling_info)
+                peeling_updates.update_pheno_penetrance(pedigree, peeling_info)
         if args.est_alt_allele_prob:
             print("Updating Alternative Allele Frequencies")
-            PeelingUpdates.update_maf_after_peeling(pedigree, peeling_info)
+            peeling_updates.update_maf_after_peeling(pedigree, peeling_info)
 
 
 def get_jit_families_by_generation(pedigree):
