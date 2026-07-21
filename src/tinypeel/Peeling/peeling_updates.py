@@ -1,13 +1,17 @@
 """Update allele frequencies, error rates, and phenotype penetrance estimates."""
+import warnings
 
 from numba import jit
 import numpy as np
 
-from ..tinyhouse import ProbMath
+from .PeelingInfo import get_het_midpoint
+from ..tinyhouse.ProbMath import (
+    getGenotypesFromMultiMaf,
+    getGenotypesFromMaf,
+    getGenotypeProbabilities,
+    updateGenoProbsFromPhenotype,
+)
 
-from . import PeelingInfo
-
-import warnings
 
 # Alternative allele frequencies are estimated with Newton updates under a
 # Hardy-Weinberg genotype prior.
@@ -20,23 +24,28 @@ def update_maf(pedigree, peeling_info):
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param peeling_info: Peeling information container.
     :type peeling_info: class:`PeelingInfo.jit_peeling_information`
-    :return: None. The function updates the pedigree.AAP attribute with the new alternative allele frequencies.
+    :return: None. The function updates the pedigree.AAP attribute with
+    the new alternative allele frequencies.
     """
     if peeling_info.is_x_chr:
         warnings.warn(
-            "Updating error rates and alternative allele frequencies for X chromosomes is not well tested. Recommend running without that option."
+            "Updating error rates and alternative allele frequencies \
+                for X chromosomes is not well tested. \
+                Recommend running without that option."
         )
-    MF = list(pedigree.AAP.keys())
+    meta_founders = list(pedigree.AAP.keys())
     genotyped_by_locus = get_genotyped_status(
         pedigree, peeling_info.n_ind, peeling_info.n_loci
     )
     for i in range(peeling_info.n_loci):
         genotyped = genotyped_by_locus[:, i]
-        for mfx in MF:
-            AAP = pedigree.AAP[mfx]
-            AAP[i] = newton_maf_updates(peeling_info, AAP, i, genotyped)
+        for mfx in meta_founders:
+            alternative_allele_prob = pedigree.AAP[mfx]
+            alternative_allele_prob[i] = newton_maf_updates(
+                peeling_info, alternative_allele_prob, i, genotyped
+            )
 
-    for mfx in MF:
+    for mfx in meta_founders:
         pedigree.AAP[mfx] = pedigree.AAP[mfx].astype(np.float32)
 
     maf_geno_cache = {}
@@ -90,24 +99,26 @@ def get_maf_genotypes_for_meta_founder(meta_founder, pedigree, n_loci, cache):
     key = tuple(meta_founder)
     if key not in cache:
         if len(meta_founder) == 2:
-            AAP = {k: np.zeros(n_loci, dtype=np.float32) for k in meta_founder}
+            alternative_allele_prob = {
+                k: np.zeros(n_loci, dtype=np.float32) for k in meta_founder
+            }
             for mfx in meta_founder:
-                AAP[mfx] = pedigree.AAP[mfx]
-            cache[key] = ProbMath.getGenotypesFromMultiMaf(AAP)
+                alternative_allele_prob[mfx] = pedigree.AAP[mfx]
+            cache[key] = getGenotypesFromMultiMaf(alternative_allele_prob)
         else:
-            cache[key] = ProbMath.getGenotypesFromMaf(pedigree.AAP[meta_founder[0]])
+            cache[key] = getGenotypesFromMaf(pedigree.AAP[meta_founder[0]])
 
     return cache[key]
 
 
-def newton_maf_updates(peeling_info, AAP, index, genotyped):
+def newton_maf_updates(peeling_info, alternative_allele_prob, index, genotyped):
     """Iterative approximation for the prior alternative allele frequency.
-    Currently limits all AAP to be between 0.001 and 0.999.
+    Currently limits all alternative_allele_prob to be between 0.001 and 0.999.
 
     :param peeling_info: Peeling information container.
     :type peeling_info: class:`PeelingInfo.jit_peeling_information`
-    :param AAP: starting alternative allele frequencies, default 0.5
-    :type AAP: 1D numpy array with length equal to the number of loci
+    :param alternative_allele_prob: starting alternative allele frequencies, default 0.5
+    :type alternative_allele_prob: 1D numpy array with length equal to the number of loci
     :param index: the marker index for which to update the alternative allele frequency
     :type index: int
     :param genotyped: whether each individual has observed data for this locus
@@ -116,12 +127,12 @@ def newton_maf_updates(peeling_info, AAP, index, genotyped):
     :rtype: float
     """
 
-    if AAP[index] < 0.001:
+    if alternative_allele_prob[index] < 0.001:
         maf = 0.001
-    elif AAP[index] > 0.999:
+    elif alternative_allele_prob[index] > 0.999:
         maf = 0.999
     else:
-        maf = AAP[index]
+        maf = alternative_allele_prob[index]
 
     iters = 5
     converged = False
@@ -129,10 +140,8 @@ def newton_maf_updates(peeling_info, AAP, index, genotyped):
         maf_old = maf
         delta = get_newton_update(maf_old, peeling_info, index, genotyped)
         maf = maf_old + delta
-        if maf < 0.001:
-            maf = 0.001
-        if maf > 0.999:
-            maf = 0.999
+        maf = max(maf, 0.001)
+        maf = min(maf, 0.999)
         if abs(maf - maf_old) < 0.0001:
             converged = True
         iters -= 1
@@ -153,7 +162,8 @@ def get_newton_update(p, peeling_info, index, genotyped):
     :type index: int
     :param genotyped: whether each individual has observed data for this locus
     :type genotyped: 1D numpy array of bool
-    :return: ratio of the first and second derivatives of the log likelihood function to be added to the current alternative allele frequency estimate.
+    :return: ratio of the first and second derivatives of the log likelihood function
+    to be added to the current alternative allele frequency estimate.
     :rtype: float
     """
     # First and second derivatives of the log likelihood.
@@ -161,10 +171,12 @@ def get_newton_update(p, peeling_info, index, genotyped):
     ll_pp = 0
 
     # Add one pseudo-observation for each homozygous/heterozygous state.
-    ll_p, ll_pp = add_individual_scalars_to_update(1, 0, 0, p, ll_p, ll_pp)
-    ll_p, ll_pp = add_individual_scalars_to_update(0, 1, 0, p, ll_p, ll_pp)
-    ll_p, ll_pp = add_individual_scalars_to_update(0, 1, 0, p, ll_p, ll_pp)
-    ll_p, ll_pp = add_individual_scalars_to_update(0, 0, 1, p, ll_p, ll_pp)
+    delta_p, delta_pp = add_individual_scalars_to_update(1, 0, 0, p)
+    ll_p, ll_pp = add_update(ll_p, ll_pp, delta_p, delta_pp)
+    delta_p, delta_pp = add_individual_scalars_to_update(0, 1, 0, p)
+    ll_p, ll_pp = add_update(ll_p, ll_pp, 2 * delta_p, 2 * delta_pp)
+    delta_p, delta_pp = add_individual_scalars_to_update(0, 0, 1, p)
+    ll_p, ll_pp = add_update(ll_p, ll_pp, delta_p, delta_pp)
     for i in range(peeling_info.n_ind):
         if genotyped[i]:
             d0 = peeling_info.penetrance[i, 0, index]
@@ -173,11 +185,32 @@ def get_newton_update(p, peeling_info, index, genotyped):
                 + peeling_info.penetrance[i, 2, index]
             )
             d2 = peeling_info.penetrance[i, 3, index]
-            ll_p, ll_pp = add_individual_scalars_to_update(d0, d1, d2, p, ll_p, ll_pp)
+            delta_p, delta_pp = add_individual_scalars_to_update(d0, d1, d2, p)
+            ll_p, ll_pp = add_update(ll_p, ll_pp, delta_p, delta_pp)
     # No observed data can leave the Newton derivative terms at zero.
     if ll_p == 0 or ll_pp == 0:
         return 0
     return -ll_p / ll_pp
+
+
+@jit(nopython=True)
+def add_update(ll_p, ll_pp, delta_p, delta_pp):
+    """Adds the first and second derivatives of the log likelihood for one individual to the total.
+
+    :param ll_p: the first derivative of the log likelihood
+    :type ll_p: float
+    :param ll_pp: the second derivative of the log likelihood
+    :type ll_pp: float
+    :param delta_p: the first derivative of the log likelihood for one individual
+    :type delta_p: float
+    :param delta_pp: the second derivative of the log likelihood for one individual
+    :type delta_pp: float
+    :return: updated first and second derivatives of the log likelihood
+    :rtype: tuple(float, float)
+    """
+    ll_p += delta_p
+    ll_pp += delta_pp
+    return ll_p, ll_pp
 
 
 @jit(nopython=True)
@@ -199,56 +232,99 @@ def add_individual_to_update(d, p, ll_p, ll_pp):
     d1 = d[1] + d[2]
     d2 = d[3]
 
-    return add_individual_scalars_to_update(d0, d1, d2, p, ll_p, ll_pp)
+    delta_p, delta_pp = add_individual_scalars_to_update(d0, d1, d2, p)
+    ll_p, ll_pp = add_update(ll_p, ll_pp, delta_p, delta_pp)
+    return ll_p, ll_pp
 
 
 @jit(nopython=True)
-def add_individual_scalars_to_update(d0, d1, d2, p, ll_p, ll_pp):
+def add_individual_scalars_to_update(d0, d1, d2, p):
     """Adds pre-collapsed genotype probabilities to the Newton update terms."""
 
     f = d0 * (1 - p) ** 2 + d1 * p * (1 - p) + d2 * p**2
     fp = (d1 - 2 * d0) + 2 * p * (d0 + d2 - d1)
     fpp = 2 * (d0 + d2 - d1)
 
-    ll_p += fp / f
-    ll_pp += fpp / f - (fp / f) ** 2
+    return fp / f, fpp / f - (fp / f) ** 2
 
-    return ll_p, ll_pp
+
+def add_founder_to_alt_allele_update(ind, geno_probs, alternative_allele_prob, ind_mf):
+    """Accumulate one founder's allele-probability contribution."""
+
+    if len(ind.MetaFounder) == 2:
+        add_two_metafounder_contribution(
+            ind.MetaFounder,
+            geno_probs,
+            alternative_allele_prob,
+            ind_mf,
+        )
+    else:
+        add_single_metafounder_contribution(
+            ind.MetaFounder[0],
+            geno_probs,
+            alternative_allele_prob,
+            ind_mf,
+        )
+
+
+def add_two_metafounder_contribution(
+    meta_founder, geno_probs, alternative_allele_prob, ind_mf
+):
+    """Split allele contributions by paternal and maternal metafounder source."""
+
+    paternal_meta_founder = meta_founder[0]
+    maternal_meta_founder = meta_founder[1]
+    genotype1 = geno_probs[1, :]
+    genotype2 = geno_probs[2, :]
+    genotype3 = geno_probs[3, :]
+
+    alternative_allele_prob[paternal_meta_founder] += 0.5 * genotype3 + genotype2
+    alternative_allele_prob[maternal_meta_founder] += 0.5 * genotype3 + genotype1
+    ind_mf[paternal_meta_founder] += 1
+    ind_mf[maternal_meta_founder] += 1
+
+
+def add_single_metafounder_contribution(
+    meta_founder, geno_probs, alternative_allele_prob, ind_mf
+):
+    """Accumulate allele contributions for a founder with one metafounder source."""
+
+    genotype1 = geno_probs[1, :]
+    genotype2 = geno_probs[2, :]
+    genotype3 = geno_probs[3, :]
+
+    alternative_allele_prob[meta_founder] += 0.5 * (genotype2 + genotype1) + genotype3
+    ind_mf[meta_founder] += 1
 
 
 def update_maf_after_peeling(pedigree, peeling_info):
-    """Updates the alternative allele frequency for each unknown parent group based on the mean genotype probabilities of the founders.
-    Currently limits all AAP to be between 0.001 and 0.999.
+    """Updates the alternative allele frequency for each unknown parent group
+    based on the mean genotype probabilities of the founders.
+    Currently limits all alternative_allele_prob to be between 0.001 and 0.999.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param peeling_info: Peeling information container.
     :type peeling_info: class:`PeelingInfo.jit_peeling_information`
-    :return: None. The function updates the pedigree.AAP attribute with the new alternative allele frequencies.
+    :return: None. The function updates the pedigree.AAP attribute
+    with the new alternative allele frequencies.
     """
-    MF = list(pedigree.AAP.keys())
-    ind_mf = {k: 0 for k in MF}
-    AAP = {k: np.zeros(peeling_info.n_loci, dtype=np.float32) for k in MF}
+    meta_founders = list(pedigree.AAP.keys())
+    ind_mf = {k: 0 for k in meta_founders}
+    alternative_allele_prob = {
+        k: np.zeros(peeling_info.n_loci, dtype=np.float32) for k in meta_founders
+    }
     for ind in pedigree:
         if ind.MetaFounder is not None and ind.isFounder():
-            ind_genotype = peeling_info.get_geno_probs(ind.idn)
-            genotype1 = ind_genotype[1, :]
-            genotype2 = ind_genotype[2, :]
-            genotype3 = ind_genotype[3, :]
-            if len(ind.MetaFounder) == 2:
-                meta_founder0 = ind.MetaFounder[0]
-                meta_founder1 = ind.MetaFounder[1]
-                AAP[meta_founder0] += 0.5 * genotype3 + genotype2
-                AAP[meta_founder1] += 0.5 * genotype3 + genotype1
-                ind_mf[meta_founder0] += 1
-                ind_mf[meta_founder1] += 1
-            else:
-                meta_founder = ind.MetaFounder[0]
-                AAP[meta_founder] += 0.5 * (genotype2 + genotype1) + genotype3
-                ind_mf[meta_founder] += 1
+            add_founder_to_alt_allele_update(
+                ind,
+                peeling_info.get_geno_probs(ind.idn),
+                alternative_allele_prob,
+                ind_mf,
+            )
 
-    for mfx in MF:
-        current_aap = AAP[mfx]
+    for mfx in meta_founders:
+        current_aap = alternative_allele_prob[mfx]
         current_aap /= ind_mf[mfx]
         current_aap = np.maximum(np.minimum(current_aap, 0.999), 0.001)
         pedigree.AAP[mfx] = current_aap.astype(np.float32)
@@ -274,7 +350,8 @@ def update_penetrance(pedigree, peeling_info, args):
     :type peeling_info: class:`PeelingInfo.jit_peeling_information`
     :param args: argument container with configuration options for peeling
     :type args: argparse.Namespace or similar object with attributes
-    :return: None. The function updates the peeling_info.penetrance attribute with the new genotype probabilities.
+    :return: None. The function updates the peeling_info.penetrance attribute
+    with the new genotype probabilities.
     """
     if args.est_geno_error_prob:
         peeling_info.geno_error = update_geno_error(pedigree, peeling_info)
@@ -283,12 +360,14 @@ def update_penetrance(pedigree, peeling_info, args):
 
     if peeling_info.is_x_chr:
         warnings.warn(
-            "Updating error rates and minor allele frequencies for X chromosomes is not well tested. Recommend running without that option."
+            "Updating error rates and minor allele frequencies for \
+                X chromosomes is not well tested. \
+                Recommend running without that option."
         )
     phase_founder = not args.no_phase_founder
     for ind in pedigree:
         x_chr_male_flag = peeling_info.is_x_chr and ind.sex == 0
-        ind_penetrance = ProbMath.getGenotypeProbabilities(
+        ind_penetrance = getGenotypeProbabilities(
             peeling_info.n_loci,
             ind.genotypes,
             ind.reads,
@@ -298,14 +377,14 @@ def update_penetrance(pedigree, peeling_info, args):
         )
 
         if ind.phenotype is not None:
-            ind_penetrance = ProbMath.updateGenoProbsFromPhenotype(
+            ind_penetrance = updateGenoProbsFromPhenotype(
                 ind_penetrance,
                 ind.phenotype,
                 pedigree.phenoPenetrance,
             )
 
         if ind.isGenotypedFounder() and phase_founder and ind.genotypes is not None:
-            loci = PeelingInfo.get_het_midpoint(ind.genotypes)
+            loci = get_het_midpoint(ind.genotypes)
             if loci is not None:
                 error = peeling_info.geno_error[loci]
                 if not x_chr_male_flag:
@@ -318,8 +397,10 @@ def update_penetrance(pedigree, peeling_info, args):
 
 def update_geno_error(pedigree, peeling_info):
     """Updates the genotype error rate for each locus using simple EM.
-    Adds the expected number of errors that an individual has, marginalising over their current estimate of their genotype probabilities.
-    We use a max value of 5% and a min value of .0001 percent to make sure the values are reasonable.
+    Adds the expected number of errors that an individual has,
+    marginalising over their current estimate of their genotype probabilities.
+    We use a max value of 5% and a min value of .0001 percent to
+    make sure the values are reasonable.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
@@ -349,13 +430,15 @@ def update_geno_error_ind(counts, errors, genotypes, geno_probs):
     :type counts: 1D numpy array with length equal to the number of loci
     :param errors: vector of errors for each locus, initialized to 0.001
     :type errors: 1D numpy array with length equal to the number of loci
-    :param genotypes: observed genotypes for an individual collected via the geno_file input option.
+    :param genotypes: observed genotypes for an individual collected
+    via the geno_file input option.
     :type genotypes: 1D numpy array of Int8 with length n_loci
-    :param geno_probs: genotype probabilities for each genotype state at each locus for the individual.
+    :param geno_probs: genotype probabilities for each genotype state
+    at each locus for the individual.
     :type geno_probs: 2D numpy array with shape 4 x n_loci
     :return: None. The function updates the counts and errors arrays in place.
     """
-    for i in range(len(counts)):
+    for i, _ in enumerate(counts):
         if genotypes[i] != 9:  # Only include non-missing genotypes.
             counts[i] += 1
             genotype_prob0 = geno_probs[0, i]
@@ -372,8 +455,10 @@ def update_geno_error_ind(counts, errors, genotypes, geno_probs):
 
 def update_seq_error(pedigree, peeling_info):
     """Updates the sequencing error rate at each locus homozygous states using simple EM.
-    This update adds the expected number of errors that an individual has marginalizing over their current genotype probabilities.
-    This only uses homozygous states; heterozygous states are ignored in both counts and errors.
+    This update adds the expected number of errors that an individual
+    has marginalizing over their current genotype probabilities.
+    This only uses homozygous states; heterozygous states are
+    ignored in both counts and errors.
     We use a max value of 5% and a min value of .0001 percent to make sure the values are reasonable
 
     :param pedigree: pedigree information container
@@ -413,12 +498,13 @@ def update_seq_error_ind(counts, errors, ref_reads, alt_reads, geno_probs):
     :type ref_reads: 1D numpy array of uint16 with length n_loci
     :param alt_reads: the number of sequencing reads supporting the alternative allele at each locus
     :type alt_reads: 1D numpy array of uint16 with length n_loci
-    :param geno_probs: genotype probabilities for each genotype state at each locus for the individual.
+    :param geno_probs: genotype probabilities for each genotype state
+    at each locus for the individual.
     :type geno_probs: 2D numpy array with shape 4 x n_loci
     :return: None. The function updates the counts and errors arrays in place.
     """
     # Expected read errors are weighted by the probability of each homozygous genotype.
-    for i in range(len(counts)):
+    for i, _ in enumerate(counts):
         genotype_prob0 = geno_probs[0, i]
         genotype_prob3 = geno_probs[3, i]
         counts[i] += (genotype_prob0 + genotype_prob3) * (alt_reads[i] + ref_reads[i])
@@ -433,7 +519,8 @@ def update_pheno_penetrance(pedigree, peeling_info):
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param peeling_info: Peeling information container.
     :type peeling_info: class:`PeelingInfo.jit_peeling_information`
-    :return: None. The function updates the pedigree.phenoPenetrance attribute with the new phenotype penetrance matrix.
+    :return: None. The function updates the pedigree.phenoPenetrance attribute
+    with the new phenotype penetrance matrix.
     """
     # Based on Kinghorn (2003), "A Simple Method to Detect a Single Gene
     # that Determines a Categorical Trait with Incomplete Penetrance".
@@ -462,17 +549,21 @@ def update_pheno_penetrance(pedigree, peeling_info):
 def update_pheno_penetrance_ind(
     denominator, contributions, rg_pheno, phenotype, geno_probs
 ):
-    """Updates the phenotype penetrance matrix for an individual based on their phenotype and genotype probabilities.
+    """Updates the phenotype penetrance matrix for an individual based on
+    their phenotype and genotype probabilities.
 
-    :param denominator: Sums the genotype probabilities across individuals with phenotype data, initialised to 0.
+    :param denominator: Sums the genotype probabilities across individuals
+    with phenotype data, initialised to 0.
     :type denominator: 2D numpy array with shape 4 x n_loci
-    :param contributions: matrix of contributions for each phenotype and genotype state, initialized to 0
+    :param contributions: matrix of contributions for each phenotype
+    and genotype state, initialized to 0
     :type contributions: 2D numpy array with shape nPhenotype categories x 4
     :param rg_pheno: number of phenotype categories
     :type rg_pheno: int
     :param phenotype: the phenotype of the individual
     :type phenotype: int
-    :param geno_probs: genotype probabilities for each genotype state at each locus for the individual.
+    :param geno_probs: genotype probabilities for each genotype state
+    at each locus for the individual.
     :type geno_probs: 2D numpy array with shape 4 x n_loci
     :return: None. The function updates the counts and contributions arrays in place.
     """
