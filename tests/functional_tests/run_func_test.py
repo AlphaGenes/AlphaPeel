@@ -1265,7 +1265,7 @@ class TestClass:
 
                 with pytest.warns(
                     UserWarning,
-                    match="Phenotype probabilities are not available. Please provide a penetrance file with -pheno_penetrance_file. -pheno_prob will be ignored.",
+                    match="Phenotype probabilities are not available. Please provide a penetrance file with -pheno_penetrance_prob_file. -pheno_prob will be ignored.",
                 ):
                     tinypeel.main(argv=self.argv)
 
