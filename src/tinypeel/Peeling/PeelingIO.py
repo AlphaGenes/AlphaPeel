@@ -491,8 +491,8 @@ def write_pheno_probs(pedigree, pheno_prob_func):
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
-    :param geno_prob_func: function to get genotype probabilities for an individual
-    :type geno_prob_func: function
+    :param pheno_prob_func: function to get phenotype probabilities for an individual
+    :type pheno_prob_func: function
     :return: None. Writes to the specified output file.
     """
     args = InputOutput.args
@@ -577,9 +577,11 @@ def write_called_phase(pedigree, geno_prob_func, is_x_chr, output_file, thresh):
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param geno_prob_func: function to get genotype probabilities for an individual
     :type geno_prob_func: function
+    :param is_x_chr: flag whether inputted genotypes are X chromosome
+    :type is_x_chr: bool
     :param output_file: name of output file to write to
     :type output_file: str
-    :param thresh: threshold for calling genotypes, defaults to 1/3
+    :param thresh: threshold for calling haplotypes, defaults to 1/2
     :type thresh: float
     :return: None. Writes to the specified output file.
     """
@@ -612,17 +614,17 @@ def write_called_phase(pedigree, geno_prob_func, is_x_chr, output_file, thresh):
 
 
 @jit(nopython=True)
-def set_missing(called_genotypes, matrix, thresh):
-    """Sets the called genotypes to missing if the probability is below the threshold.
+def set_missing(called_types, matrix, thresh):
+    """Sets the called genotypes or haplotypes to missing if the probability is below the threshold.
 
-    :param called_genotypes: array of called genotypes
-    :type called_genotypes: 2D numpy array of float32 with shape 3 x n_loci
+    :param called_types: array of called genotypes or haplotypes
+    :type called_types: 1D numpy array of integer genotype or haplotype calls
     :param matrix: genotype probability matrix
-    :type matrix: 2D numpy array of float32 with shape 3 x n_loci
-    :param thresh: threshold for calling genotypes, defaults to 1/3
+    :type matrix: 2D numpy array of probabilities with states x n_loci
+    :param thresh: threshold for calling genotypes or haplotypes
     :type thresh: float
     """
-    n_loci = len(called_genotypes)
+    n_loci = len(called_types)
     for i in range(n_loci):
-        if matrix[called_genotypes[i], i] <= thresh:
-            called_genotypes[i] = 9
+        if matrix[called_types[i], i] <= thresh:
+            called_types[i] = 9
