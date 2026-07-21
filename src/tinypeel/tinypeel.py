@@ -950,7 +950,7 @@ def main(argv=None):
     if args.pheno_prob:
         if args.phenoPenetrance is None:
             warnings.warn(
-                "Phenotype probabilities are not available. Please provide a penetrance file with -pheno_penetrance_file. -pheno_prob will be ignored."
+                "Phenotype probabilities are not available. Please provide a penetrance file with -pheno_penetrance_prob_file. -pheno_prob will be ignored."
             )
         else:
             PeelingIO.write_pheno_probs(
@@ -959,7 +959,7 @@ def main(argv=None):
     if args.est_pheno_penetrance_prob or args.pheno_penetrance_prob:
         if pedigree.phenoPenetrance is None:
             warnings.warn(
-                "Phenotype penetrance is not available. Please provide a penetrance file with -pheno_penetrance_file. -pheno_penetrance will be ignored."
+                "Phenotype penetrance is not available. Please provide a penetrance file with -pheno_penetrance_prob_file. -est_pheno_penetrance_prob and -pheno_penetrance_prob will be ignored."
             )
         else:
             PeelingIO.write_pheno_penetrance(pedigree)
