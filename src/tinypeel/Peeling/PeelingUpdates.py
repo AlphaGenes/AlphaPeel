@@ -1,3 +1,5 @@
+"""Update allele frequencies, error rates, and phenotype penetrance estimates."""
+
 from numba import jit
 import numpy as np
 
@@ -7,19 +9,8 @@ from . import PeelingInfo
 
 import warnings
 
-#########################################################################################
-# In this module we will update 3 things:                                               #
-# 1) Our estimate for the MAF (both prior to peeling and after each peeling cycle) .    #
-# 2) Our estimate of the locus specific (sequencing) error rate.                        #
-# 3) Our estimate of the locus specific recombination rate.                             #
-#########################################################################################
-
-
-# Estimating the alternative allele frequency. This update is done by using an iterative approach
-# which maximizes the likelihood of the observed genotypes conditional on them having been
-# generated from hardy-weinberg equilibrium with a fixed maf value. To speed up, we use
-# Newton style updates to estimate the alternative allele frequency.
-# There is math on how to do this... somewhere?
+# Alternative allele frequencies are estimated with Newton updates under a
+# Hardy-Weinberg genotype prior.
 
 
 def update_maf(pedigree, peeling_info):
@@ -33,7 +24,7 @@ def update_maf(pedigree, peeling_info):
     """
     if peeling_info.is_x_chr:
         warnings.warn(
-            "Updating error rates and alternative allele frequencies for X chromosomes are not well test and will break in interesting ways. Recommend running without that option."
+            "Updating error rates and alternative allele frequencies for X chromosomes is not well tested. Recommend running without that option."
         )
     MF = list(pedigree.AAP.keys())
     genotyped_by_locus = get_genotyped_status(
@@ -165,11 +156,11 @@ def get_newton_update(p, peeling_info, index, genotyped):
     :return: ratio of the first and second derivatives of the log likelihood function to be added to the current alternative allele frequency estimate.
     :rtype: float
     """
-    # Log liklihood's first + second derivitives
+    # First and second derivatives of the log likelihood.
     ll_p = 0
     ll_pp = 0
 
-    # I want to add priors. Should be 1 individual of each of the four states.
+    # Add one pseudo-observation for each homozygous/heterozygous state.
     ll_p, ll_pp = add_individual_scalars_to_update(1, 0, 0, p, ll_p, ll_pp)
     ll_p, ll_pp = add_individual_scalars_to_update(0, 1, 0, p, ll_p, ll_pp)
     ll_p, ll_pp = add_individual_scalars_to_update(0, 1, 0, p, ll_p, ll_pp)
@@ -183,8 +174,9 @@ def get_newton_update(p, peeling_info, index, genotyped):
             )
             d2 = peeling_info.penetrance[i, 3, index]
             ll_p, ll_pp = add_individual_scalars_to_update(d0, d1, d2, p, ll_p, ll_pp)
+    # No observed data can leave the Newton derivative terms at zero.
     if ll_p == 0 or ll_pp == 0:
-        return 0  # Could be a case where no one has data.
+        return 0
     return -ll_p / ll_pp
 
 
@@ -270,9 +262,7 @@ def update_maf_after_peeling(pedigree, peeling_info):
             peeling_info.anterior[ind.idn, :, :] = maf_geno
 
 
-#
-# NOTE: The following code updates the genotype and sequencing error rates.
-#
+# Genotype and sequencing error-rate updates.
 
 
 def update_penetrance(pedigree, peeling_info, args):
@@ -293,13 +283,11 @@ def update_penetrance(pedigree, peeling_info, args):
 
     if peeling_info.is_x_chr:
         warnings.warn(
-            "Updating error rates and minor allele frequencies for X chromosomes are not well test and will break in interesting ways. Recommend running without that option."
+            "Updating error rates and minor allele frequencies for X chromosomes is not well tested. Recommend running without that option."
         )
     phase_founder = not args.no_phase_founder
     for ind in pedigree:
-        x_chr_male_flag = (
-            peeling_info.is_x_chr and ind.sex == 0
-        )  # This is the X chromosome and the individual is male.
+        x_chr_male_flag = peeling_info.is_x_chr and ind.sex == 0
         ind_penetrance = ProbMath.getGenotypeProbabilities(
             peeling_info.n_loci,
             ind.genotypes,
@@ -385,7 +373,7 @@ def update_geno_error_ind(counts, errors, genotypes, geno_probs):
 def update_seq_error(pedigree, peeling_info):
     """Updates the sequencing error rate at each locus homozygous states using simple EM.
     This update adds the expected number of errors that an individual has marginalizing over their current genotype probabilities.
-    This only uses the homozygotic states, heterozygotic states are ignored (in both the counts + errors terms).
+    This only uses homozygous states; heterozygous states are ignored in both counts and errors.
     We use a max value of 5% and a min value of .0001 percent to make sure the values are reasonable
 
     :param pedigree: pedigree information container
@@ -415,7 +403,7 @@ def update_seq_error(pedigree, peeling_info):
 
 @jit(nopython=True)
 def update_seq_error_ind(counts, errors, ref_reads, alt_reads, geno_probs):
-    """Updates the sequencing error rate for homozygotic states at each locus with non-missing genotype.
+    """Updates the sequencing error rate for homozygous states at each locus with read data.
 
     :param counts: vector of counts for each locus, initialized to 1
     :type counts: 1D numpy array with length equal to the number of loci
@@ -429,9 +417,7 @@ def update_seq_error_ind(counts, errors, ref_reads, alt_reads, geno_probs):
     :type geno_probs: 2D numpy array with shape 4 x n_loci
     :return: None. The function updates the counts and errors arrays in place.
     """
-    # Errors occur when genotype is 0 and an alternative allele happens.
-    # Errors occur when genotype is 2 (coded as 3) and a reference allele happens.
-    # Number of observations is number of reads * probability the individual is homozygous.
+    # Expected read errors are weighted by the probability of each homozygous genotype.
     for i in range(len(counts)):
         genotype_prob0 = geno_probs[0, i]
         genotype_prob3 = geno_probs[3, i]
@@ -449,11 +435,10 @@ def update_pheno_penetrance(pedigree, peeling_info):
     :type peeling_info: class:`PeelingInfo.jit_peeling_information`
     :return: None. The function updates the pedigree.phenoPenetrance attribute with the new phenotype penetrance matrix.
     """
-    # Credit to Kinghorn (2003) A SIMPLE METHOD TO DETECT A SINGLE GENE THAT DETERMINES ACATEGORICAL TRAIT WITH INCOMPLETE PENETRANCE
-    rg_pheno = pedigree.phenoPenetrance.shape[1]  # Range of phenotype values
-    denominator = np.full(
-        (4, pedigree.nLoci), 0, dtype=np.float32
-    )  # Sum of the genotypes across individuals with any phenotype data
+    # Based on Kinghorn (2003), "A Simple Method to Detect a Single Gene
+    # that Determines a Categorical Trait with Incomplete Penetrance".
+    rg_pheno = pedigree.phenoPenetrance.shape[1]
+    denominator = np.full((4, pedigree.nLoci), 0, dtype=np.float32)
     contributions = np.full((4, rg_pheno), 0, dtype=np.float32)
 
     for ind in pedigree:
@@ -469,7 +454,6 @@ def update_pheno_penetrance(pedigree, peeling_info):
     for pheno in range(rg_pheno):
         pedigree.phenoPenetrance[:, pheno] = contributions[:, pheno] / denominator[:, 0]
 
-    # Normalize the contributions to get the penetrance matrix.
     pedigree.phenoPenetrance = pedigree.phenoPenetrance / np.sum(
         pedigree.phenoPenetrance, 1, keepdims=True
     )
@@ -492,9 +476,7 @@ def update_pheno_penetrance_ind(
     :type geno_probs: 2D numpy array with shape 4 x n_loci
     :return: None. The function updates the counts and contributions arrays in place.
     """
-    # For now, assuming only single locus genotype input
-    # Handles multiple phenotype record as another count
-
+    # Multiple phenotype records for an individual contribute as repeated counts.
     geno_probs_first_locus = geno_probs[:, 0]
     for pheno in phenotype:
         pheno = int(pheno)

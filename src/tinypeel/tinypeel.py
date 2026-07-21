@@ -34,16 +34,13 @@ ALPHAPEEL_ARGUMENT_ALIASES = {
 
 
 def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
-    """Sets up and runs each of the peeling cycles (default is 5).
-    The set up includes:
-    - saving the alternative allele probabilities for each metafounder
-        - either with default of 0.5 or the -alt_allele_prob_file option input.
-        - using the est_start_alt_allele_prob option to estimate the alternative allele frequency.
-    - user warnings if metafounder is not in pedigree, or est_start_alt_allele_prob is used with -alt_allele_prob_file.
-    Running the peeling cycles includes:
-    - peeling down and up for each generation
-    - collecting iterations
-    - updating alternative allele frequencies for each metafounder, genotyping error rate, and sequencing error rate if the options are selected.
+    """Set up and run the configured peeling cycles.
+
+    The setup prepares alternative allele probabilities for each metafounder.
+    These priors either come from ``-alt_allele_prob_file`` or default to 0.5,
+    and ``-est_start_alt_allele_prob`` can replace them with penetrance-based
+    estimates before cycling. Each cycle then peels down and up through the
+    pedigree generations and updates requested model parameters.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
@@ -55,8 +52,9 @@ def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
     :type single_locus_mode: bool, optional
     :return: None. The function modifies the peeling_info and pedigree object in place
     """
-    # Right now maf _only_ uses the penetrance so can be estimated once.
+    # Initial MAF estimates depend only on penetrance, so they can be prepared once.
     if args.alt_allele_prob_file is not None:
+        # Keep only metafounder priors that are actually used by pedigree founders.
         mf_pedigree = []
         maf_geno_cache = {}
         for ind in pedigree:
@@ -73,7 +71,6 @@ def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
                             for i in range(peeling_info.n_loci):
                                 aap_value = aap[i]
                                 if aap_value > 1 or aap_value < 0:
-                                    # Throw an error (equivalent to if value is missing as set in tinyhouse)
                                     raise ValueError(
                                         f"Invalid value {aap_value} for alternative allele probability for metafounder {mfx} at locus {i}. \nValues must be between 0 and 1. Set to 0.5 (default) if unknown."
                                     )
@@ -86,7 +83,7 @@ def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
                 )
                 peeling_info.anterior[ind.idn, :, :] = maf_geno
         mf_input = pedigree.AAP.copy()
-        # removal of any metafounders not in pedigree
+        # Drop alternative allele priors for metafounders absent from the pedigree.
         for mfx in mf_input:
             if mfx not in mf_pedigree:
                 del pedigree.AAP[mfx]
@@ -149,8 +146,7 @@ def get_jit_families_by_generation(pedigree):
 def peeling_cycle(
     pedigree, peeling_info, args, single_locus_mode=False, jit_generations=None
 ):
-    """Runs a single peeling cycle.
-    Starts with peeling down, then peeling up.
+    """Run one peeling cycle, first down the pedigree and then back up.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
@@ -197,7 +193,6 @@ def peeling_cycle(
                     Peeling.peel_up,
                     jit_families,
                     repeat(peeling_info),
-                    repeat(single_locus_mode),
                 )
         else:
             for family in jit_families:
@@ -247,7 +242,7 @@ def update_sire(sire, peeling_info):
         log_update = np.log(peeling_info.posterior_sire_contribution[fam_id, :, :])
         sire_posterior += log_update
 
-    # Rescale values.
+    # Convert accumulated log terms back to normalized probabilities.
     sire_posterior[:, :] = Peeling.exp_norm_1d(sire_posterior, peeling_info.n_loci)
     sire_posterior /= np.sum(sire_posterior, 0)
 
@@ -274,7 +269,12 @@ def update_dam(dam, peeling_info):
 
 
 def get_loci_and_distance(snp_map, seg_map):
-    """Takes the snp_map and seg_map and returns the loci and distance for each snp.
+    """Return the bracketing segregation loci and interpolation distance for each SNP.
+
+    ``snp_map`` contains the genotype/SNP positions and ``seg_map`` contains
+    the segregation-marker positions. Both must already be sorted. The returned
+    ``loci`` values identify the two neighbouring segregation markers for each
+    SNP, while ``distance`` is the interpolation weight between those markers.
 
     :param snp_map: matrix for the position of the SNPs across and on the chromosome.
     :type snp_map: 1D numpy array with length of n_loci
@@ -287,17 +287,15 @@ def get_loci_and_distance(snp_map, seg_map):
     distance = np.full(n_snp, 0, dtype=np.float32)
     loci = np.full((n_snp, 2), 0, dtype=np.uint32)
 
-    # Assume snp map and seg_map are sorted.
+    # Both maps must be sorted so the segregation index can advance monotonically.
     seg_index = 0
     for i in range(n_snp):
         pos = snp_map[i]
-        # Move along the seg_map until we reach a point where we are either at the end of the map, or where the next seg marker occurs after the position in the genotype file.
-        # This assumes sorting pretty heavily. Alternative would be to find the neighboring positions in the seg file for each marker in the genotype file.
+        # Find the closest marker at or before the SNP position.
         while seg_index < (len(seg_map) - 1) and seg_map[seg_index + 1] < pos:
             seg_index += 1
 
-        # Now that positions are known, choose the neighboring markers and the distance to those markers.
-        # First two if statements handle the begining and ends of the chromosome.
+        # Clamp positions outside the segregation map to the nearest boundary.
         if seg_index == 0 and seg_map[seg_index] > pos:
             loci[i, 0] = seg_index
             loci[i, 1] = seg_index
@@ -310,21 +308,19 @@ def get_loci_and_distance(snp_map, seg_map):
             loci[i, 0] = seg_index
             loci[i, 1] = seg_index + 1
             gap = seg_map[seg_index + 1] - seg_map[seg_index]
-            distance[i] = (
-                1.0 - (pos - seg_map[seg_index]) / gap
-            )  # At distance 0, only use seg_index. At distance 1, use seg_index + 1.
+            distance[i] = 1.0 - (pos - seg_map[seg_index]) / gap
     return (loci, distance)
 
 
 def generate_single_locus_segregation(peeling_info, pedigree, args):
-    """Generates the segregation probabilities for each locus in the peeling_info object.
-        If the -seg_file option is used,
-        - collects the segregation file,
-        - reads in the SNP and segregation map files,
-        - calculates the loci and distance from each SNP
-        - adjust loci indices to align with segregation file
-        - interpolates the segregation probabilities based on the distance and segregation probabilities at the two neighbouring markers.
-        Otherwise, the segregation probabilities are set to 0.25.
+    """Populate single-locus segregation probabilities from a segregation map.
+
+    When ``-seg_file`` is provided, ``peeling_info.positions`` supplies SNP
+    positions from the genotype map and ``-seg_map_file`` supplies segregation
+    marker positions. The function reads only the required ``start:stop`` window
+    from the segregation file, shifts the matched loci back to that local window,
+    and interpolates each SNP from its two neighbouring segregation markers.
+    Otherwise the default uniform probabilities remain in place.
 
     :param peeling_info: Peeling information container
     :type peeling_info: class:`PeelingInfo.jit_peeling_information`
@@ -335,7 +331,6 @@ def generate_single_locus_segregation(peeling_info, pedigree, args):
     :return: None. The function modifies the peeling_info object in place
     """
     if args.segfile is not None:
-        # This just gets the locations in the map files.
         snp_map = peeling_info.positions
         seg_map = np.array(InputOutput.readMapFile(args.seg_map_file)[2])
 
@@ -344,7 +339,8 @@ def generate_single_locus_segregation(peeling_info, pedigree, args):
         stop = np.max(loci)
 
         seg = InputOutput.readInSeg(pedigree, args.seg_file, start=start, stop=stop)
-        loci -= start  # Re-align to seg file.
+        # Re-align absolute segregation-map indices to the window read from seg_file.
+        loci -= start
         segregation = peeling_info.segregation
         for i in range(len(distance)):
             seg_loc0 = loci[i, 0]
@@ -544,9 +540,6 @@ def get_multithread_options():
         help="Maximum number of threads to use. Default: 1.",
     )
     return parse_dictionary
-
-
-# ACTUAL PROGRAM BELOW
 
 
 def _add_program_arguments(parser):

@@ -2,12 +2,11 @@ from numba import jit, float32
 import numpy as np
 
 
-# Defining variables for peel up and peel down. Ideally these would be characters, but numba does not support characters.
+# Numba handles integer state constants more reliably than string markers.
 PEEL_UP = 0
 PEEL_DOWN = 1
 
 
-# This is the main peeling down function.
 @jit(
     nopython=True,
     nogil=True,
@@ -32,7 +31,6 @@ def peel_down(family, peeling_info, single_locus_mode):
     e4 = e / 4
     e16 = e / 16
 
-    # Setup local variables from the peeling information container.
     anterior = peeling_info.anterior
     penetrance = peeling_info.penetrance
     posterior = peeling_info.posterior
@@ -47,28 +45,30 @@ def peel_down(family, peeling_info, single_locus_mode):
     dam = family.dam
     fam = family.idn
 
-    # Creating variables here:
-    # child_segs: The segregation estimates for a particular child (These are re-used? so need to be stored)
-    # all_to_parents: The projection of each child onto the parental genotypes.
-    # parentsMinustChild: The estimate of the parent's genotypes minus the contribution from a specific individual.
-
+    # Current child's projection onto joint parent genotypes.
     child_to_parents_current = np.full((4, 4, n_loci), 0, dtype=np.float32)
+    # All children's projections accumulated on joint parent genotypes.
     all_to_parents = np.full((4, 4, n_loci), 0, dtype=np.float32)
+    # Parent genotype probabilities after removing this family's current contribution.
     prob_sire = np.full((4, n_loci), 0, dtype=np.float32)
     prob_dam = np.full((4, n_loci), 0, dtype=np.float32)
+    # Current child's posterior and penetrance terms collapsed by genotype state.
     child_values_current = np.full((4, n_loci), 0, dtype=np.float32)
 
-    # Some local variables. current_seg is the segregation estimate of a child (but may be modified).
+    # Current child's segregation probabilities and forward-pass workspace.
     current_seg = np.full((4, n_loci), 1, dtype=np.float32)
     forward_seg = np.full((4, n_loci), 1, dtype=np.float32)
 
     needs_segregation_update = not single_locus_mode
+    # Per-child inheritance tensors, reused later to update anterior probabilities.
     child_seg_tensor = np.full((n_offspring, 4, 4, 4, n_loci), 0, dtype=np.float32)
+    # Joint parent estimates with one child's contribution removed.
     parents_minus_child = np.full((n_offspring, 4, 4, n_loci), 1, dtype=np.float32)
     if needs_segregation_update:
+        # Stored child genotype values needed after parent-minus-child estimates are built.
         child_values_tensor = np.full((n_offspring, 4, n_loci), 0, dtype=np.float32)
 
-    # Construct the joint parent genotypes based on the parent's anterior, penetrance, and posterior terms minus this family.
+    # Build parent genotype probabilities excluding this family's current contribution.
     setup_parent_genotype_probs(
         anterior,
         penetrance,
@@ -82,13 +82,9 @@ def peel_down(family, peeling_info, single_locus_mode):
         n_loci,
     )
 
-    # Einstien sum notation 1: create the joint parental genotypes based on the probabilities for each parent.
-    # joint_parents = np.einsum("ai, bi -> abi", prob_sire, prob_dam)
-
+    # Equivalent einsum: joint_parents = np.einsum("ai, bi -> abi", prob_sire, prob_dam)
     joint_parents = get_joint_parents(prob_sire, prob_dam, n_loci)
     smooth_16_by_locus(joint_parents, e1e, e16, n_loci)
-
-    # Now construct the parental genotypes based on within-family information.
 
     if is_x_chr:
         for index in range(n_offspring):
@@ -123,12 +119,10 @@ def peel_down(family, peeling_info, single_locus_mode):
         for index in range(n_offspring):
             child = family.offspring[index]
 
-            # Einstien sum notation 2: Create the child-specific segregation tensor using the child's currrent segregation estimate.
-            # child_seg_tensor[index,:,:,:,:] = np.einsum("abcd, di -> abci", segregation_tensor, current_seg)
+            # Equivalent einsum: child_seg_tensor[index, :, :, :, :] = np.einsum("abcd, di -> abci", segregation_tensor, current_seg)
             child_segs = child_seg_tensor[index, :, :, :, :]
 
-            # Einstien sum notation 3: Estimate the parental genotypes based on the child's genotypes and their segregation tensor.
-            # child_to_parents[index,:,:,:] = np.einsum("abci, ci -> abi", child_seg_tensor[index,:,:,:,:], child_values)
+            # Equivalent einsum: child_to_parents_current = np.einsum("abci, ci -> abi", child_segs, child_values_current)
             project_child_for_peel_autosome(
                 posterior,
                 penetrance,
@@ -153,12 +147,13 @@ def peel_down(family, peeling_info, single_locus_mode):
                 n_loci,
             )
 
-    # Estimate the parents genotype and the child-specific posterior terms using a slightly smarter log scale.
+    # Combine all child projections on the log scale, then subtract each child
+    # to produce child-specific parent estimates.
     add_joint_parents_and_all_to_minus(
         parents_minus_child, joint_parents, all_to_parents, n_offspring, n_loci
     )
 
-    # Move from a log-scale to a non-log scale and re-normalize.
+    # Convert from log scale to normalized probabilities.
     all_to_parents = exp_norm_2d(all_to_parents, n_loci)
     for i in range(n_offspring):
         parents_minus_child[i, :, :, :] = exp_norm_2d(
@@ -168,8 +163,7 @@ def peel_down(family, peeling_info, single_locus_mode):
     for i in range(n_offspring):
         child = family.offspring[i]
 
-        # Einstien sum notation 4: Project the parent genotypes down onto the child genotypes.
-        # anterior[child,:,:] = np.einsum("abci, abi -> ci", child_seg_tensor[i,:,:,:,:], parents_minus_child[i,:,:,:])
+        # Equivalent einsum: anterior[child, :, :] = np.einsum("abci, abi -> ci", child_seg_tensor[i, :, :, :, :], parents_minus_child[i, :, :, :])
         child_anterior = anterior[child, :, :]
         project_parent_genotypes(
             child_seg_tensor[i, :, :, :, :],
@@ -181,23 +175,18 @@ def peel_down(family, peeling_info, single_locus_mode):
 
     if needs_segregation_update:
         if is_x_chr:
-            # Estimate the segregation probabilities for each child.
-
             for i in range(n_offspring):
-                # Child values is the same as in the posterior estimation step above.
                 child = family.offspring[i]
                 child_values = child_values_tensor[i, :, :]
 
-                if peeling_info.sex[child] == 0:  # 0 for male, 1 for female.
+                if peeling_info.sex[child] == 0:  # 0=male, 1=female.
                     segregation_tensor = peeling_info.segregation_tensor_xy
                     segregation_tensor_norm = peeling_info.segregation_tensor_xy_norm
-                elif peeling_info.sex[child] == 1:  # 0 for male, 1 for female.
+                elif peeling_info.sex[child] == 1:  # 0=male, 1=female.
                     segregation_tensor = peeling_info.segregation_tensor_xx
                     segregation_tensor_norm = peeling_info.segregation_tensor_xx_norm
 
-                # Einstien sum notation 5:
-                # segregation[child,:,:] = np.einsum("abcd, abi, ci-> di", segregation_tensor, parents_minus_child[i,:,:,:], child_values)
-                # Estimate with normalizing.
+                # Equivalent einsum: segregation[child, :, :] = np.einsum("abcd, abi, ci -> di", segregation_tensor, parents_minus_child[i, :, :, :], child_values)
                 estimate_segregation_with_norm(
                     segregation_tensor,
                     segregation_tensor_norm,
@@ -219,16 +208,11 @@ def peel_down(family, peeling_info, single_locus_mode):
                             e1e * segregation[child, state, locus] + e4
                         )
         else:
-            # Estimate the segregation probabilities for each child.
-
             for i in range(n_offspring):
-                # Child values is the same as in the posterior estimation step above.
                 child = family.offspring[i]
                 child_values = child_values_tensor[i, :, :]
 
-                # Einstien sum notation 5:
-                # segregation[child,:,:] = np.einsum("abcd, abi, ci-> di", segregation_tensor, parents_minus_child[i,:,:,:], child_values)
-                # Estimate with normalizing.
+                # Equivalent einsum: segregation[child, :, :] = np.einsum("abcd, abi, ci -> di", segregation_tensor, parents_minus_child[i, :, :, :], child_values)
                 estimate_segregation_with_norm(
                     segregation_tensor,
                     segregation_tensor_norm,
@@ -282,12 +266,18 @@ def peel_up(family, peeling_info):
     dam = family.dam
     fam = family.idn
 
+    # Current child's projection onto joint parent genotypes.
     child_to_parents_current = np.full((4, 4, n_loci), 0, dtype=np.float32)
+    # All children's projections accumulated on joint parent genotypes.
     all_to_parents = np.full((4, 4, n_loci), 0, dtype=np.float32)
+    # Parent genotype probabilities after removing this family's current contribution.
     prob_sire = np.full((4, n_loci), 0, dtype=np.float32)
     prob_dam = np.full((4, n_loci), 0, dtype=np.float32)
+    # Current child's posterior and penetrance terms collapsed by genotype state.
     child_values_current = np.full((4, n_loci), 0, dtype=np.float32)
+    # Current child's segregation probabilities.
     current_seg = np.full((4, n_loci), 1, dtype=np.float32)
+    # Single-child inheritance tensor reused for each offspring during peel-up.
     child_seg_tensor = np.full((1, 4, 4, 4, n_loci), 0, dtype=np.float32)
     child_segs_current = child_seg_tensor[0, :, :, :, :]
 
@@ -360,9 +350,7 @@ def peel_up(family, peeling_info):
     smooth_4_by_locus(dam_posterior, e1e, e4, n_loci)
 
 
-#
-# The following are a large number of "helper" jit functions that replace the einstien sums in the original scripts.
-#
+# JIT helpers below replace the einsum calls used in the original implementation.
 
 
 @jit(nopython=True, nogil=True)
@@ -475,7 +463,7 @@ def project_child_for_peel_x_chr(
     smooth_4_by_locus(child_values, e1e, e4, n_loci)
     normalize_4_by_locus(current_seg, n_loci)
 
-    if sex[child] == 0:  # 0 for male, 1 for female.
+    if sex[child] == 0:  # 0=male, 1=female.
         segregation_tensor = segregation_tensor_xy
     else:
         segregation_tensor = segregation_tensor_xx
@@ -498,7 +486,7 @@ def get_joint_parents(prob_sire, prob_dam, n_loci):
         with information from previous peeling cycle (P(p, m))
     :rtype: 3D numpy array of float32 with size 4 x 4 x n_loci
     """
-    # joint_parents = np.einsum("ai, bi -> abi", prob_sire, prob_dam)
+    # Equivalent einsum: output = np.einsum("ai, bi -> abi", prob_sire, prob_dam)
     output = np.full(shape=(4, 4, n_loci), fill_value=0, dtype=np.float32)
     for a in range(4):
         for b in range(4):
@@ -521,7 +509,7 @@ def create_child_segs(segregation_tensor, current_seg, output, n_loci):
         the child's genotype of each locus with information from previous peeling cycle (P(p, m, allele))
     :type output: 4D numpy array of float32 with size 4 x 4 x 4 x n_loci
     """
-    # child_segs[index,:,:,:,:] = np.einsum("abcd, di -> abci", segregation_tensor, current_seg)
+    # Equivalent einsum: output = np.einsum("abcd, di -> abci", segregation_tensor, current_seg)
     for a in range(4):
         for b in range(4):
             for c in range(4):
@@ -551,7 +539,7 @@ def project_child_genotypes(child_segs, child_values, output, n_loci):
         (P(p, m))
     :type output: 3D numpy array of float32 with size 4 x 4 x n_loci
     """
-    # child_to_parents[index,:,:,:] = np.einsum("abci, ci -> abi", child_segs[index,:,:,:,:], child_values)
+    # Equivalent einsum: output = np.einsum("abci, ci -> abi", child_segs, child_values)
     for a in range(4):
         for b in range(4):
             for i in range(n_loci):
@@ -578,7 +566,7 @@ def project_parent_genotypes(child_segs, parent_values, output, n_loci):
         from previous peeling cycle without the information of the current child (P(allele))
     :type output: 2D numpy array of float32 with size 4 x n_loci
     """
-    # anterior[child,:,:] = np.einsum("abci, abi -> ci", child_segs[i,:,:,:,:], parents_minus_child[i,:,:,:])
+    # Equivalent einsum: output = np.einsum("abci, abi -> ci", child_segs, parent_values)
 
     for c in range(4):
         for i in range(n_loci):
@@ -639,7 +627,7 @@ def estimate_segregation_with_norm(
     output,
     n_loci,
 ):
-    """Estimate with normalizing.
+    """Estimate segregation probabilities with tensor-specific normalization.
 
     :param segregation_tensor: the probability of each combination of the sire's genotype, the dam's genotype and
         the child's genotype and segregation without any other information (P(p, m, allele, seg))
@@ -661,14 +649,13 @@ def estimate_segregation_with_norm(
         (P(seg))
     :type output: 2D numpy array of float32 with size 4 x n_loci
     """
-    # output = np.einsum("abcd, abi, ci-> di", segregation_tensor, parents_minus_child, child_values)
+    # Equivalent einsum before normalization: output = np.einsum("abcd, abi, ci -> di", segregation_tensor, parent_values, child_values)
     for d in range(4):
         for i in range(n_loci):
             total = 0
             for a in range(4):
                 for b in range(4):
                     for c in range(4):
-                        # Check if norm is 0. Otherwise use norm to normalize.
                         if segregation_tensor_norm[a, b, c] != 0:
                             total += (
                                 segregation_tensor[a, b, c, d]
@@ -695,7 +682,7 @@ def combine_and_reduce_axis1(joint_estimate, parent_estimate, output, n_loci):
         given the information of later and current generations from previous peeling cycle (P(p))
     :rtype: 2D numpy array of float32 with size 4 x n_loci
     """
-    # output = np.einsum("abi, bi-> ai", joint_estimate, parent_estimate)
+    # Equivalent einsum: output = np.einsum("abi, bi -> ai", joint_estimate, parent_estimate)
     for a in range(4):
         for i in range(n_loci):
             total = 0
@@ -720,7 +707,7 @@ def combine_and_reduce_axis0(joint_estimate, parent_estimate, output, n_loci):
         given the information of later and current generations from previous peeling cycle (P(m))
     :rtype: 2D numpy array of float32 with size 4 x n_loci
     """
-    # output = np.einsum("abi, ai-> bi", joint_estimate, parent_estimate)
+    # Equivalent einsum: output = np.einsum("abi, ai -> bi", joint_estimate, parent_estimate)
     for b in range(4):
         for i in range(n_loci):
             total = 0
@@ -788,11 +775,8 @@ def exp_norm_2d(mat, n_loci):
     :return: the normalized exponential of the `mat`
     :rtype: 3D numpy array of float32 with size 4 x 4 x n_loci
     """
-    # Matrix is 4x4xnLoci: Output is to take the exponential of the matrix and normalize each locus. We need to make sure that there are not any overflow values.
     for i in range(n_loci):
-        max_val = (
-            1  # Log of anything between 0-1 will be less than 0. Using 1 as a default.
-        )
+        max_val = 1  # Log probabilities are non-positive, so 1 marks "unset".
         for a in range(4):
             for b in range(4):
                 if mat[a, b, i] > max_val or max_val == 1:
@@ -814,11 +798,8 @@ def exp_norm_1d(mat, n_loci):
     :return: the normalized exponential of the `mat`
     :rtype: 2D numpy array of float32 with size 4 x n_loci
     """
-    # Matrix is 4x4xnLoci: Output is to take the exponential of the matrix and normalize each locus. We need to make sure that there are not any overflow values.
     for i in range(n_loci):
-        max_val = (
-            1  # Log of anything between 0-1 will be less than 0. Using 1 as a default.
-        )
+        max_val = 1  # Log probabilities are non-positive, so 1 marks "unset".
         for a in range(4):
             if mat[a, i] > max_val or max_val == 1:
                 max_val = mat[a, i]
@@ -866,8 +847,7 @@ def collapse_segregation_in_place(segregation, transmission, forward, n_loci):
     :type forward: 2D numpy array of float32 with size 4 x n_loci
     :return: None. The function updates segregation in place with the collapsed probabilities.
     """
-    # This is the forward backward algorithm.
-    # Segregation estimate state ordering: pp, pm, mp, mm
+    # Forward-backward pass over segregation states ordered as pp, pm, mp, mm.
     tmp = np.full((4), 0, dtype=np.float32)
     new = np.full((4), 0, dtype=np.float32)
 
@@ -890,9 +870,6 @@ def collapse_segregation_in_place(segregation, transmission, forward, n_loci):
         for j in range(4):
             tmp[j] = tmp[j] / sum_j
 
-        # !                  fm  fm  fm  fm
-        # !segregationOrder: pp, pm, mp, mm
-
         new[0] = e2 * tmp[3] + e1e * (tmp[1] + tmp[2]) + e2i * tmp[0]
         new[1] = e2 * tmp[2] + e1e * (tmp[0] + tmp[3]) + e2i * tmp[1]
         new[2] = e2 * tmp[1] + e1e * (tmp[0] + tmp[3]) + e2i * tmp[2]
@@ -905,9 +882,7 @@ def collapse_segregation_in_place(segregation, transmission, forward, n_loci):
     for j in range(4):
         prev[j] = 1
 
-    for i in range(
-        n_loci - 2, -1, -1
-    ):  # zero indexed then minus one since we skip the boundary.
+    for i in range(n_loci - 2, -1, -1):
         e = transmission[i]
         e2 = e**2
         e1e = e * (1 - e)

@@ -5,7 +5,7 @@ from ..tinyhouse import InputOutput
 
 
 def write_out_parameters(peeling_info):
-    """Writes out the geno error rate, seq error rate, and recombination probabilities.
+    """Write estimated error rates and recombination probabilities.
 
     :param peeling_info: Peeling information container
     :type peeling_info: class:`PeelingInfo.jit_peeling_information`
@@ -23,14 +23,15 @@ def write_out_parameters(peeling_info):
             peeling_info.seq_error,
         )
     if args.rec_prob:
+        # Placeholder until recombination-probability output is implemented.
         np.savetxt(
             args.out_file + ".rec_prob.txt",
             np.empty((1, 1)),
-        )  # not implemented atm, just as a placeholder
+        )
 
 
 def write_out_alt_allele_prob(pedigree):
-    """Writes out the alternative allele probabilities for each locus and metafounder in the pedigree.
+    """Write alternative allele probabilities for each locus and metafounder.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
@@ -38,19 +39,16 @@ def write_out_alt_allele_prob(pedigree):
     """
     args = InputOutput.args
 
-    # Custom sorting key to extract numeric part of metafounder keys if it's an integer
     def sort_key(mf_key):
         part = mf_key.split("_")[1]
         return (0, int(part)) if part.isdigit() else (1, part)
 
-    # Order the metafounders: MF_1, MF_2, ..., MF_11, etc., otherwise keep original order
+    # Sort MF_1, MF_2, ..., MF_11 numerically when possible.
     sorted_aap = dict(sorted(pedigree.AAP.items(), key=lambda item: sort_key(item[0])))
     sorted_mf = list(sorted_aap.keys())
-    # Combine data into a single 2D array
     combined_aap = np.hstack(
         [sorted_aap[key].reshape(pedigree.nLoci, -1) for key in sorted_mf]
     )
-    # Save into text file with metafounders heading columns
     np.savetxt(
         args.out_file + ".alt_allele_prob.txt",
         combined_aap,
@@ -75,13 +73,11 @@ def write_pheno_penetrance(pedigree):
 
 
 def write_genotypes(pedigree, geno_prob_func, is_x_chr):
-    """Writes out the genotypes for each individual. Format depends on user input and arguments.
-    The output can include:
-    - Dosages
-    - Phased genotype probabilities
-    - Genotype probabilities
-    - Called genotypes (based on user inputted threshold or default 1/3)
-    - Called haplotypes (based on user inputted threshold or default 1/2)
+    """Write requested genotype outputs for each individual.
+
+    Depending on CLI options, outputs can include dosages, phased genotype
+    probabilities, genotype probabilities, called genotypes, and called
+    haplotypes.
 
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
