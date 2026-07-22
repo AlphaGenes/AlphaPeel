@@ -17,6 +17,97 @@ from ..tinyhouse.ProbMath import (
 # Hardy-Weinberg genotype prior.
 
 
+def prepare_alternative_allele_probabilities(pedigree, peeling_info, args):
+    """Prepare initial alternative allele probabilities before peeling cycles."""
+
+    if args.alt_allele_prob_file is not None:
+        prepare_input_alternative_allele_probabilities(pedigree, peeling_info)
+    else:
+        prepare_default_alternative_allele_probabilities(pedigree, peeling_info)
+
+    if args.est_start_alt_allele_prob:
+        if args.alt_allele_prob_file is not None and len(pedigree.AAP) > 1:
+            warnings.warn(
+                "-est_start_alt_allele_prob will overwrite any differences "
+                "between metafounders. "
+                "To avoid this, please use -est_alt_allele_prob instead."
+            )
+        update_maf(pedigree, peeling_info)
+
+
+def prepare_input_alternative_allele_probabilities(pedigree, peeling_info):
+    """Prepare user-supplied alternative allele probabilities for used metafounders."""
+
+    mf_pedigree = []
+    maf_geno_cache = {}
+    for ind in pedigree:
+        if ind.isFounder() and ind.MetaFounder is not None:
+            update_founder_metafounder_priors(ind, pedigree, peeling_info, mf_pedigree)
+            maf_geno = get_maf_genotypes_for_meta_founder(
+                ind.MetaFounder, pedigree, peeling_info.n_loci, maf_geno_cache
+            )
+            peeling_info.anterior[ind.idn, :, :] = maf_geno
+    remove_unused_metafounder_priors(pedigree, mf_pedigree)
+
+
+def update_founder_metafounder_priors(ind, pedigree, peeling_info, mf_pedigree):
+    """Add and validate alternative allele priors for one founder's metafounders."""
+
+    for mfx in ind.MetaFounder:
+        if mfx in mf_pedigree:
+            continue
+
+        mf_pedigree.append(mfx)
+        if pedigree.AAP.get(mfx) is None:
+            pedigree.AAP[mfx] = np.full(peeling_info.n_loci, 0.5, dtype=np.float32)
+        else:
+            validate_and_clip_alternative_allele_probabilities(
+                pedigree.AAP[mfx], mfx, peeling_info.n_loci
+            )
+
+
+def validate_and_clip_alternative_allele_probabilities(aap, mfx, n_loci):
+    """Validate and clip one metafounder's alternative allele probabilities."""
+
+    for i in range(n_loci):
+        aap_value = aap[i]
+        if aap_value > 1 or aap_value < 0:
+            raise ValueError(
+                f"Invalid value {aap_value} for alternative allele probability "
+                f"for metafounder {mfx} at locus {i}. \n"
+                "Values must be between 0 and 1. Set to 0.5 (default) if unknown."
+            )
+        if aap_value < 0.001:
+            aap[i] = 0.001
+        elif aap_value > 0.999:
+            aap[i] = 0.999
+
+
+def remove_unused_metafounder_priors(pedigree, mf_pedigree):
+    """Drop alternative allele priors for metafounders absent from the pedigree."""
+
+    mf_input = pedigree.AAP.copy()
+    for mfx in mf_input:
+        if mfx not in mf_pedigree:
+            del pedigree.AAP[mfx]
+            warnings.warn(
+                f"{mfx} is not in the pedigree. "
+                f"The alternative allele probability for {mfx} has been ignored."
+            )
+
+
+def prepare_default_alternative_allele_probabilities(pedigree, peeling_info):
+    """Create default alternative allele probabilities for all metafounders."""
+
+    for ind in pedigree:
+        if ind.MetaFounder is not None:
+            for mfx in ind.MetaFounder:
+                if pedigree.AAP.get(mfx) is None:
+                    pedigree.AAP[mfx] = np.full(
+                        peeling_info.n_loci, 0.5, dtype=np.float32
+                    )
+
+
 def update_maf(pedigree, peeling_info):
     """Estimates the alternative allele frequency at all loci (i.e markers).
 

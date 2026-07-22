@@ -1,23 +1,35 @@
+"""Entry point for the AlphaPeel program."""
+
 import sys
+import warnings
+import concurrent.futures
+import argparse
+from itertools import repeat
 
 import numpy as np
-import warnings
 
-from .tinyhouse import Pedigree
-from .tinyhouse import InputOutput
+from .tinyhouse.Pedigree import Pedigree
+from .tinyhouse.InputOutput import (
+    print_boilerplate,
+    readMapFile,
+    readInSeg,
+    add_arguments_from_dictionary,
+    parseArgs,
+    readInPedigreeFromInputs,
+)
 
-from .peeling import peeling
-from .peeling import peeling_io
-from .peeling import peeling_info_module
-from .peeling import peeling_updates
+from .peeling.peeling import peel_down, peel_up, exp_norm_1d
+from .peeling.peeling_io import write_requested_outputs
+from .peeling.peeling_info_module import create_peeling_info
+from .peeling.peeling_updates import (
+    prepare_alternative_allele_probabilities,
+    update_penetrance,
+    update_maf_after_peeling,
+    update_pheno_penetrance,
+)
+from .peeling.version import version
 
-import concurrent.futures
-from itertools import repeat
-import argparse
-
-from .peeling import version
-
-version_version = version.version
+version_version = version
 
 ALPHAPEEL_ARGUMENT_ALIASES = {
     "pedigree": "ped_file",
@@ -53,57 +65,7 @@ def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
     :return: None. The function modifies the peeling_info and pedigree object in place
     """
     # Initial MAF estimates depend only on penetrance, so they can be prepared once.
-    if args.alt_allele_prob_file is not None:
-        # Keep only metafounder priors that are actually used by pedigree founders.
-        mf_pedigree = []
-        maf_geno_cache = {}
-        for ind in pedigree:
-            if ind.isFounder() and ind.MetaFounder is not None:
-                for mfx in ind.MetaFounder:
-                    if mfx not in mf_pedigree:
-                        mf_pedigree.append(mfx)
-                        if pedigree.AAP.get(mfx) is None:
-                            pedigree.AAP[mfx] = np.full(
-                                peeling_info.n_loci, 0.5, dtype=np.float32
-                            )
-                        else:
-                            aap = pedigree.AAP[mfx]
-                            for i in range(peeling_info.n_loci):
-                                aap_value = aap[i]
-                                if aap_value > 1 or aap_value < 0:
-                                    raise ValueError(
-                                        f"Invalid value {aap_value} for alternative allele probability for metafounder {mfx} at locus {i}. \nValues must be between 0 and 1. Set to 0.5 (default) if unknown."
-                                    )
-                                elif aap_value < 0.001:
-                                    aap[i] = 0.001
-                                elif aap_value > 0.999:
-                                    aap[i] = 0.999
-                maf_geno = peeling_updates.get_maf_genotypes_for_meta_founder(
-                    ind.MetaFounder, pedigree, peeling_info.n_loci, maf_geno_cache
-                )
-                peeling_info.anterior[ind.idn, :, :] = maf_geno
-        mf_input = pedigree.AAP.copy()
-        # Drop alternative allele priors for metafounders absent from the pedigree.
-        for mfx in mf_input:
-            if mfx not in mf_pedigree:
-                del pedigree.AAP[mfx]
-                warnings.warn(
-                    f"{mfx} is not in the pedigree. The alternative allele probability for {mfx} has been ignored."
-                )
-    else:
-        for ind in pedigree:
-            if ind.MetaFounder is not None:
-                for mfx in ind.MetaFounder:
-                    if pedigree.AAP.get(mfx) is None:
-                        pedigree.AAP[mfx] = np.full(
-                            peeling_info.n_loci, 0.5, dtype=np.float32
-                        )
-    if args.est_start_alt_allele_prob:
-        if args.alt_allele_prob_file is not None and len(pedigree.AAP) > 1:
-            warnings.warn(
-                "-est_start_alt_allele_prob will overwrite any differences between metafounders. To avoid this, please use -est_alt_allele_prob instead"
-            )
-        peeling_updates.update_maf(pedigree, peeling_info)
+    prepare_alternative_allele_probabilities(pedigree, peeling_info, args)
     jit_generations = None
     if args.n_cycle > 0:
         jit_generations = get_jit_families_by_generation(pedigree)
@@ -118,20 +80,34 @@ def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
             jit_generations=jit_generations,
         )
         peeling_info.iteration += 1
+        update_estimated_parameters(pedigree, peeling_info, args)
 
-        if args.est_geno_error_prob or args.est_seq_error_prob:
-            peeling_updates.update_penetrance(pedigree, peeling_info, args)
-        if args.est_pheno_penetrance_prob:
-            if args.phenoPenetrance is None or args.phenotype is None:
-                warnings.warn(
-                    "Both -pheno_penetrance_prob_file and -pheno_file are required to update the phenotype penetrance probabilities. Skipping update."
-                )
-            else:
-                print("Updating Phenotype Penetrance")
-                peeling_updates.update_pheno_penetrance(pedigree, peeling_info)
-        if args.est_alt_allele_prob:
-            print("Updating Alternative Allele Frequencies")
-            peeling_updates.update_maf_after_peeling(pedigree, peeling_info)
+
+def update_estimated_parameters(pedigree, peeling_info, args):
+    """Update requested estimated parameters after one peeling cycle."""
+
+    if args.est_geno_error_prob or args.est_seq_error_prob:
+        update_penetrance(pedigree, peeling_info, args)
+    if args.est_pheno_penetrance_prob:
+        update_estimated_phenotype_penetrance(pedigree, peeling_info, args)
+    if args.est_alt_allele_prob:
+        print("Updating Alternative Allele Frequencies")
+        update_maf_after_peeling(pedigree, peeling_info)
+
+
+def update_estimated_phenotype_penetrance(pedigree, peeling_info, args):
+    """Update phenotype penetrance when required inputs are available."""
+
+    if args.phenoPenetrance is None or args.phenotype is None:
+        warnings.warn(
+            "Both -pheno_penetrance_prob_file and -pheno_file are "
+            "required to update the phenotype penetrance probabilities. "
+            "Skipping update."
+        )
+        return
+
+    print("Updating Phenotype Penetrance")
+    update_pheno_penetrance(pedigree, peeling_info)
 
 
 def get_jit_families_by_generation(pedigree):
@@ -172,14 +148,14 @@ def peeling_cycle(
                 max_workers=n_workers
             ) as executor:
                 executor.map(
-                    peeling.peel_down,
+                    peel_down,
                     jit_families,
                     repeat(peeling_info),
                     repeat(single_locus_mode),
                 )
         else:
             for family in jit_families:
-                peeling.peel_down(family, peeling_info, single_locus_mode)
+                peel_down(family, peeling_info, single_locus_mode)
 
     for index, generation in enumerate(reversed(pedigree.generations)):
         print("Peeling Up, Generation", pedigree.nGenerations - index - 1)
@@ -190,13 +166,13 @@ def peeling_cycle(
                 max_workers=n_workers
             ) as executor:
                 executor.map(
-                    peeling.peel_up,
+                    peel_up,
                     jit_families,
                     repeat(peeling_info),
                 )
         else:
             for family in jit_families:
-                peeling.peel_up(family, peeling_info)
+                peel_up(family, peeling_info)
 
         sires = set()
         dams = set()
@@ -243,7 +219,7 @@ def update_sire(sire, peeling_info):
         sire_posterior += log_update
 
     # Convert accumulated log terms back to normalized probabilities.
-    sire_posterior[:, :] = peeling.exp_norm_1d(sire_posterior, peeling_info.n_loci)
+    sire_posterior[:, :] = exp_norm_1d(sire_posterior, peeling_info.n_loci)
     sire_posterior /= np.sum(sire_posterior, 0)
 
 
@@ -264,7 +240,7 @@ def update_dam(dam, peeling_info):
         log_update = np.log(peeling_info.posterior_dam_contribution[fam_id, :, :])
         dam_posterior += log_update
 
-    dam_posterior[:, :] = peeling.exp_norm_1d(dam_posterior, peeling_info.n_loci)
+    dam_posterior[:, :] = exp_norm_1d(dam_posterior, peeling_info.n_loci)
     dam_posterior /= np.sum(dam_posterior, 0)
 
 
@@ -331,24 +307,37 @@ def generate_single_locus_segregation(peeling_info, pedigree, args):
     :return: None. The function modifies the peeling_info object in place
     """
     if args.segfile is not None:
-        snp_map = peeling_info.positions
-        seg_map = np.array(InputOutput.readMapFile(args.seg_map_file)[2])
+        seg, loci, distance = read_single_locus_segregation_inputs(
+            peeling_info, pedigree, args
+        )
+        interpolate_single_locus_segregation(
+            peeling_info.segregation, seg, loci, distance
+        )
 
-        loci, distance = get_loci_and_distance(snp_map, seg_map)
-        start = np.min(loci)
-        stop = np.max(loci)
 
-        seg = InputOutput.readInSeg(pedigree, args.seg_file, start=start, stop=stop)
-        # Re-align absolute segregation-map indices to the window read from seg_file.
-        loci -= start
-        segregation = peeling_info.segregation
-        for i in range(len(distance)):
-            seg_loc0 = loci[i, 0]
-            seg_loc1 = loci[i, 1]
-            segregation_at_locus = segregation[:, :, i]
-            seg0 = seg[:, :, seg_loc0]
-            seg1 = seg[:, :, seg_loc1]
-            segregation_at_locus[:, :] = distance[i] * seg0 + (1 - distance[i]) * seg1
+def read_single_locus_segregation_inputs(peeling_info, pedigree, args):
+    """Read segregation inputs and map SNP loci into the local segregation window."""
+
+    seg_map = np.array(readMapFile(args.seg_map_file)[2])
+    loci, distance = get_loci_and_distance(peeling_info.positions, seg_map)
+    start = np.min(loci)
+    stop = np.max(loci)
+    seg = readInSeg(pedigree, args.seg_file, start=start, stop=stop)
+    # Re-align absolute segregation-map indices to the window read from seg_file.
+    loci -= start
+    return seg, loci, distance
+
+
+def interpolate_single_locus_segregation(segregation, seg, loci, distance):
+    """Interpolate each SNP's segregation probabilities from bracketing markers."""
+
+    for i, value in enumerate(distance):
+        seg_loc0 = loci[i, 0]
+        seg_loc1 = loci[i, 1]
+        segregation_at_locus = segregation[:, :, i]
+        seg0 = seg[:, :, seg_loc0]
+        seg1 = seg[:, :, seg_loc1]
+        segregation_at_locus[:, :] = value * seg0 + (1 - value) * seg1
 
 
 def get_probability_options():
@@ -358,7 +347,7 @@ def get_probability_options():
     :return: A dictionary with the options for the genotype and sequencing error rates.
     :rtype: dict
     """
-    parse_dictionary = dict()
+    parse_dictionary = {}
     parse_dictionary["mut_prob"] = lambda parser: parser.add_argument(
         "-mut_prob",
         default=1e-8,
@@ -400,7 +389,7 @@ def get_input_options():
     :return: the options for the input files and parameters.
     :rtype: dict
     """
-    parse_dictionary = dict()
+    parse_dictionary = {}
     parse_dictionary["pedigree"] = lambda parser: parser.add_argument(
         "-ped_file",
         default=None,
@@ -446,14 +435,17 @@ def get_input_options():
         required=False,
         type=str,
         nargs="*",
-        help="Alternative allele probability file (see format details in the docs). Default: 0.5 for each locus.",
+        help="Alternative allele probability file (see format details in the docs). "
+        "Default: 0.5 for each locus.",
     )
     parse_dictionary["main_metafounder"] = lambda parser: parser.add_argument(
         "-main_metafounder",
         default="MF_1",
         required=False,
         type=str,
-        help="ID used to represent the base population of the pedigree (metafounder / unknown parent group) (see format details in the docs). Default: MF_1.",
+        help="ID used to represent the base population of the pedigree "
+        "(metafounder / unknown parent group) (see format details in the docs). "
+        "Default: MF_1.",
     )
     parse_dictionary["phenotype"] = lambda parser: parser.add_argument(
         "-pheno_file",
@@ -498,27 +490,36 @@ def get_output_options():
     :return: the options for the output files and parameters.
     :rtype: dict
     """
-    parse_dictionary = dict()
+    parse_dictionary = {}
 
     parse_dictionary["writekey"] = lambda parser: parser.add_argument(
         "-out_id_order",
         default="id",
         required=False,
         type=str,
-        help='Determines the order in which individuals are ordered in the output file based on their order in the corresponding input file. Individuals not in the input file are placed at the end of the file and sorted in alphanumeric order. These inividuals can be surpressed with the "-out_id_only" option. Options: id, pedigree, genotypes, sequence, segregation. Defualt: id.',
+        help="Determines the order in which individuals are ordered in the "
+        "output file based on their order in the corresponding input file. "
+        "Individuals not in the input file are placed at the end of the file and "
+        "sorted in alphanumeric order. "
+        'These inividuals can be surpressed with the "-out_id_only" option. '
+        "Options: id, pedigree, genotypes, sequence, segregation. Defualt: id.",
     )
     parse_dictionary["onlykeyed"] = lambda parser: parser.add_argument(
         "-out_id_only",
         action="store_true",
         required=False,
-        help='Suppress output for individuals not present in the file specified with -out_id_order. It also suppresses "dummy" individuals.',
+        help="Suppress output for individuals not present in the file "
+        "specified with -out_id_order. "
+        'It also suppresses "dummy" individuals.',
     )
     parse_dictionary["out_digits"] = lambda parser: parser.add_argument(
         "-out_digits",
         default=4,
         type=int,
         required=False,
-        help="Specify the number of digits to round the outputs. Does not apply to outputs from ``alt_allele_prob``, ``geno_error_prob``, ``seq_error_prob``, and ``pheno_penetrance``. Default: 4.",
+        help="Specify the number of digits to round the outputs. "
+        "Does not apply to outputs from ``alt_allele_prob``, ``geno_error_prob``, "
+        "``seq_error_prob``, and ``pheno_penetrance``. Default: 4.",
     )
 
     return parse_dictionary
@@ -531,7 +532,7 @@ def get_multithread_options():
     :return: the option for the multithreading parameters.
     :rtype: dict
     """
-    parse_dictionary = dict()
+    parse_dictionary = {}
     parse_dictionary["maxthreads"] = lambda parser: parser.add_argument(
         "-n_thread",
         default=1,
@@ -567,7 +568,7 @@ def _add_input_individual_arguments(parser):
     """Add input options for individual-level data."""
 
     input_parser = parser.add_argument_group("Input options: individuals")
-    InputOutput.add_arguments_from_dictionary(
+    add_arguments_from_dictionary(
         input_parser,
         get_input_options(),
         options=[
@@ -590,7 +591,9 @@ def _add_input_individual_arguments(parser):
         required=False,
         type=str,
         nargs="*",
-        help="Optional external phased genotype probability file(s) (see format details in the docs). This will provide the starting internal genotype probability state. ",
+        help="Optional external phased genotype probability file(s) "
+        "(see format details in the docs). "
+        "This will provide the starting internal genotype probability state. ",
     )
 
 
@@ -605,7 +608,7 @@ def _add_input_marker_arguments(parser):
         type=str,
         help="Map file for loci in genomic data files (see format details in the docs).",
     )
-    InputOutput.add_arguments_from_dictionary(
+    add_arguments_from_dictionary(
         marker_parser,
         get_input_options(),
         options=["startsnp", "stopsnp"],
@@ -618,7 +621,7 @@ def _add_input_model_parameter_arguments(parser):
     parameter_parser = parser.add_argument_group(
         "Input options: model parameters and other"
     )
-    InputOutput.add_arguments_from_dictionary(
+    add_arguments_from_dictionary(
         parameter_parser,
         get_input_options(),
         options=[
@@ -634,7 +637,7 @@ def _add_input_model_parameter_arguments(parser):
         type=float,
         help="Recombination length of the chromosome in Morgans. Default: 1.00",
     )
-    InputOutput.add_arguments_from_dictionary(
+    add_arguments_from_dictionary(
         parameter_parser,
         get_probability_options(),
         options=["mut_prob", "geno_error_prob", "seq_error_prob"],
@@ -655,7 +658,8 @@ def _add_output_individual_arguments(parser):
         "-geno",
         action="store_true",
         required=False,
-        help="Call and output genotypes (see format details in the docs). The default genotype calling threshold is set to 1/3.",
+        help="Call and output genotypes (see format details in the docs). "
+        "The default genotype calling threshold is set to 1/3.",
     )
     output_parser.add_argument(
         "-geno_threshold",
@@ -663,7 +667,8 @@ def _add_output_individual_arguments(parser):
         required=False,
         type=float,
         nargs="*",
-        help="Custom genotype calling threshold(s) from the genotype probabilities. Multiple space separated values allowed.\
+        help="Custom genotype calling threshold(s) from the genotype probabilities. "
+        "Multiple space separated values allowed.\
         Value(s) less than 1/3 are replaced by 1/3.",
     )
     output_parser.add_argument(
@@ -682,7 +687,8 @@ def _add_output_individual_arguments(parser):
         "-hap",
         action="store_true",
         required=False,
-        help="Call and output haplotypes (see format details in the docs). The default haplotype calling threshold is set to 1/2.",
+        help="Call and output haplotypes (see format details in the docs). "
+        "The default haplotype calling threshold is set to 1/2.",
     )
     output_parser.add_argument(
         "-hap_threshold",
@@ -690,7 +696,8 @@ def _add_output_individual_arguments(parser):
         required=False,
         type=float,
         nargs="*",
-        help="Custom haplotype calling threshold(s) from the phased genotype probabilities. Multiple space separated values allowed.\
+        help="Custom haplotype calling threshold(s) from the phased genotype probabilities. "
+        "Multiple space separated values allowed.\
         Value(s) less than 1/2 are replaced by 1/2.",
     )
     output_parser.add_argument(
@@ -715,7 +722,9 @@ def _add_output_individual_arguments(parser):
         "-alt_allele_prob",
         action="store_true",
         required=False,
-        help="Output alternative allele frequencies (see format details in the docs). Output 0.5 if none of ``est_start_alt_allele_prob``, ``est_alt_allele_prob``, or ``alt_allele_prob_file`` is used.",
+        help="Output alternative allele frequencies (see format details in the docs). "
+        "Output 0.5 if none of ``est_start_alt_allele_prob``, ``est_alt_allele_prob``, "
+        "or ``alt_allele_prob_file`` is used.",
     )
     output_parser.add_argument(
         "-pheno_penetrance_prob",
@@ -733,9 +742,10 @@ def _add_output_io_arguments(parser):
         "-out_file",
         required=True,
         type=str,
-        help='The output file prefix. All file outputs will be named as "PREFIX.OUTPUT.txt", where "OUTPUT" is the type of output (for example, "dosage" and "geno_prob").',
+        help='The output file prefix. All file outputs will be named as "PREFIX.OUTPUT.txt", '
+        'where "OUTPUT" is the type of output (for example, "dosage" and "geno_prob").',
     )
-    InputOutput.add_arguments_from_dictionary(
+    add_arguments_from_dictionary(
         output_parser,
         get_output_options(),
         options=["writekey", "onlykeyed", "out_digits"],
@@ -784,7 +794,7 @@ def _add_peeling_parameter_arguments(parser):
         type=int,
         help="Number of peeling cycles. Default: 5.",
     )
-    InputOutput.add_arguments_from_dictionary(
+    add_arguments_from_dictionary(
         computational_parser,
         get_multithread_options(),
         options=["maxthreads"],
@@ -797,37 +807,44 @@ def _add_peeling_parameter_arguments(parser):
         "-est_start_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Estimate from all inputted genomic data prior to peeling and output alternative allele probabilities (see format details in the docs).",
+        help="Estimate from all inputted genomic data prior to peeling "
+        "and output alternative allele probabilities "
+        "(see format details in the docs).",
     )
     estimation_parser.add_argument(
         "-est_alt_allele_prob",
         action="store_true",
         required=False,
-        help="Estimate after each peeling cycle and output alternative allele probabilities (see format details in the docs).",
+        help="Estimate after each peeling cycle and output alternative allele probabilities "
+        "(see format details in the docs).",
     )
     estimation_parser.add_argument(
         "-est_geno_error_prob",
         action="store_true",
         required=False,
-        help="Estimate after each peeling cycle and output genotype error probabilities (see format details in the docs).",
+        help="Estimate after each peeling cycle and output genotype error probabilities "
+        "(see format details in the docs).",
     )
     estimation_parser.add_argument(
         "-est_seq_error_prob",
         action="store_true",
         required=False,
-        help="Estimate after each peeling cycle and output sequence error probabilities (see format details in the docs).",
+        help="Estimate after each peeling cycle and output sequence error probabilities "
+        "(see format details in the docs).",
     )
     estimation_parser.add_argument(
         "-est_pheno_penetrance_prob",
         action="store_true",
         required=False,
-        help="Estimate after each peeling cycle and output phenotype penetrance probabilities (see format details in the docs).",
+        help="Estimate after each peeling cycle and output phenotype penetrance probabilities "
+        "(see format details in the docs).",
     )
     estimation_parser.add_argument(
         "-no_phase_founder",
         action="store_true",
         required=False,
-        help="Suppress phasing a heterozygous allele (if such an allele can be found) in genotyped individuals without genotyped parents.",
+        help="Suppress phasing a heterozygous allele (if such an allele can be found) "
+        "in genotyped individuals without genotyped parents.",
     )
 
 
@@ -886,7 +903,7 @@ def parse_alphapeel_args(parser, argv=None):
         parser.parse_args(sys.argv[1:] if argv is None else list(argv))
         sys.exit(0)
 
-    args = InputOutput.parseArgs("AlphaPeel", parser, argv=argv)
+    args = parseArgs("AlphaPeel", parser, argv=argv)
 
     return normalise_alphapeel_args(args)
 
@@ -902,13 +919,15 @@ def get_args(argv=None):
 
 
 def main(argv=None):
-    """Main function for the AlphaPeel program. This function collects the arguments from the command line and runs the peeling algorithm."""
+    """Main function for the AlphaPeel program.
+    This function collects the arguments from the command line and runs the peeling algorithm.
+    """
     docs_link = f"https://alphapeel.readthedocs.io/en/v{version_version}/usage.html"
-    InputOutput.print_boilerplate("AlphaPeel", version=version_version, docs=docs_link)
+    print_boilerplate("AlphaPeel", version=version_version, docs=docs_link)
     args = get_args(argv=argv)
 
-    pedigree = Pedigree.Pedigree()
-    InputOutput.readInPedigreeFromInputs(pedigree, args)
+    pedigree = Pedigree()
+    readInPedigreeFromInputs(pedigree, args)
 
     single_locus_mode = args.method == "single"
     if args.method == "multi" and args.segfile:
@@ -924,7 +943,7 @@ def main(argv=None):
         for ind in pedigree:
             ind.phenotype = None
 
-    peeling_info = peeling_info_module.create_peeling_info(
+    peeling_info = create_peeling_info(
         pedigree, args, phase_founder=(not args.no_phase_founder)
     )
 
@@ -935,38 +954,9 @@ def main(argv=None):
         pedigree, peeling_info, args, single_locus_mode=single_locus_mode
     )
 
-    peeling_io.write_genotypes(
-        pedigree,
-        geno_prob_func=peeling_info.get_geno_probs,
-        is_x_chr=peeling_info.is_x_chr,
+    write_requested_outputs(
+        pedigree, peeling_info, args, single_locus_mode=single_locus_mode
     )
-    peeling_io.write_out_parameters(peeling_info)
-    if (
-        args.est_alt_allele_prob
-        or args.est_start_alt_allele_prob
-        or args.alt_allele_prob
-    ):
-        peeling_io.write_out_alt_allele_prob(pedigree)
-    if args.pheno_prob:
-        if args.phenoPenetrance is None:
-            warnings.warn(
-                "Phenotype probabilities are not available. Please provide a penetrance file with -pheno_penetrance_prob_file. -pheno_prob will be ignored."
-            )
-        else:
-            peeling_io.write_pheno_probs(
-                pedigree, pheno_prob_func=peeling_info.get_pheno_probs
-            )
-    if args.est_pheno_penetrance_prob or args.pheno_penetrance_prob:
-        if pedigree.phenoPenetrance is None:
-            warnings.warn(
-                "Phenotype penetrance is not available. Please provide a penetrance file with -pheno_penetrance_prob_file. -est_pheno_penetrance_prob and -pheno_penetrance_prob will be ignored."
-            )
-        else:
-            peeling_io.write_pheno_penetrance(pedigree)
-    if not single_locus_mode and args.seg_prob:
-        InputOutput.writeIdnIndexedMatrix(
-            pedigree, peeling_info.segregation, args.out_file + ".seg_prob.txt"
-        )
 
 
 if __name__ == "__main__":

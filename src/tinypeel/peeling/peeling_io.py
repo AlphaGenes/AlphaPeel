@@ -117,6 +117,51 @@ def add_penetrance_from_external_file(pedigree, peeling_info, file_name, args):
                 e = (e + 1) % 4
 
 
+def write_requested_outputs(pedigree, peeling_info, args, single_locus_mode=False):
+    """Write all outputs requested by command-line arguments."""
+
+    write_genotypes(
+        pedigree,
+        geno_prob_func=peeling_info.get_geno_probs,
+        is_x_chr=peeling_info.is_x_chr,
+    )
+    write_out_parameters(peeling_info)
+    if (
+        args.est_alt_allele_prob
+        or args.est_start_alt_allele_prob
+        or args.alt_allele_prob
+    ):
+        write_out_alt_allele_prob(pedigree)
+    write_requested_phenotype_outputs(pedigree, peeling_info, args)
+    if not single_locus_mode and args.seg_prob:
+        InputOutput.writeIdnIndexedMatrix(
+            pedigree, peeling_info.segregation, args.out_file + ".seg_prob.txt"
+        )
+
+
+def write_requested_phenotype_outputs(pedigree, peeling_info, args):
+    """Write requested phenotype probability and penetrance outputs."""
+
+    if args.pheno_prob:
+        if args.phenoPenetrance is None:
+            warnings.warn(
+                "Phenotype probabilities are not available. "
+                "Please provide a penetrance file with -pheno_penetrance_prob_file. "
+                "-pheno_prob will be ignored."
+            )
+        else:
+            write_pheno_probs(pedigree, pheno_prob_func=peeling_info.get_pheno_probs)
+    if args.est_pheno_penetrance_prob or args.pheno_penetrance_prob:
+        if pedigree.phenoPenetrance is None:
+            warnings.warn(
+                "Phenotype penetrance is not available. "
+                "Please provide a penetrance file with -pheno_penetrance_prob_file. "
+                "-est_pheno_penetrance_prob and -pheno_penetrance_prob will be ignored."
+            )
+        else:
+            write_pheno_penetrance(pedigree)
+
+
 def write_genotypes(pedigree, geno_prob_func, is_x_chr):
     """Write requested genotype outputs for each individual.
 
