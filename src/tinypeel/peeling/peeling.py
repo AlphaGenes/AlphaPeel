@@ -15,7 +15,7 @@ def peel_down(family, peeling_info, single_locus_mode):
     :param family: The family object that the peeling is performed on.
     :type family: class:`tinyhouse.Pedigree.Family`
     :param peeling_info: Peeling information container.
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :param single_locus_mode: A flag to indicate the mode of peeling.
         `False` if using multi-locus peeling, and `True` if using single-locus peeling.
     :type single_locus_mode: bool
@@ -219,7 +219,7 @@ def peel_up(family, peeling_info):
     :param family: The family object that the peeling is performed on.
     :type family: class:`tinyhouse.Pedigree.Family`
     :param peeling_info: Peeling information container.
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :return: None. The function modifies the peeling_info object in place.
     """
     e = 0.000001

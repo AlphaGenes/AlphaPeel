@@ -1,14 +1,22 @@
 """Peeling information setup and the JIT container used by peeling cycles."""
 
+import warnings
+from collections import OrderedDict
+
+import numpy as np
 from numba import jit, optional, boolean, int8, uint32, float32
 from numba.experimental import jitclass
-import numpy as np
-from collections import OrderedDict
-import warnings
 
-from ..tinyhouse import ProbMath
-from ..tinyhouse import HaplotypeOperations
+from .peeling_io import add_penetrance_from_external_file
 from ..tinyhouse import InputOutput
+from ..tinyhouse.ProbMath import (
+    generateSegregation,
+    generateSegregationXYChrom,
+    generateSegregationXXChrom,
+    getGenotypeProbabilities,
+    updateGenoProbsFromPhenotype,
+)
+from ..tinyhouse.HaplotypeOperations import ind_fillInGenotypesFromPhase
 
 
 def create_peeling_info(pedigree, args, phase_founder=False):
@@ -18,136 +26,213 @@ def create_peeling_info(pedigree, args, phase_founder=False):
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param args: argument container with configuration options for peeling
     :type args: argparse.Namespace or similar object with attributes
-    :param phase_founder: whether to phase genotyped founders using heterozygous loci, defaults to False
+    :param phase_founder: whether to phase genotyped founders using heterozygous loci,
+        defaults to False
     :type phase_founder: bool, optional
-    :return: peeling_info: a peeling information object containing all the necessary information for peeling
-    :rtype: jit_peeling_information
+    :return: peeling_info: a peeling information object containing all the
+        necessary information for peeling
+    :rtype: JitPeelingInformation
     """
     n_loci = pedigree.nLoci
 
-    peeling_info = jit_peeling_information(
+    peeling_info = JitPeelingInformation(
         n_ind=pedigree.maxIdn, n_fam=pedigree.maxFam, n_loci=n_loci
     )
 
+    initialize_peeling_info_model(peeling_info, args)
+    initialize_individual_probabilities(pedigree, peeling_info, args, phase_founder)
+    add_external_phased_genotype_probabilities(pedigree, peeling_info, args)
+
+    return peeling_info
+
+
+def initialize_peeling_info_model(peeling_info, args):
+    """Initialize chromosome, map, error, transmission, and segregation settings."""
+
     peeling_info.is_x_chr = args.x_chr
-    # Positions are only needed when map-aware transmission rates are used.
-    peeling_info.positions = None
-    if args.map_file:
-        if args.stopsnp is not None:
-            peeling_info.positions = np.array(
-                InputOutput.readMapFile(args.map_file, args.startsnp, args.stopsnp + 1)[
-                    2
-                ],
-                dtype=np.uint32,
-            )
-        else:
-            peeling_info.positions = np.array(
-                InputOutput.readMapFile(args.map_file)[2], dtype=np.uint32
-            )
-
-    mut_prob = args.mut_prob
-
-    # Segregation tensors encode P(parent genotypes, child genotype, segregation state).
-    # The *_norm tensors are partial tensors used as normalizing constants.
-    peeling_info.segregation_tensor = ProbMath.generateSegregation(mu=mut_prob)
-    peeling_info.segregation_tensor_norm = ProbMath.generateSegregation(
-        mu=mut_prob, partial=True
-    )
-    if peeling_info.is_x_chr:
-        peeling_info.segregation_tensor_xy = ProbMath.generateSegregationXYChrom(
-            mu=mut_prob
-        )
-        peeling_info.segregation_tensor_xy_norm = ProbMath.generateSegregationXYChrom(
-            mu=mut_prob, partial=True
-        )
-        peeling_info.segregation_tensor_xx = ProbMath.generateSegregationXXChrom(
-            mu=mut_prob
-        )
-        peeling_info.segregation_tensor_xx_norm = ProbMath.generateSegregationXXChrom(
-            mu=mut_prob, partial=True
-        )
-
+    set_map_positions(peeling_info, args)
+    setup_segregation_tensors(peeling_info, args.mut_prob)
     peeling_info.geno_error[:] = args.geno_error_prob
     peeling_info.seq_error[:] = args.seq_error_prob
     setup_transmission(args.rec_length, peeling_info)
 
+
+def set_map_positions(peeling_info, args):
+    """Set marker positions when map-aware transmission rates are used."""
+
+    # Positions are only needed when map-aware transmission rates are used.
+    peeling_info.positions = None
+    if not args.map_file:
+        return
+
+    if args.stopsnp is not None:
+        positions = InputOutput.readMapFile(
+            args.map_file, args.startsnp, args.stopsnp + 1
+        )[2]
+    else:
+        positions = InputOutput.readMapFile(args.map_file)[2]
+    peeling_info.positions = np.array(positions, dtype=np.uint32)
+
+
+def setup_segregation_tensors(peeling_info, mut_prob):
+    """Set segregation tensors used by the peeling kernels."""
+
+    # Segregation tensors encode P(parent genotypes, child genotype, segregation state).
+    # The *_norm tensors are partial tensors used as normalizing constants.
+    peeling_info.segregation_tensor = generateSegregation(mu=mut_prob)
+    peeling_info.segregation_tensor_norm = generateSegregation(
+        mu=mut_prob, partial=True
+    )
+    if peeling_info.is_x_chr:
+        peeling_info.segregation_tensor_xy = generateSegregationXYChrom(mu=mut_prob)
+        peeling_info.segregation_tensor_xy_norm = generateSegregationXYChrom(
+            mu=mut_prob, partial=True
+        )
+        peeling_info.segregation_tensor_xx = generateSegregationXXChrom(mu=mut_prob)
+        peeling_info.segregation_tensor_xx_norm = generateSegregationXXChrom(
+            mu=mut_prob, partial=True
+        )
+
+
+def initialize_individual_probabilities(pedigree, peeling_info, args, phase_founder):
+    """Initialize per-individual sex, penetrance, and X-chromosome segregation."""
+
     for ind in pedigree:
         peeling_info.sex[ind.idn] = ind.sex
 
-        if ind.genotypes is not None and ind.haplotypes is not None:
-            HaplotypeOperations.ind_fillInGenotypesFromPhase(ind)
-
-        x_chr_male_flag = peeling_info.is_x_chr and ind.sex == 0
-
-        ind_penetrance = ProbMath.getGenotypeProbabilities(
-            peeling_info.n_loci,
-            ind.genotypes,
-            ind.reads,
-            peeling_info.geno_error,
-            peeling_info.seq_error,
-            x_chr_male_flag,
+        fill_genotypes_from_phase(ind)
+        ind_penetrance = get_individual_penetrance(
+            ind, pedigree, peeling_info, args, phase_founder
         )
-
-        if peeling_info.is_x_chr:
-            ind_segregation = peeling_info.segregation[ind.idn, :, :]
-            if ind.sex == 0:
-                # Males use the paternal X states.
-                ind_segregation[0, :] = 0.5
-                ind_segregation[1, :] = 0.5
-                ind_segregation[2, :] = 0
-                ind_segregation[3, :] = 0
-            elif ind.sex == 1:
-                # Females use the maternal X states.
-                ind_segregation[0, :] = 0
-                ind_segregation[1, :] = 0
-                ind_segregation[2, :] = 0.5
-                ind_segregation[3, :] = 0.5
-        if ind.phenotype is not None:
-            # Phenotypes further weight genotype penetrance.
-            # Phenotype updates currently assume the existing single-locus phenotype model;
-            # multi-phenotype or multi-locus phenotype handling needs an explicit extension.
-            ind_penetrance = ProbMath.updateGenoProbsFromPhenotype(
-                ind_penetrance,
-                ind.phenotype,
-                pedigree.phenoPenetrance,
-            )
-
-        if ind.isGenotypedFounder() and phase_founder and ind.genotypes is not None:
-            loci = get_het_midpoint(ind.genotypes)
-            if loci is not None:
-                error = args.geno_error_prob
-                if (not peeling_info.is_x_chr) or (ind.sex != 0):
-                    ind_penetrance[:, loci] = np.array(
-                        [error / 3, error / 3, 1 - error, error / 3], dtype=np.float32
-                    )
-
+        initialize_x_chr_segregation(ind, peeling_info)
         peeling_info.penetrance[ind.idn, :, :] = ind_penetrance
 
-    if args.phased_geno_prob_file is not None:
-        if peeling_info.is_x_chr:
-            warnings.warn(
-                "Using an external phased genotype probability file and the x_chr option is highly discouraged. Please do not use.",
-                UserWarning,
-            )
 
-        if args.est_geno_error_prob:
-            warnings.warn(
-                "External phased genotype probability file included, but est_geno_error_prob flag used. The two options are incompatible. est_geno_error_prob set to false.",
-                UserWarning,
-            )
-            args.est_geno_error_prob = False
+def fill_genotypes_from_phase(ind):
+    """Fill genotypes from phase when both genotype and haplotype inputs exist."""
 
-        if args.est_seq_error_prob:
-            warnings.warn(
-                "External phased genotype probability file included, but est_seq_error_prob flag used. The two options are incompatible. est_seq_error_prob set to false.",
-                UserWarning,
-            )
-            args.est_seq_error_prob = False
+    if ind.genotypes is not None and ind.haplotypes is not None:
+        ind_fillInGenotypesFromPhase(ind)
 
-        for pen in args.phased_geno_prob_file:
-            add_penetrance_from_external_file(pedigree, peeling_info, pen, args)
 
-    return peeling_info
+def get_individual_penetrance(ind, pedigree, peeling_info, args, phase_founder):
+    """Build one individual's initial genotype penetrance matrix."""
+
+    ind_penetrance = get_base_individual_penetrance(ind, peeling_info)
+    ind_penetrance = apply_phenotype_to_penetrance(ind, pedigree, ind_penetrance)
+    apply_founder_phase_penetrance(
+        ind, peeling_info, args, phase_founder, ind_penetrance
+    )
+    return ind_penetrance
+
+
+def get_base_individual_penetrance(ind, peeling_info):
+    """Build genotype/read penetrance before phenotype or founder-phase adjustments."""
+
+    x_chr_male_flag = peeling_info.is_x_chr and ind.sex == 0
+    return getGenotypeProbabilities(
+        peeling_info.n_loci,
+        ind.genotypes,
+        ind.reads,
+        peeling_info.geno_error,
+        peeling_info.seq_error,
+        x_chr_male_flag,
+    )
+
+
+def initialize_x_chr_segregation(ind, peeling_info):
+    """Set initial X-chromosome segregation probabilities for one individual."""
+
+    if not peeling_info.is_x_chr:
+        return
+
+    ind_segregation = peeling_info.segregation[ind.idn, :, :]
+    if ind.sex == 0:
+        # Males use the paternal X states.
+        ind_segregation[0, :] = 0.5
+        ind_segregation[1, :] = 0.5
+        ind_segregation[2, :] = 0
+        ind_segregation[3, :] = 0
+    elif ind.sex == 1:
+        # Females use the maternal X states.
+        ind_segregation[0, :] = 0
+        ind_segregation[1, :] = 0
+        ind_segregation[2, :] = 0.5
+        ind_segregation[3, :] = 0.5
+
+
+def apply_phenotype_to_penetrance(ind, pedigree, ind_penetrance):
+    """Apply phenotype probabilities to one individual's penetrance."""
+
+    if ind.phenotype is None:
+        return ind_penetrance
+
+    # Phenotypes further weight genotype penetrance.
+    # Phenotype updates currently assume the existing single-locus phenotype model;
+    # multi-phenotype or multi-locus phenotype handling needs an explicit extension.
+    return updateGenoProbsFromPhenotype(
+        ind_penetrance,
+        ind.phenotype,
+        pedigree.phenoPenetrance,
+    )
+
+
+def apply_founder_phase_penetrance(
+    ind, peeling_info, args, phase_founder, ind_penetrance
+):
+    """Set phased-founder penetrance at the heterozygous midpoint when requested."""
+
+    if not (ind.isGenotypedFounder() and phase_founder and ind.genotypes is not None):
+        return
+
+    loci = get_het_midpoint(ind.genotypes)
+    if loci is None or (peeling_info.is_x_chr and ind.sex == 0):
+        return
+
+    error = args.geno_error_prob
+    ind_penetrance[:, loci] = np.array(
+        [error / 3, error / 3, 1 - error, error / 3], dtype=np.float32
+    )
+
+
+def add_external_phased_genotype_probabilities(pedigree, peeling_info, args):
+    """Apply external phased genotype probability files when configured."""
+
+    if args.phased_geno_prob_file is None:
+        return
+
+    warn_for_external_phased_genotype_options(peeling_info, args)
+    for pen in args.phased_geno_prob_file:
+        add_penetrance_from_external_file(pedigree, peeling_info, pen, args)
+
+
+def warn_for_external_phased_genotype_options(peeling_info, args):
+    """Warn and disable incompatible options for external phased probabilities."""
+
+    if peeling_info.is_x_chr:
+        warnings.warn(
+            "Using an external phased genotype probability file and "
+            "the x_chr option is highly discouraged. Please do not use.",
+            UserWarning,
+        )
+
+    if args.est_geno_error_prob:
+        warnings.warn(
+            "External phased genotype probability file included, "
+            "but est_geno_error_prob flag used. "
+            "The two options are incompatible. est_geno_error_prob set to false.",
+            UserWarning,
+        )
+        args.est_geno_error_prob = False
+
+    if args.est_seq_error_prob:
+        warnings.warn(
+            "External phased genotype probability file included, "
+            "but est_seq_error_prob flag used. "
+            "The two options are incompatible. est_seq_error_prob set to false.",
+            UserWarning,
+        )
+        args.est_seq_error_prob = False
 
 
 def setup_transmission(length, peeling_info):
@@ -159,7 +244,7 @@ def setup_transmission(length, peeling_info):
     :param length: Estimated recombination length of the chromosome in Morgans. Default = 1.00
     :type length: float
     :param peeling_info: Peeling information container.
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :return: None. Updates peeling_info.transmission_rate in place
     """
     # Relative positions of the loci on a chromosome, scaled between 0 and 1.
@@ -175,53 +260,14 @@ def setup_transmission(length, peeling_info):
         peeling_info.transmission_rate[i] = distance
 
 
-def add_penetrance_from_external_file(pedigree, peeling_info, file_name, args):
-    """Read external genotype penetrance values and multiply them into penetrance.
-
-    :param pedigree: pedigree information container
-    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
-    :param peeling_info: Peeling information container
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
-    :param file_name: path to the external penetrance file
-    :type file_name: str
-    :param args: argument container with configuration options for peeling set up, including startsnp and stopsnp.
-    :type args: argparse.Namespace or similar object with attributes
-    :return: None. Updates peeling_info.penetrance in place
-    """
-    print("Reading in penetrance file:", file_name)
-    with open(file_name) as f:
-        e = 0
-        for line in f:
-            parts = line.split()
-            idx = parts[0]
-            parts = parts[1:]
-
-            if args.startsnp is not None:
-                parts = parts[args.startsnp : args.stopsnp + 1]
-
-            penetrance_line = np.array([float(val) for val in parts], dtype=np.float32)
-
-            if idx not in pedigree.individuals:
-                warnings.warn(
-                    "Individual",
-                    idx,
-                    "not found in pedigree. Individual ignored.",
-                    UserWarning,
-                )
-            else:
-                ind = pedigree.individuals[idx]
-                penetrance_prob = peeling_info.penetrance[ind.idn, e, :]
-                penetrance_prob *= penetrance_line
-                e = (e + 1) % 4
-
-
 @jit(nopython=True)
 def get_het_midpoint(geno):
     """Finds the midpoint of the heterozygous loci in a genotype array.
 
     :param geno: observed genotypes for an individual collected via user input.
     :type geno: 1D numpy array of Int8 with length n_loci
-    :return: The index of the first heterozygous locus found, or None if no heterozygous loci are present.
+    :return: The index of the first heterozygous locus found,
+        or None if no heterozygous loci are present.
     :rtype: int or None
     """
     n_loci = len(geno)
@@ -274,12 +320,15 @@ spec["iteration"] = uint32
 
 
 @jitclass(spec)
-class jit_peeling_information(object):
+# This jitclass is the compiled peeling state container; keeping the arrays as
+# direct attributes preserves clear numba field types and call-site access.
+# pylint: disable=too-many-instance-attributes
+class JitPeelingInformation:
     """Holds the peeling information for a given pedigree.
 
 
     :param object: peeling information object
-    :type object: class:`jit_peeling_information`
+    :type object: class:`JitPeelingInformation`
     """
 
     def __init__(self, n_ind, n_fam, n_loci):
@@ -374,7 +423,8 @@ class jit_peeling_information(object):
         :param idn: Internal number for an individual in the pedigree.
         :type idn: int
         :param pheno_penetrance: phenotype penetrance values
-        :type pheno_penetrance: 2D numpy array of float32 with shape 4 x number of phenotype categories
+        :type pheno_penetrance: 2D numpy array of float32 with shape
+            4 x number of phenotype categories
         :return: pheno_probs: the phenotype probabilities for the individual
         :rtype: 2D numpy array of float32 with shape number of phenotype categories x 1
         """
