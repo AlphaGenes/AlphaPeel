@@ -1,4 +1,5 @@
 """Update allele frequencies, error rates, and phenotype penetrance estimates."""
+
 import warnings
 
 from numba import jit

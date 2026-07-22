@@ -1,6 +1,9 @@
+"""Input/output functions."""
+
+from contextlib import ExitStack
+
 import numpy as np
 from numba import jit
-from contextlib import ExitStack
 from ..tinyhouse import InputOutput
 
 
@@ -88,151 +91,182 @@ def write_genotypes(pedigree, geno_prob_func, is_x_chr):
     :return: None. Writes to files specified in the InputOutput.args.
     """
     args = InputOutput.args
-    formatter = f"{{:.{args.out_digits}f}}".format
-    x_chr_male_dosage_weights = np.array([0, 0, 0, 1])
-    autosome_dosage_weights = np.array([0, 1, 1, 2])
+    geno_thresholds = get_output_thresholds(args.geno, args.geno_threshold, 1 / 3)
+    hap_thresholds = get_output_thresholds(args.hap, args.hap_threshold, 1 / 2)
+    output_settings = {
+        "formatter": f"{{:.{args.out_digits}f}}".format,
+        "dosage_weights": (np.array([0, 0, 0, 1]), np.array([0, 1, 1, 2])),
+        "is_x_chr": is_x_chr,
+        "geno_thresholds": geno_thresholds,
+        "hap_thresholds": hap_thresholds,
+    }
 
-    geno_threshold_list = []
-    if args.geno:
-        if args.geno_threshold:
-            for thresh in args.geno_threshold:
-                if thresh < 1 / 3:
-                    geno_threshold_list.append(1 / 3)
-                else:
-                    geno_threshold_list.append(thresh)
-        else:
-            geno_threshold_list.append(1 / 3)
-
-    hap_threshold_list = []
-    if args.hap:
-        if args.hap_threshold:
-            for thresh in args.hap_threshold:
-                if thresh < 1 / 2:
-                    hap_threshold_list.append(1 / 2)
-                else:
-                    hap_threshold_list.append(thresh)
-        else:
-            hap_threshold_list.append(1 / 2)
-
-    has_output = (
+    if not (
         (not args.no_dosage)
         or args.phased_geno_prob
         or args.geno_prob
-        or len(geno_threshold_list) != 0
-        or len(hap_threshold_list) != 0
-    )
-    if not has_output:
+        or len(geno_thresholds) != 0
+        or len(hap_thresholds) != 0
+    ):
         return
 
+    write_genotypes_single_pass(pedigree, geno_prob_func, output_settings)
+
+
+def get_output_thresholds(enabled, thresholds, minimum):
+    """Return validated output thresholds for called genotypes or haplotypes."""
+
+    if not enabled:
+        return []
+    if thresholds:
+        return [max(thresh, minimum) for thresh in thresholds]
+    return [minimum]
+
+
+def write_genotypes_single_pass(pedigree, geno_prob_func, output_settings):
+    """Write all requested genotype outputs in one pass through the pedigree."""
+
+    args = InputOutput.args
     with ExitStack() as stack:
-        dosage_file = None
-        if not args.no_dosage:
-            dosage_file = stack.enter_context(open(args.out_file + ".dosage.txt", "w+"))
+        output_files = open_genotype_output_files(
+            stack, args, output_settings["geno_thresholds"]
+        )
+        output_files["haps"] = open_threshold_files(
+            stack, args.out_file, "hap", output_settings["hap_thresholds"], "haplotypes"
+        )
 
-        phased_geno_prob_file = None
-        if args.phased_geno_prob:
-            phased_geno_prob_file = stack.enter_context(
-                open(args.out_file + ".phased_geno_prob.txt", "w+")
+        for _, ind in pedigree.writeOrder():
+            matrix = geno_prob_func(ind.idn, ind.sex)
+            write_individual_genotype_outputs(
+                ind, matrix, output_settings, output_files
             )
 
-        geno_prob_file = None
-        if args.geno_prob:
-            geno_prob_file = stack.enter_context(
-                open(args.out_file + ".geno_prob.txt", "w+")
-            )
 
-        geno_files = []
-        for threshold in geno_threshold_list:
-            output_file = args.out_file + ".geno_" + str(round(threshold, 3)) + ".txt"
-            print(
-                f"Writing called genotypes with threshold {threshold} to {output_file}"
-            )
-            geno_files.append((threshold, stack.enter_context(open(output_file, "w+"))))
+def open_genotype_output_files(stack, args, geno_thresholds):
+    """Open requested genotype output files and return their handles."""
 
-        hap_files = []
-        for threshold in hap_threshold_list:
-            output_file = args.out_file + ".hap_" + str(round(threshold, 3)) + ".txt"
-            print(
-                f"Writing called haplotypes with threshold {threshold} to {output_file}"
-            )
-            hap_files.append((threshold, stack.enter_context(open(output_file, "w+"))))
+    output_files = {
+        "dosage": None,
+        "phased_geno_prob": None,
+        "geno_prob": None,
+        "genotypes": open_threshold_files(
+            stack, args.out_file, "geno", geno_thresholds, "genotypes"
+        ),
+    }
+    if not args.no_dosage:
+        output_files["dosage"] = enter_output_file(stack, args.out_file + ".dosage.txt")
+    if args.phased_geno_prob:
+        output_files["phased_geno_prob"] = enter_output_file(
+            stack, args.out_file + ".phased_geno_prob.txt"
+        )
+    if args.geno_prob:
+        output_files["geno_prob"] = enter_output_file(
+            stack, args.out_file + ".geno_prob.txt"
+        )
+    return output_files
 
+
+def open_threshold_files(stack, out_file, file_suffix, thresholds, output_label):
+    """Open requested thresholded output files."""
+
+    output_files = []
+    for threshold in thresholds:
+        output_file = f"{out_file}.{file_suffix}_{round(threshold, 3)}.txt"
+        print(
+            f"Writing called {output_label} with threshold {threshold} to {output_file}"
+        )
+        output_files.append((threshold, enter_output_file(stack, output_file)))
+    return output_files
+
+
+def enter_output_file(stack, output_file):
+    """Open an output file under the shared output ExitStack."""
+
+    # pylint: disable=consider-using-with
+    return stack.enter_context(open(output_file, "w+", encoding="utf-8"))
+
+
+def write_individual_genotype_outputs(ind, matrix, output_settings, output_files):
+    """Write all requested genotype outputs for one individual."""
+
+    if output_files["dosage"] is not None:
+        write_individual_dosage(output_files["dosage"], ind, matrix, output_settings)
+    if output_files["phased_geno_prob"] is not None:
+        write_phased_geno_probs_from_matrix(
+            output_files["phased_geno_prob"],
+            ind,
+            matrix,
+            output_settings["formatter"],
+        )
+    if output_files["geno_prob"] is not None:
+        write_geno_probs_from_matrix(
+            output_files["geno_prob"], ind, matrix, output_settings["formatter"]
+        )
+    if output_files["genotypes"]:
+        write_individual_called_genotypes(ind, matrix, output_settings, output_files)
+    if output_files["haps"]:
+        write_individual_called_haplotypes(
+            ind, matrix, output_settings["is_x_chr"], output_files["haps"]
+        )
+
+
+def write_individual_dosage(output_file, ind, matrix, output_settings):
+    """Write one individual's dosage to the appropriate chromosome output."""
+
+    x_chr_male_weights, autosome_weights = output_settings["dosage_weights"]
+    if output_settings["is_x_chr"]:
+        write_dosage_from_matrix(
+            output_file,
+            ind,
+            matrix,
+            output_settings["formatter"],
+            (x_chr_male_weights, autosome_weights),
+        )
+    else:
+        write_autosome_dosage_from_matrix(
+            output_file,
+            ind,
+            matrix,
+            output_settings["formatter"],
+            autosome_weights,
+        )
+
+
+def write_individual_called_genotypes(ind, matrix, output_settings, output_files):
+    """Write one individual's called genotype outputs."""
+
+    if output_settings["is_x_chr"]:
+        matrix_collapsed_hets = get_collapsed_genotypes(matrix, True, ind.sex)
+    else:
+        matrix_collapsed_hets = get_autosome_collapsed_genotypes(matrix)
+    for threshold, output_handle in output_files["genotypes"]:
+        write_called_genotypes_from_collapsed(
+            output_handle, ind, matrix_collapsed_hets, threshold
+        )
+
+
+def write_individual_called_haplotypes(ind, matrix, is_x_chr, hap_files):
+    """Write one individual's called haplotype outputs."""
+
+    for threshold, output_handle in hap_files:
         if is_x_chr:
-            for idx, ind in pedigree.writeOrder():
-                matrix = geno_prob_func(ind.idn, ind.sex)
-
-                if dosage_file is not None:
-                    write_dosage_from_matrix(
-                        dosage_file,
-                        ind,
-                        matrix,
-                        True,
-                        formatter,
-                        x_chr_male_dosage_weights,
-                        autosome_dosage_weights,
-                    )
-
-                if phased_geno_prob_file is not None:
-                    write_phased_geno_probs_from_matrix(
-                        phased_geno_prob_file, ind, matrix, formatter
-                    )
-
-                if geno_prob_file is not None:
-                    write_geno_probs_from_matrix(geno_prob_file, ind, matrix, formatter)
-
-                if geno_files:
-                    matrix_collapsed_hets = get_collapsed_genotypes(
-                        matrix, True, ind.sex
-                    )
-                    for threshold, output_handle in geno_files:
-                        write_called_genotypes_from_collapsed(
-                            output_handle, ind, matrix_collapsed_hets, threshold
-                        )
-
-                if hap_files:
-                    for threshold, output_handle in hap_files:
-                        write_called_phase_from_matrix(
-                            output_handle, ind, matrix, True, threshold
-                        )
+            write_called_phase_from_matrix(output_handle, ind, matrix, True, threshold)
         else:
-            for idx, ind in pedigree.writeOrder():
-                matrix = geno_prob_func(ind.idn, ind.sex)
-
-                if dosage_file is not None:
-                    write_autosome_dosage_from_matrix(
-                        dosage_file,
-                        ind,
-                        matrix,
-                        formatter,
-                        autosome_dosage_weights,
-                    )
-
-                if phased_geno_prob_file is not None:
-                    write_phased_geno_probs_from_matrix(
-                        phased_geno_prob_file, ind, matrix, formatter
-                    )
-
-                if geno_prob_file is not None:
-                    write_geno_probs_from_matrix(geno_prob_file, ind, matrix, formatter)
-
-                if geno_files:
-                    matrix_collapsed_hets = get_autosome_collapsed_genotypes(matrix)
-                    for threshold, output_handle in geno_files:
-                        write_called_genotypes_from_collapsed(
-                            output_handle, ind, matrix_collapsed_hets, threshold
-                        )
-
-                if hap_files:
-                    for threshold, output_handle in hap_files:
-                        write_autosome_called_phase_from_matrix(
-                            output_handle, ind, matrix, threshold
-                        )
+            write_autosome_called_phase_from_matrix(
+                output_handle, ind, matrix, threshold
+            )
 
 
 def write_genotypes_separate_passes(pedigree, geno_prob_func, is_x_chr):
     """Writes genotype outputs with one full pedigree pass per output file."""
 
     args = InputOutput.args
+    output_context = {
+        "pedigree": pedigree,
+        "geno_prob_func": geno_prob_func,
+        "is_x_chr": is_x_chr,
+        "out_file": args.out_file,
+    }
     if not args.no_dosage:
         write_dosages(pedigree, geno_prob_func, is_x_chr, args.out_file + ".dosage.txt")
     if args.phased_geno_prob:
@@ -241,51 +275,51 @@ def write_genotypes_separate_passes(pedigree, geno_prob_func, is_x_chr):
         )
     if args.geno_prob:
         write_geno_probs(pedigree, geno_prob_func, args.out_file + ".geno_prob.txt")
-    if args.geno:
-        geno_threshold_list = []
-        if args.geno_threshold:
-            for thresh in args.geno_threshold:
-                if thresh < 1 / 3:
-                    geno_threshold_list.append(1 / 3)
-                else:
-                    geno_threshold_list.append(thresh)
-        else:
-            geno_threshold_list.append(1 / 3)
+    write_separate_threshold_outputs(
+        output_context,
+        get_separate_output_settings(
+            args.geno, args.geno_threshold, 1 / 3, "geno", "genotypes"
+        ),
+        write_called_genotypes,
+    )
+    write_separate_threshold_outputs(
+        output_context,
+        get_separate_output_settings(
+            args.hap, args.hap_threshold, 1 / 2, "hap", "haplotypes"
+        ),
+        write_called_phase,
+    )
 
-        for threshold in geno_threshold_list:
-            print(
-                f"Writing called genotypes with threshold {threshold} to {args.out_file + '.geno_' + str(round(threshold, 3)) + '.txt'}"
-            )
-            write_called_genotypes(
-                pedigree,
-                geno_prob_func,
-                is_x_chr,
-                args.out_file + ".geno_" + str(round(threshold, 3)) + ".txt",
-                threshold,
-            )
 
-    if args.hap:
-        hap_threshold_list = []
-        if args.hap_threshold:
-            for thresh in args.hap_threshold:
-                if thresh < 1 / 2:
-                    hap_threshold_list.append(1 / 2)
-                else:
-                    hap_threshold_list.append(thresh)
-        else:
-            hap_threshold_list.append(1 / 2)
+def get_separate_output_settings(enabled, thresholds, minimum, suffix, label):
+    """Return settings for thresholded separate-pass outputs."""
 
-        for threshold in hap_threshold_list:
-            print(
-                f"Writing called haplotypes with threshold {threshold} to {args.out_file + '.hap_' + str(round(threshold, 3)) + '.txt'}"
-            )
-            write_called_phase(
-                pedigree,
-                geno_prob_func,
-                is_x_chr,
-                args.out_file + ".hap_" + str(round(threshold, 3)) + ".txt",
-                threshold,
-            )
+    return {
+        "thresholds": get_output_thresholds(enabled, thresholds, minimum),
+        "suffix": suffix,
+        "label": label,
+    }
+
+
+def write_separate_threshold_outputs(output_context, output_settings, writer):
+    """Write separate-pass thresholded genotype or haplotype outputs."""
+
+    for threshold in output_settings["thresholds"]:
+        output_file = (
+            f"{output_context['out_file']}.{output_settings['suffix']}_"
+            f"{round(threshold, 3)}.txt"
+        )
+        print(
+            f"Writing called {output_settings['label']} "
+            f"with threshold {threshold} to {output_file}"
+        )
+        writer(
+            output_context["pedigree"],
+            output_context["geno_prob_func"],
+            output_context["is_x_chr"],
+            output_file,
+            threshold,
+        )
 
 
 def write_phased_geno_probs_from_matrix(f, ind, matrix, formatter):
@@ -317,18 +351,17 @@ def write_dosage_from_matrix(
     f,
     ind,
     matrix,
-    is_x_chr,
     formatter,
-    x_chr_male_dosage_weights,
-    autosome_dosage_weights,
+    dosage_weights,
 ):
     """Writes one individual's allele dosage."""
 
-    if is_x_chr and ind.sex == 0:
-        tmp = x_chr_male_dosage_weights
+    x_chr_male_dosage_weights, autosome_dosage_weights = dosage_weights
+    if ind.sex == 0:
+        weights = x_chr_male_dosage_weights
     else:
-        tmp = autosome_dosage_weights
-    dosage = np.dot(tmp, matrix)
+        weights = autosome_dosage_weights
+    dosage = np.dot(weights, matrix)
     f.write(ind.idx + " " + " ".join(map(formatter, dosage)) + "\n")
 
 
@@ -438,8 +471,8 @@ def write_phased_geno_probs(pedigree, geno_prob_func, output_file):
     """
     args = InputOutput.args
     formatter = f"{{:.{args.out_digits}f}}".format
-    with open(output_file, "w+") as f:
-        for idx, ind in pedigree.writeOrder():
+    with open(output_file, "w+", encoding="utf-8") as f:
+        for _, ind in pedigree.writeOrder():
             matrix = geno_prob_func(ind.idn, ind.sex)
             for i in range(matrix.shape[0]):
                 matrix_row = matrix[i, :]
@@ -459,8 +492,8 @@ def write_geno_probs(pedigree, geno_prob_func, output_file):
     """
     args = InputOutput.args
     formatter = f"{{:.{args.out_digits}f}}".format
-    with open(output_file, "w+") as f:
-        for idx, ind in pedigree.writeOrder():
+    with open(output_file, "w+", encoding="utf-8") as f:
+        for _, ind in pedigree.writeOrder():
             matrix = geno_prob_func(ind.idn, ind.sex)
             matrix0 = matrix[0, :]
             matrix1 = matrix[1, :]
@@ -497,8 +530,8 @@ def write_pheno_probs(pedigree, pheno_prob_func):
     """
     args = InputOutput.args
     formatter = f"{{:.{args.out_digits}f}}".format
-    with open(args.out_file + ".pheno_prob.txt", "w+") as f:
-        for idx, ind in pedigree.writeOrder():
+    with open(args.out_file + ".pheno_prob.txt", "w+", encoding="utf-8") as f:
+        for _, ind in pedigree.writeOrder():
             matrix = pheno_prob_func(ind.idn, pedigree.phenoPenetrance)
             f.write("\n")
             for i in range(matrix.shape[0]):
@@ -523,8 +556,8 @@ def write_dosages(pedigree, geno_prob_func, is_x_chr, output_file):
     formatter = f"{{:.{args.out_digits}f}}".format
     x_chr_male_dosage_weights = np.array([0, 0, 0, 1])
     autosome_dosage_weights = np.array([0, 1, 1, 2])
-    with open(output_file, "w+") as f:
-        for idx, ind in pedigree.writeOrder():
+    with open(output_file, "w+", encoding="utf-8") as f:
+        for _, ind in pedigree.writeOrder():
             if is_x_chr and ind.sex == 0:
                 tmp = x_chr_male_dosage_weights
             else:
@@ -548,8 +581,8 @@ def write_called_genotypes(pedigree, geno_prob_func, is_x_chr, output_file, thre
     :type thresh: float
     :return: None. Writes to the specified output file.
     """
-    with open(output_file, "w+") as f:
-        for idx, ind in pedigree.writeOrder():
+    with open(output_file, "w+", encoding="utf-8") as f:
+        for _, ind in pedigree.writeOrder():
             matrix = geno_prob_func(ind.idn, ind.sex)
             matrix0 = matrix[0, :]
             matrix1 = matrix[1, :]
@@ -585,32 +618,10 @@ def write_called_phase(pedigree, geno_prob_func, is_x_chr, output_file, thresh):
     :type thresh: float
     :return: None. Writes to the specified output file.
     """
-    with open(output_file, "w+") as f:
-        for idx, ind in pedigree.writeOrder():
+    with open(output_file, "w+", encoding="utf-8") as f:
+        for _, ind in pedigree.writeOrder():
             matrix = geno_prob_func(ind.idn, ind.sex)
-            matrix0 = matrix[0, :]
-            matrix1 = matrix[1, :]
-            matrix2 = matrix[2, :]
-            matrix3 = matrix[3, :]
-
-            # Paternal
-            if is_x_chr and ind.sex == 0:
-                paternal_haplotype = np.full(matrix.shape[1], 9, dtype=np.int8)
-            else:
-                paternal_probs = np.empty((2, matrix.shape[1]), dtype=np.float32)
-                paternal_probs[0, :] = matrix0 + matrix1
-                paternal_probs[1, :] = matrix2 + matrix3
-                paternal_haplotype = np.argmax(paternal_probs, axis=0)
-                set_missing(paternal_haplotype, paternal_probs, thresh)
-            f.write(ind.idx + " " + " ".join(map(str, paternal_haplotype)) + "\n")
-
-            # Maternal
-            maternal_probs = np.empty((2, matrix.shape[1]), dtype=np.float32)
-            maternal_probs[0, :] = matrix0 + matrix2
-            maternal_probs[1, :] = matrix1 + matrix3
-            maternal_haplotype = np.argmax(maternal_probs, axis=0)
-            set_missing(maternal_haplotype, maternal_probs, thresh)
-            f.write(ind.idx + " " + " ".join(map(str, maternal_haplotype)) + "\n")
+            write_called_phase_from_matrix(f, ind, matrix, is_x_chr, thresh)
 
 
 @jit(nopython=True)
