@@ -432,10 +432,10 @@ def update_geno_error_ind(counts, errors, genotypes, geno_probs):
     :param errors: vector of errors for each locus, initialized to 0.001
     :type errors: 1D numpy array with length equal to the number of loci
     :param genotypes: observed genotypes for an individual collected
-    via the geno_file input option.
+        via the geno_file input option.
     :type genotypes: 1D numpy array of Int8 with length n_loci
     :param geno_probs: genotype probabilities for each genotype state
-    at each locus for the individual.
+        at each locus for the individual.
     :type geno_probs: 2D numpy array with shape 4 x n_loci
     :return: None. The function updates the counts and errors arrays in place.
     """
@@ -500,7 +500,7 @@ def update_seq_error_ind(counts, errors, ref_reads, alt_reads, geno_probs):
     :param alt_reads: the number of sequencing reads supporting the alternative allele at each locus
     :type alt_reads: 1D numpy array of uint16 with length n_loci
     :param geno_probs: genotype probabilities for each genotype state
-    at each locus for the individual.
+        at each locus for the individual.
     :type geno_probs: 2D numpy array with shape 4 x n_loci
     :return: None. The function updates the counts and errors arrays in place.
     """
@@ -521,7 +521,7 @@ def update_pheno_penetrance(pedigree, peeling_info):
     :param peeling_info: Peeling information container.
     :type peeling_info: class:`PeelingInfo.jit_peeling_information`
     :return: None. The function updates the pedigree.phenoPenetrance attribute
-    with the new phenotype penetrance matrix.
+        with the new phenotype penetrance matrix.
     """
     # Based on Kinghorn (2003), "A Simple Method to Detect a Single Gene
     # that Determines a Categorical Trait with Incomplete Penetrance".
@@ -554,17 +554,17 @@ def update_pheno_penetrance_ind(
     their phenotype and genotype probabilities.
 
     :param denominator: Sums the genotype probabilities across individuals
-    with phenotype data, initialised to 0.
+        with phenotype data, initialised to 0.
     :type denominator: 2D numpy array with shape 4 x n_loci
     :param contributions: matrix of contributions for each phenotype
-    and genotype state, initialized to 0
+        and genotype state, initialized to 0
     :type contributions: 2D numpy array with shape nPhenotype categories x 4
     :param rg_pheno: number of phenotype categories
     :type rg_pheno: int
     :param phenotype: the phenotype of the individual
     :type phenotype: int
     :param geno_probs: genotype probabilities for each genotype state
-    at each locus for the individual.
+        at each locus for the individual.
     :type geno_probs: 2D numpy array with shape 4 x n_loci
     :return: None. The function updates the counts and contributions arrays in place.
     """
