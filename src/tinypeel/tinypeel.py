@@ -6,7 +6,7 @@ import warnings
 from .tinyhouse import Pedigree
 from .tinyhouse import InputOutput
 
-from .Peeling import Peeling
+from .Peeling import peeling
 from .Peeling import peeling_io
 from .Peeling import PeelingInfo
 from .Peeling import peeling_updates
@@ -172,14 +172,14 @@ def peeling_cycle(
                 max_workers=n_workers
             ) as executor:
                 executor.map(
-                    Peeling.peel_down,
+                    peeling.peel_down,
                     jit_families,
                     repeat(peeling_info),
                     repeat(single_locus_mode),
                 )
         else:
             for family in jit_families:
-                Peeling.peel_down(family, peeling_info, single_locus_mode)
+                peeling.peel_down(family, peeling_info, single_locus_mode)
 
     for index, generation in enumerate(reversed(pedigree.generations)):
         print("Peeling Up, Generation", pedigree.nGenerations - index - 1)
@@ -190,13 +190,13 @@ def peeling_cycle(
                 max_workers=n_workers
             ) as executor:
                 executor.map(
-                    Peeling.peel_up,
+                    peeling.peel_up,
                     jit_families,
                     repeat(peeling_info),
                 )
         else:
             for family in jit_families:
-                Peeling.peel_up(family, peeling_info)
+                peeling.peel_up(family, peeling_info)
 
         sires = set()
         dams = set()
@@ -243,7 +243,7 @@ def update_sire(sire, peeling_info):
         sire_posterior += log_update
 
     # Convert accumulated log terms back to normalized probabilities.
-    sire_posterior[:, :] = Peeling.exp_norm_1d(sire_posterior, peeling_info.n_loci)
+    sire_posterior[:, :] = peeling.exp_norm_1d(sire_posterior, peeling_info.n_loci)
     sire_posterior /= np.sum(sire_posterior, 0)
 
 
@@ -264,7 +264,7 @@ def update_dam(dam, peeling_info):
         log_update = np.log(peeling_info.posterior_dam_contribution[fam_id, :, :])
         dam_posterior += log_update
 
-    dam_posterior[:, :] = Peeling.exp_norm_1d(dam_posterior, peeling_info.n_loci)
+    dam_posterior[:, :] = peeling.exp_norm_1d(dam_posterior, peeling_info.n_loci)
     dam_posterior /= np.sum(dam_posterior, 0)
 
 
