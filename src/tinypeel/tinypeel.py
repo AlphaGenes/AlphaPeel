@@ -6,16 +6,16 @@ import warnings
 from .tinyhouse import Pedigree
 from .tinyhouse import InputOutput
 
-from .Peeling import peeling
-from .Peeling import peeling_io
-from .Peeling import PeelingInfo
-from .Peeling import peeling_updates
+from .peeling import peeling
+from .peeling import peeling_io
+from .peeling import peeling_info_module
+from .peeling import peeling_updates
 
 import concurrent.futures
 from itertools import repeat
 import argparse
 
-from .Peeling import version
+from .peeling import version
 
 version_version = version.version
 
@@ -45,7 +45,7 @@ def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param peeling_info: Peeling information container
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :param args: argument container with configuration options for peeling
     :type args: argparse.Namespace or similar object with attributes
     :param single_locus_mode: whether method is single locus or not, defaults to False
@@ -151,7 +151,7 @@ def peeling_cycle(
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param peeling_info: Peeling information container
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :param args: argument container with configuration options for peeling
     :type args: argparse.Namespace or similar object with attributes
     :param single_locus_mode: whether method is single locus or not, defaults to False
@@ -210,7 +210,7 @@ def update_posterior(peeling_info, sires, dams):
     """Updates the posterior term for a specific set of sires and dams.
 
     :param peeling_info: Peeling information container
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :param sires: collection of sires to update
     :type sires: set of class:`tinyhouse.Pedigree.Individual`
     :param dams: collection of dams to update
@@ -231,7 +231,7 @@ def update_sire(sire, peeling_info):
     :param sire: the sire to update
     :type sire: class: `tinyhouse.Pedigree.Individual`
     :param peeling_info: Peeling information container
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :return: None. The function modifies the peeling_info object in place
     """
     fam_list = [fam.idn for fam in sire.families]
@@ -253,7 +253,7 @@ def update_dam(dam, peeling_info):
     :param dam: the dam to update
     :type dam: class: `tinyhouse.Pedigree.Individual`
     :param peeling_info: Peeling information container
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :return: None. The function modifies the peeling_info object in place
     """
     fam_list = [fam.idn for fam in dam.families]
@@ -323,7 +323,7 @@ def generate_single_locus_segregation(peeling_info, pedigree, args):
     Otherwise the default uniform probabilities remain in place.
 
     :param peeling_info: Peeling information container
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param args: argument container with configuration options for peeling
@@ -924,7 +924,7 @@ def main(argv=None):
         for ind in pedigree:
             ind.phenotype = None
 
-    peeling_info = PeelingInfo.create_peeling_info(
+    peeling_info = peeling_info_module.create_peeling_info(
         pedigree, args, phase_founder=(not args.no_phase_founder)
     )
 

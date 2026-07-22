@@ -1,6 +1,7 @@
 """Input/output functions."""
 
 from contextlib import ExitStack
+import warnings
 
 import numpy as np
 from numba import jit
@@ -11,7 +12,7 @@ def write_out_parameters(peeling_info):
     """Write estimated error rates and recombination probabilities.
 
     :param peeling_info: Peeling information container
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :return: None. Writes to files specified in the InputOutput.args.
     """
     args = InputOutput.args
@@ -73,6 +74,47 @@ def write_pheno_penetrance(pedigree):
         args.out_file + ".pheno_penetrance.txt",
         pedigree.phenoPenetrance,
     )
+
+
+def add_penetrance_from_external_file(pedigree, peeling_info, file_name, args):
+    """Read external genotype penetrance values and multiply them into penetrance.
+
+    :param pedigree: pedigree information container
+    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
+    :param peeling_info: Peeling information container
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
+    :param file_name: path to the external penetrance file
+    :type file_name: str
+    :param args: argument container with configuration options for peeling set up,
+        including startsnp and stopsnp.
+    :type args: argparse.Namespace or similar object with attributes
+    :return: None. Updates peeling_info.penetrance in place
+    """
+    print("Reading in penetrance file:", file_name)
+    with open(file_name, "r", encoding="utf-8") as f:
+        e = 0
+        for line in f:
+            parts = line.split()
+            idx = parts[0]
+            parts = parts[1:]
+
+            if args.startsnp is not None:
+                parts = parts[args.startsnp : args.stopsnp + 1]
+
+            penetrance_line = np.array([float(val) for val in parts], dtype=np.float32)
+
+            if idx not in pedigree.individuals:
+                warnings.warn(
+                    "Individual",
+                    idx,
+                    "not found in pedigree. Individual ignored.",
+                    UserWarning,
+                )
+            else:
+                ind = pedigree.individuals[idx]
+                penetrance_prob = peeling_info.penetrance[ind.idn, e, :]
+                penetrance_prob *= penetrance_line
+                e = (e + 1) % 4
 
 
 def write_genotypes(pedigree, geno_prob_func, is_x_chr):

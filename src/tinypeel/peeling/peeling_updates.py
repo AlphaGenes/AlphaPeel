@@ -5,11 +5,10 @@ import warnings
 from numba import jit
 import numpy as np
 
-from .PeelingInfo import get_het_midpoint
+from .peeling_info_module import get_base_individual_penetrance, get_het_midpoint
 from ..tinyhouse.ProbMath import (
     getGenotypesFromMultiMaf,
     getGenotypesFromMaf,
-    getGenotypeProbabilities,
     updateGenoProbsFromPhenotype,
 )
 
@@ -24,7 +23,7 @@ def update_maf(pedigree, peeling_info):
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param peeling_info: Peeling information container.
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :return: None. The function updates the pedigree.AAP attribute with
     the new alternative allele frequencies.
     """
@@ -117,7 +116,7 @@ def newton_maf_updates(peeling_info, alternative_allele_prob, index, genotyped):
     Currently limits all alternative_allele_prob to be between 0.001 and 0.999.
 
     :param peeling_info: Peeling information container.
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :param alternative_allele_prob: starting alternative allele frequencies, default 0.5
     :type alternative_allele_prob: 1D numpy array with length equal to the number of loci
     :param index: the marker index for which to update the alternative allele frequency
@@ -158,7 +157,7 @@ def get_newton_update(p, peeling_info, index, genotyped):
     :param p: the current alternative allele frequency estimate
     :type p: float
     :param peeling_info: Peeling information container.
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :param index: the marker index for which to update the alternative allele frequency
     :type index: int
     :param genotyped: whether each individual has observed data for this locus
@@ -306,7 +305,7 @@ def update_maf_after_peeling(pedigree, peeling_info):
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param peeling_info: Peeling information container.
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :return: None. The function updates the pedigree.AAP attribute
     with the new alternative allele frequencies.
     """
@@ -348,7 +347,7 @@ def update_penetrance(pedigree, peeling_info, args):
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param peeling_info: Peeling information container.
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :param args: argument container with configuration options for peeling
     :type args: argparse.Namespace or similar object with attributes
     :return: None. The function updates the peeling_info.penetrance attribute
@@ -368,14 +367,7 @@ def update_penetrance(pedigree, peeling_info, args):
     phase_founder = not args.no_phase_founder
     for ind in pedigree:
         x_chr_male_flag = peeling_info.is_x_chr and ind.sex == 0
-        ind_penetrance = getGenotypeProbabilities(
-            peeling_info.n_loci,
-            ind.genotypes,
-            ind.reads,
-            peeling_info.geno_error,
-            peeling_info.seq_error,
-            x_chr_male_flag,
-        )
+        ind_penetrance = get_base_individual_penetrance(ind, peeling_info)
 
         if ind.phenotype is not None:
             ind_penetrance = updateGenoProbsFromPhenotype(
@@ -406,7 +398,7 @@ def update_geno_error(pedigree, peeling_info):
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param peeling_info: Peeling information container
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :return: the updated genotype error rates for each locus
     :rtype: 1D numpy array with length equal to the number of loci
     """
@@ -465,7 +457,7 @@ def update_seq_error(pedigree, peeling_info):
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param peeling_info: Peeling information container.
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :return: the updated sequencing error rates for each locus
     :rtype: 1D numpy array with length equal to the number of loci
     """
@@ -519,7 +511,7 @@ def update_pheno_penetrance(pedigree, peeling_info):
     :param pedigree: pedigree information container
     :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
     :param peeling_info: Peeling information container.
-    :type peeling_info: class:`PeelingInfo.jit_peeling_information`
+    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
     :return: None. The function updates the pedigree.phenoPenetrance attribute
         with the new phenotype penetrance matrix.
     """
