@@ -1,7 +1,40 @@
 """Main peeling functions."""
 
+import concurrent.futures
+
 from numba import jit, float32
 import numpy as np
+
+
+_LOCUS_THREAD_COUNT = 1
+_DEFER_SEGREGATION_COLLAPSE = False
+
+
+def set_locus_thread_count(n_threads):
+    """Set the number of Python threads used for manual locus splitting."""
+
+    global _LOCUS_THREAD_COUNT
+    _LOCUS_THREAD_COUNT = n_threads
+
+
+def set_defer_segregation_collapse(enabled):
+    """Set whether peel-down estimates segregation without collapsing it."""
+
+    global _DEFER_SEGREGATION_COLLAPSE
+    _DEFER_SEGREGATION_COLLAPSE = enabled
+
+
+def peel_down(family, peeling_info, single_locus_mode):
+    """Peel information down from parents to offspring."""
+
+    n_threads = _LOCUS_THREAD_COUNT
+    if n_threads <= 1:
+        _peel_down_serial(
+            family, peeling_info, single_locus_mode, _DEFER_SEGREGATION_COLLAPSE
+        )
+        return
+
+    _peel_down_threaded_parent_setup(family, peeling_info, single_locus_mode, n_threads)
 
 
 @jit(
@@ -9,7 +42,7 @@ import numpy as np
     nogil=True,
     locals={"e": float32, "e4": float32, "e16": float32, "e1e": float32},
 )
-def peel_down(family, peeling_info, single_locus_mode):
+def _peel_down_serial(family, peeling_info, single_locus_mode, defer_collapse):
     """Peel information down from parents to offspring.
 
     :param family: The family object that the peeling is performed on.
@@ -59,8 +92,141 @@ def peel_down(family, peeling_info, single_locus_mode):
 
     if not single_locus_mode:
         update_child_segregation_for_peel_down(
+            family, peeling_info, workspace, (e1e, e4), defer_collapse
+        )
+
+
+def _peel_down_threaded_parent_setup(
+    family, peeling_info, single_locus_mode, n_threads
+):
+    """Peel down with parent/joint setup split across locus chunks."""
+
+    e = 0.000001
+    e1e = 1 - e
+    e4 = e / 4
+    e16 = e / 16
+
+    n_loci = peeling_info.n_loci
+    n_offspring = len(family.offspring)
+    workspace = create_peel_down_workspace(n_offspring, n_loci)
+    prob_sire = workspace[2]
+    prob_dam = workspace[3]
+    joint_parents = np.empty((4, 4, n_loci), dtype=np.float32)
+
+    _setup_parent_probs_and_joint_by_locus_threads(
+        family,
+        peeling_info,
+        prob_sire,
+        prob_dam,
+        joint_parents,
+        e1e,
+        e16,
+        n_loci,
+        n_threads,
+    )
+
+    _peel_down_after_parent_setup_by_locus_threads(
+        family,
+        peeling_info,
+        workspace,
+        joint_parents,
+        (e1e, e4),
+        single_locus_mode,
+        _DEFER_SEGREGATION_COLLAPSE,
+        n_loci,
+        n_offspring,
+        n_threads,
+    )
+
+    if not single_locus_mode and not _DEFER_SEGREGATION_COLLAPSE:
+        collapse_estimated_child_segregations_for_peel_down(
             family, peeling_info, workspace, (e1e, e4)
         )
+
+
+def _setup_parent_probs_and_joint_by_locus_threads(
+    family,
+    peeling_info,
+    prob_sire,
+    prob_dam,
+    joint_parents,
+    joint_scale,
+    joint_floor,
+    n_loci,
+    n_threads,
+):
+    """Split the parent/joint setup by locus and run chunks on Python threads."""
+
+    n_workers = min(n_threads, n_loci)
+    chunk_size = (n_loci + n_workers - 1) // n_workers
+    futures = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        for start in range(0, n_loci, chunk_size):
+            stop = min(start + chunk_size, n_loci)
+            futures.append(
+                executor.submit(
+                    setup_parent_probs_and_joint_slice,
+                    peeling_info.posterior[family.sire, :, start:stop],
+                    peeling_info.posterior[family.dam, :, start:stop],
+                    peeling_info.posterior_sire_contribution[family.idn, :, start:stop],
+                    peeling_info.posterior_dam_contribution[family.idn, :, start:stop],
+                    peeling_info.anterior[family.sire, :, start:stop],
+                    peeling_info.anterior[family.dam, :, start:stop],
+                    peeling_info.penetrance[family.sire, :, start:stop],
+                    peeling_info.penetrance[family.dam, :, start:stop],
+                    prob_sire[:, start:stop],
+                    prob_dam[:, start:stop],
+                    joint_parents[:, :, start:stop],
+                    joint_scale,
+                    joint_floor,
+                    stop - start,
+                )
+            )
+
+        for future in futures:
+            future.result()
+
+
+def _peel_down_after_parent_setup_by_locus_threads(
+    family,
+    peeling_info,
+    workspace,
+    joint_parents,
+    smoothing,
+    single_locus_mode,
+    defer_collapse,
+    n_loci,
+    n_offspring,
+    n_threads,
+):
+    """Split the post-parent peel-down calculations by locus."""
+
+    n_workers = min(n_threads, n_loci)
+    chunk_size = (n_loci + n_workers - 1) // n_workers
+    futures = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        for start in range(0, n_loci, chunk_size):
+            stop = min(start + chunk_size, n_loci)
+            futures.append(
+                executor.submit(
+                    peel_down_after_parent_setup_slice,
+                    family,
+                    peeling_info,
+                    workspace,
+                    joint_parents[:, :, start:stop],
+                    smoothing[0],
+                    smoothing[1],
+                    single_locus_mode,
+                    start,
+                    stop,
+                    n_offspring,
+                )
+            )
+
+        for future in futures:
+            future.result()
 
 
 @jit(nopython=True, nogil=True)
@@ -157,20 +323,88 @@ def update_child_anteriors_for_peel_down(family, peeling_info, workspace, n_loci
 
 
 @jit(nopython=True, nogil=True)
-def update_child_segregation_for_peel_down(family, peeling_info, workspace, smoothing):
+def normalize_parent_estimates_slice(workspace, start, stop, n_offspring):
+    """Convert sliced peel-down parent estimates from log scale to probabilities."""
+
+    n_loci = stop - start
+    workspace[1][:, :, start:stop] = exp_norm_2d(workspace[1][:, :, start:stop], n_loci)
+    for i in range(n_offspring):
+        workspace[7][i, :, :, start:stop] = exp_norm_2d(
+            workspace[7][i, :, :, start:stop], n_loci
+        )
+
+
+@jit(nopython=True, nogil=True)
+def update_child_anteriors_for_peel_down_slice(
+    family, peeling_info, workspace, start, stop
+):
+    """Update child anterior genotype probabilities for one locus slice."""
+
+    n_loci = stop - start
+    for index, child in enumerate(family.offspring):
+        project_parent_genotypes(
+            workspace[6][index, :, :, :, start:stop],
+            workspace[7][index, :, :, start:stop],
+            peeling_info.anterior[child, :, start:stop],
+            n_loci,
+        )
+        normalize_4_by_locus(peeling_info.anterior[child, :, start:stop], n_loci)
+
+
+@jit(nopython=True, nogil=True)
+def update_child_segregation_for_peel_down(
+    family, peeling_info, workspace, smoothing, defer_collapse
+):
     """Update child segregation probabilities after peel-down."""
 
     for index, child in enumerate(family.offspring):
         update_one_child_segregation_for_peel_down(
-            child, peeling_info, workspace, index, smoothing
+            child, peeling_info, workspace, index, smoothing, defer_collapse
+        )
+
+
+@jit(nopython=True, nogil=True)
+def collapse_estimated_child_segregations_for_peel_down(
+    family, peeling_info, workspace, smoothing
+):
+    """Collapse already-estimated child segregations after threaded locus work."""
+
+    for child in family.offspring:
+        collapse_one_child_segregation_for_peel_down(child, peeling_info, workspace)
+        smooth_4_by_locus(
+            peeling_info.segregation[child, :, :],
+            smoothing[0],
+            smoothing[1],
+            peeling_info.n_loci,
         )
 
 
 @jit(nopython=True, nogil=True)
 def update_one_child_segregation_for_peel_down(
-    child, peeling_info, workspace, child_index, smoothing
+    child, peeling_info, workspace, child_index, smoothing, defer_collapse
 ):
     """Update one child's segregation probabilities after peel-down."""
+
+    estimate_one_child_segregation_for_peel_down(
+        child, peeling_info, workspace, child_index
+    )
+    if defer_collapse:
+        return
+
+    collapse_one_child_segregation_for_peel_down(child, peeling_info, workspace)
+    smooth_4_by_locus(
+        peeling_info.segregation[child, :, :],
+        smoothing[0],
+        smoothing[1],
+        peeling_info.n_loci,
+    )
+
+
+@jit(nopython=True, nogil=True)
+def estimate_one_child_segregation_for_peel_down(
+    child, peeling_info, workspace, child_index
+):
+    """Estimate one child's uncollapsed segregation probabilities."""
 
     if peeling_info.is_x_chr and peeling_info.sex[child] == 0:  # 0=male, 1=female.
         segregation_tensor = peeling_info.segregation_tensor_xy
@@ -193,6 +427,40 @@ def update_one_child_segregation_for_peel_down(
         peeling_info.n_loci,
     )
 
+
+@jit(nopython=True, nogil=True)
+def estimate_child_segregations_for_peel_down_slice(
+    family, peeling_info, workspace, start, stop
+):
+    """Estimate child segregation probabilities for one locus slice."""
+
+    n_loci = stop - start
+    for index, child in enumerate(family.offspring):
+        if peeling_info.is_x_chr and peeling_info.sex[child] == 0:  # 0=male, 1=female.
+            segregation_tensor = peeling_info.segregation_tensor_xy
+            segregation_tensor_norm = peeling_info.segregation_tensor_xy_norm
+        elif peeling_info.is_x_chr:
+            segregation_tensor = peeling_info.segregation_tensor_xx
+            segregation_tensor_norm = peeling_info.segregation_tensor_xx_norm
+        else:
+            segregation_tensor = peeling_info.segregation_tensor
+            segregation_tensor_norm = peeling_info.segregation_tensor_norm
+
+        estimate_segregation_with_norm(
+            (segregation_tensor, segregation_tensor_norm),
+            (
+                workspace[7][index, :, :, start:stop],
+                workspace[8][index, :, start:stop],
+            ),
+            peeling_info.segregation[child, :, start:stop],
+            n_loci,
+        )
+
+
+@jit(nopython=True, nogil=True)
+def collapse_one_child_segregation_for_peel_down(child, peeling_info, workspace):
+    """Collapse one child's full-chromosome segregation probabilities."""
+
     # workspace[9]: forward_seg
     collapse_segregation_in_place(
         peeling_info.segregation[child, :, :],
@@ -200,12 +468,94 @@ def update_one_child_segregation_for_peel_down(
         workspace[9],
         peeling_info.n_loci,
     )
-    smooth_4_by_locus(
-        peeling_info.segregation[child, :, :],
-        smoothing[0],
-        smoothing[1],
-        peeling_info.n_loci,
+
+
+@jit(nopython=True, nogil=True)
+def collapse_child_segregations_in_place(
+    segregation, transmission, child_ids, scale, floor, n_loci
+):
+    """Collapse full-chromosome segregation probabilities for selected children."""
+
+    forward = np.full((4, n_loci), 1, dtype=np.float32)
+    for child in child_ids:
+        collapse_segregation_in_place(
+            segregation[child, :, :],
+            transmission,
+            forward,
+            n_loci,
+        )
+        smooth_4_by_locus(segregation[child, :, :], scale, floor, n_loci)
+
+
+@jit(nopython=True, nogil=True)
+def peel_down_after_parent_setup_slice(
+    family,
+    peeling_info,
+    workspace,
+    joint_parents,
+    scale,
+    floor,
+    single_locus_mode,
+    start,
+    stop,
+    n_offspring,
+):
+    """Run post-parent peel-down calculations for one locus slice."""
+
+    n_loci = stop - start
+    child_to_parents = workspace[0][:, :, start:stop]
+    all_to_parents = workspace[1][:, :, start:stop]
+    child_values = workspace[4][:, start:stop]
+    current_seg = workspace[5][:, start:stop]
+
+    for index, child in enumerate(family.offspring):
+        child_segs = workspace[6][index, :, :, :, start:stop]
+        if peeling_info.is_x_chr and peeling_info.sex[child] == 0:
+            segregation_tensor = peeling_info.segregation_tensor_xy
+        elif peeling_info.is_x_chr:
+            segregation_tensor = peeling_info.segregation_tensor_xx
+        else:
+            segregation_tensor = peeling_info.segregation_tensor
+
+        project_child_for_peel_slice(
+            peeling_info.posterior[child, :, start:stop],
+            peeling_info.penetrance[child, :, start:stop],
+            peeling_info.segregation[child, :, start:stop],
+            segregation_tensor,
+            child_values,
+            current_seg,
+            child_segs,
+            child_to_parents,
+            scale,
+            floor,
+            n_loci,
+        )
+        if not single_locus_mode:
+            workspace[8][index, :, start:stop] = child_values
+
+        add_log_child_to_parents_and_subtract_current(
+            child_to_parents,
+            all_to_parents,
+            workspace[7][index, :, :, start:stop],
+            n_loci,
+        )
+
+    add_joint_parents_and_all_to_minus(
+        workspace[7][:, :, :, start:stop],
+        joint_parents,
+        all_to_parents,
+        n_offspring,
+        n_loci,
     )
+    normalize_parent_estimates_slice(workspace, start, stop, n_offspring)
+    update_child_anteriors_for_peel_down_slice(
+        family, peeling_info, workspace, start, stop
+    )
+
+    if not single_locus_mode:
+        estimate_child_segregations_for_peel_down_slice(
+            family, peeling_info, workspace, start, stop
+        )
 
 
 @jit(
@@ -213,7 +563,7 @@ def update_one_child_segregation_for_peel_down(
     nogil=True,
     locals={"e": float32, "e4": float32, "e1e": float32},
 )
-def peel_up(family, peeling_info):
+def _peel_up_serial(family, peeling_info):
     """Peel information up from offspring to parents.
 
     :param family: The family object that the peeling is performed on.
@@ -240,6 +590,121 @@ def peel_up(family, peeling_info):
     smooth_4_by_locus(workspace[3], e1e, e4, n_loci)
     accumulate_children_for_peel_up(family, peeling_info, workspace, (e1e, e4))
     update_parent_posteriors_for_peel_up(family, peeling_info, workspace, (e1e, e4))
+
+
+def peel_up(family, peeling_info):
+    """Peel information up from offspring to parents."""
+
+    n_threads = _LOCUS_THREAD_COUNT
+    if n_threads <= 1:
+        _peel_up_serial(family, peeling_info)
+        return
+
+    _peel_up_threaded_by_locus(family, peeling_info, n_threads)
+
+
+def _peel_up_threaded_by_locus(family, peeling_info, n_threads):
+    """Peel up with each Python thread owning a locus chunk."""
+
+    e = 0.000001
+    e1e = 1 - e
+    e4 = e / 4
+
+    n_loci = peeling_info.n_loci
+    n_workers = min(n_threads, n_loci)
+    chunk_size = (n_loci + n_workers - 1) // n_workers
+    workspace = create_peel_up_workspace(n_loci)
+    futures = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        for start in range(0, n_loci, chunk_size):
+            stop = min(start + chunk_size, n_loci)
+            futures.append(
+                executor.submit(
+                    _peel_up_locus_slice,
+                    family,
+                    peeling_info,
+                    workspace,
+                    e1e,
+                    e4,
+                    start,
+                    stop,
+                )
+            )
+
+        for future in futures:
+            future.result()
+
+
+def _peel_up_locus_slice(
+    family,
+    peeling_info,
+    workspace,
+    scale,
+    floor,
+    start,
+    stop,
+):
+    """Run the complete peel-up calculation for one locus slice."""
+
+    n_loci = stop - start
+    prob_sire = workspace[2][:, start:stop]
+    prob_dam = workspace[3][:, start:stop]
+    child_values = workspace[4][:, start:stop]
+    current_seg = workspace[5][:, start:stop]
+    child_segs = workspace[6][0, :, :, :, start:stop]
+    child_to_parents = workspace[0][:, :, start:stop]
+    all_to_parents = workspace[1][:, :, start:stop]
+
+    setup_parent_probs_slice(
+        peeling_info.posterior[family.sire, :, start:stop],
+        peeling_info.posterior[family.dam, :, start:stop],
+        peeling_info.posterior_sire_contribution[family.idn, :, start:stop],
+        peeling_info.posterior_dam_contribution[family.idn, :, start:stop],
+        peeling_info.anterior[family.sire, :, start:stop],
+        peeling_info.anterior[family.dam, :, start:stop],
+        peeling_info.penetrance[family.sire, :, start:stop],
+        peeling_info.penetrance[family.dam, :, start:stop],
+        prob_sire,
+        prob_dam,
+        n_loci,
+    )
+    smooth_4_by_locus(prob_sire, scale, floor, n_loci)
+    smooth_4_by_locus(prob_dam, scale, floor, n_loci)
+
+    for child in family.offspring:
+        if peeling_info.is_x_chr and peeling_info.sex[child] == 0:
+            segregation_tensor = peeling_info.segregation_tensor_xy
+        elif peeling_info.is_x_chr:
+            segregation_tensor = peeling_info.segregation_tensor_xx
+        else:
+            segregation_tensor = peeling_info.segregation_tensor
+
+        project_child_for_peel_slice(
+            peeling_info.posterior[child, :, start:stop],
+            peeling_info.penetrance[child, :, start:stop],
+            peeling_info.segregation[child, :, start:stop],
+            segregation_tensor,
+            child_values,
+            current_seg,
+            child_segs,
+            child_to_parents,
+            scale,
+            floor,
+            n_loci,
+        )
+        add_log_child_to_parents(child_to_parents, all_to_parents, n_loci)
+
+    update_parent_posteriors_for_peel_up_slice(
+        all_to_parents,
+        prob_sire,
+        prob_dam,
+        peeling_info.posterior_sire_contribution[family.idn, :, start:stop],
+        peeling_info.posterior_dam_contribution[family.idn, :, start:stop],
+        scale,
+        floor,
+        n_loci,
+    )
 
 
 @jit(nopython=True, nogil=True)
@@ -309,6 +774,146 @@ def update_parent_posteriors_for_peel_up(family, peeling_info, workspace, smooth
     combine_and_reduce_axis0(all_to_parents, workspace[2], dam_posterior, n_loci)
     normalize_4_by_locus(dam_posterior, n_loci)
     smooth_4_by_locus(dam_posterior, smoothing[0], smoothing[1], n_loci)
+
+
+@jit(nopython=True, nogil=True)
+def setup_parent_probs_slice(
+    posterior_sire,
+    posterior_dam,
+    posterior_sire_contribution,
+    posterior_dam_contribution,
+    anterior_sire,
+    anterior_dam,
+    penetrance_sire,
+    penetrance_dam,
+    prob_sire,
+    prob_dam,
+    n_loci,
+):
+    """Build normalized parent probabilities for a locus slice."""
+
+    for state in range(4):
+        for locus in range(n_loci):
+            prob_sire[state, locus] = np.log(posterior_sire[state, locus]) - np.log(
+                posterior_sire_contribution[state, locus]
+            )
+            prob_dam[state, locus] = np.log(posterior_dam[state, locus]) - np.log(
+                posterior_dam_contribution[state, locus]
+            )
+
+    exp_norm_1d_in_place(prob_sire, n_loci)
+    exp_norm_1d_in_place(prob_dam, n_loci)
+
+    for state in range(4):
+        for locus in range(n_loci):
+            prob_sire[state, locus] *= (
+                anterior_sire[state, locus] * penetrance_sire[state, locus]
+            )
+            prob_dam[state, locus] *= (
+                anterior_dam[state, locus] * penetrance_dam[state, locus]
+            )
+
+    normalize_4_by_locus(prob_sire, n_loci)
+    normalize_4_by_locus(prob_dam, n_loci)
+
+
+@jit(nopython=True, nogil=True)
+def setup_parent_probs_and_joint_slice(
+    posterior_sire,
+    posterior_dam,
+    posterior_sire_contribution,
+    posterior_dam_contribution,
+    anterior_sire,
+    anterior_dam,
+    penetrance_sire,
+    penetrance_dam,
+    prob_sire,
+    prob_dam,
+    joint_parents,
+    joint_scale,
+    joint_floor,
+    n_loci,
+):
+    """Build parent probabilities and smoothed joint estimates for a locus slice."""
+
+    setup_parent_probs_slice(
+        posterior_sire,
+        posterior_dam,
+        posterior_sire_contribution,
+        posterior_dam_contribution,
+        anterior_sire,
+        anterior_dam,
+        penetrance_sire,
+        penetrance_dam,
+        prob_sire,
+        prob_dam,
+        n_loci,
+    )
+
+    for geno_sire in range(4):
+        for geno_dam in range(4):
+            for locus in range(n_loci):
+                joint_parents[geno_sire, geno_dam, locus] = (
+                    prob_sire[geno_sire, locus]
+                    * prob_dam[geno_dam, locus]
+                    * joint_scale
+                    + joint_floor
+                )
+
+
+@jit(nopython=True, nogil=True)
+def project_child_for_peel_slice(
+    posterior_child,
+    penetrance_child,
+    segregation_child,
+    segregation_tensor,
+    child_values,
+    current_seg,
+    child_segs,
+    child_to_parents,
+    scale,
+    floor,
+    n_loci,
+):
+    """Project one child's sliced loci onto parental genotypes."""
+
+    for state in range(4):
+        for locus in range(n_loci):
+            child_values[state, locus] = (
+                posterior_child[state, locus] * penetrance_child[state, locus]
+            )
+            current_seg[state, locus] = segregation_child[state, locus]
+
+    normalize_4_by_locus(child_values, n_loci)
+    smooth_4_by_locus(child_values, scale, floor, n_loci)
+    normalize_4_by_locus(current_seg, n_loci)
+
+    create_child_segs(segregation_tensor, current_seg, child_segs, n_loci)
+    project_child_genotypes(child_segs, child_values, child_to_parents, n_loci)
+
+
+@jit(nopython=True, nogil=True)
+def update_parent_posteriors_for_peel_up_slice(
+    all_to_parents,
+    prob_sire,
+    prob_dam,
+    sire_posterior,
+    dam_posterior,
+    scale,
+    floor,
+    n_loci,
+):
+    """Update parent posterior contributions for a locus slice."""
+
+    all_to_parents = exp_norm_2d(all_to_parents, n_loci)
+
+    combine_and_reduce_axis1(all_to_parents, prob_dam, sire_posterior, n_loci)
+    normalize_4_by_locus(sire_posterior, n_loci)
+    smooth_4_by_locus(sire_posterior, scale, floor, n_loci)
+
+    combine_and_reduce_axis0(all_to_parents, prob_sire, dam_posterior, n_loci)
+    normalize_4_by_locus(dam_posterior, n_loci)
+    smooth_4_by_locus(dam_posterior, scale, floor, n_loci)
 
 
 @jit(nopython=True, nogil=True)
