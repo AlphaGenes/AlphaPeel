@@ -2,6 +2,7 @@
 
 import warnings
 from collections import OrderedDict
+from dataclasses import dataclass
 
 import numpy as np
 from numba import jit, optional, boolean, int8, uint32, float32
@@ -17,6 +18,18 @@ from ..tinyhouse.ProbMath import (
     updateGenoProbsFromPhenotype,
 )
 from ..tinyhouse.HaplotypeOperations import ind_fillInGenotypesFromPhase
+
+
+@dataclass
+class PeelingCycleContext:
+    """Prepared state reused by one or more peeling cycles."""
+
+    pedigree: object
+    peeling_info: object
+    n_fam_threads: int
+    single_locus_mode: bool
+    jit_generations: list
+    locus_thread_blocks: list
 
 
 def create_peeling_info(pedigree, args, phase_founder=False):
@@ -47,7 +60,7 @@ def create_peeling_info(pedigree, args, phase_founder=False):
 
 
 def create_locus_block_peeling_infos(peeling_info, n_blocks):
-    """Create independent peeling-info objects for contiguous locus blocks."""
+    """Create view-backed peeling-info objects for contiguous locus blocks."""
 
     blocks = []
     n_loci = peeling_info.n_loci
@@ -57,61 +70,67 @@ def create_locus_block_peeling_infos(peeling_info, n_blocks):
     for start in range(0, n_loci, chunk_size):
         stop = min(start + chunk_size, n_loci)
         blocks.append(
-            (start, stop, copy_peeling_info_locus_block(peeling_info, start, stop))
+            (start, stop, view_peeling_info_locus_block(peeling_info, start, stop))
         )
 
     return blocks
 
 
-def copy_peeling_info_locus_block(peeling_info, start, stop):
-    """Copy a contiguous locus block from a full peeling-info object."""
+def view_peeling_info_locus_block(peeling_info, start, stop):
+    """Create a peeling-info object whose arrays are views of one locus block."""
 
     block_n_loci = stop - start
-    block_info = JitPeelingInformation(
-        n_ind=peeling_info.n_ind,
-        n_fam=peeling_info.n_fam,
-        n_loci=block_n_loci,
-    )
+    # Seed the jitclass with the smallest valid allocation, then replace fields
+    # with views. This avoids allocating full block-sized arrays just to discard
+    # them immediately.
+    block_info = JitPeelingInformation(n_ind=1, n_fam=1, n_loci=1)
 
+    block_info.n_ind = peeling_info.n_ind
+    block_info.n_fam = peeling_info.n_fam
+    block_info.n_loci = block_n_loci
     block_info.iteration = peeling_info.iteration
     block_info.is_x_chr = peeling_info.is_x_chr
-    block_info.sex[:] = peeling_info.sex
+    # The fields below are declared on JitPeelingInformation. For block views,
+    # we intentionally rebind them from allocated arrays to slices of the full
+    # peeling_info arrays.
+    # pylint: disable=attribute-defined-outside-init
+    block_info.sex = peeling_info.sex
 
-    block_info.anterior[:, :, :] = peeling_info.anterior[:, :, start:stop]
-    block_info.posterior[:, :, :] = peeling_info.posterior[:, :, start:stop]
-    block_info.penetrance[:, :, :] = peeling_info.penetrance[:, :, start:stop]
-    block_info.segregation[:, :, :] = peeling_info.segregation[:, :, start:stop]
-    block_info.posterior_sire_contribution[
-        :, :, :
-    ] = peeling_info.posterior_sire_contribution[:, :, start:stop]
-    block_info.posterior_dam_contribution[
-        :, :, :
-    ] = peeling_info.posterior_dam_contribution[:, :, start:stop]
+    block_info.anterior = peeling_info.anterior[:, :, start:stop]
+    block_info.posterior = peeling_info.posterior[:, :, start:stop]
+    block_info.penetrance = peeling_info.penetrance[:, :, start:stop]
+    block_info.segregation = peeling_info.segregation[:, :, start:stop]
+    block_info.posterior_sire_contribution = peeling_info.posterior_sire_contribution[
+        :, :, start:stop
+    ]
+    block_info.posterior_dam_contribution = peeling_info.posterior_dam_contribution[
+        :, :, start:stop
+    ]
 
-    block_info.geno_error[:] = peeling_info.geno_error[start:stop]
-    block_info.seq_error[:] = peeling_info.seq_error[start:stop]
-    copy_block_transmission(peeling_info, block_info, start, stop)
-    copy_block_positions(peeling_info, block_info, start, stop)
+    block_info.geno_error = peeling_info.geno_error[start:stop]
+    block_info.seq_error = peeling_info.seq_error[start:stop]
+    view_block_transmission(peeling_info, block_info, start, stop)
+    view_block_positions(peeling_info, block_info, start, stop)
     copy_shared_segregation_tensors(peeling_info, block_info)
 
     return block_info
 
 
-def copy_block_transmission(peeling_info, block_info, start, stop):
-    """Copy within-block transmission rates."""
+def view_block_transmission(peeling_info, block_info, start, stop):
+    """Point a block at the full transmission rates inside the block."""
 
     if block_info.n_loci <= 1:
         return
 
-    block_info.transmission_rate[:] = peeling_info.transmission_rate[start : stop - 1]
+    block_info.transmission_rate = peeling_info.transmission_rate[start : stop - 1]
 
 
-def copy_block_positions(peeling_info, block_info, start, stop):
-    """Copy locus positions when present."""
+def view_block_positions(peeling_info, block_info, start, stop):
+    """Point a block at locus positions when present."""
 
     block_info.positions = None
     if peeling_info.positions is not None:
-        block_info.positions = peeling_info.positions[start:stop].copy()
+        block_info.positions = peeling_info.positions[start:stop]
 
 
 def copy_shared_segregation_tensors(peeling_info, block_info):
@@ -123,43 +142,6 @@ def copy_shared_segregation_tensors(peeling_info, block_info):
     block_info.segregation_tensor_xy_norm = peeling_info.segregation_tensor_xy_norm
     block_info.segregation_tensor_xx = peeling_info.segregation_tensor_xx
     block_info.segregation_tensor_xx_norm = peeling_info.segregation_tensor_xx_norm
-
-
-def merge_locus_block_peeling_infos(peeling_info, blocks):
-    """Merge locus-block probability arrays into a full peeling-info object."""
-
-    for start, stop, block_info in blocks:
-        peeling_info.anterior[:, :, start:stop] = block_info.anterior
-        peeling_info.posterior[:, :, start:stop] = block_info.posterior
-        peeling_info.penetrance[:, :, start:stop] = block_info.penetrance
-        peeling_info.segregation[:, :, start:stop] = block_info.segregation
-        peeling_info.posterior_sire_contribution[
-            :, :, start:stop
-        ] = block_info.posterior_sire_contribution
-        peeling_info.posterior_dam_contribution[
-            :, :, start:stop
-        ] = block_info.posterior_dam_contribution
-        peeling_info.geno_error[start:stop] = block_info.geno_error
-        peeling_info.seq_error[start:stop] = block_info.seq_error
-
-
-def scatter_full_peeling_info_to_locus_blocks(peeling_info, blocks):
-    """Refresh block-local arrays from the full peeling-info object."""
-
-    for start, stop, block_info in blocks:
-        block_info.iteration = peeling_info.iteration
-        block_info.anterior[:, :, :] = peeling_info.anterior[:, :, start:stop]
-        block_info.posterior[:, :, :] = peeling_info.posterior[:, :, start:stop]
-        block_info.penetrance[:, :, :] = peeling_info.penetrance[:, :, start:stop]
-        block_info.segregation[:, :, :] = peeling_info.segregation[:, :, start:stop]
-        block_info.posterior_sire_contribution[
-            :, :, :
-        ] = peeling_info.posterior_sire_contribution[:, :, start:stop]
-        block_info.posterior_dam_contribution[
-            :, :, :
-        ] = peeling_info.posterior_dam_contribution[:, :, start:stop]
-        block_info.geno_error[:] = peeling_info.geno_error[start:stop]
-        block_info.seq_error[:] = peeling_info.seq_error[start:stop]
 
 
 def initialize_peeling_info_model(peeling_info, args):

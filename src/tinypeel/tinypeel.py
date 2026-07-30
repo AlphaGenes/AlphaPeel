@@ -21,17 +21,13 @@ from .tinyhouse.InputOutput import (
 from .peeling.peeling import (
     peel_down,
     peel_up,
-    exp_norm_1d,
-    set_defer_segregation_collapse,
-    set_locus_thread_count,
-    collapse_child_segregations_in_place,
+    update_posterior,
 )
 from .peeling.peeling_io import write_requested_outputs
 from .peeling.peeling_info_module import (
-    create_locus_block_peeling_infos,
     create_peeling_info,
-    merge_locus_block_peeling_infos,
-    scatter_full_peeling_info_to_locus_blocks,
+    create_locus_block_peeling_infos,
+    PeelingCycleContext,
 )
 from .peeling.peeling_updates import (
     prepare_alternative_allele_probabilities,
@@ -52,7 +48,7 @@ ALPHAPEEL_ARGUMENT_ALIASES = {
     "phasefile": "hap_file",
     "writekey": "out_id_order",
     "onlykeyed": "out_id_only",
-    "maxthreads": "n_thread",
+    "maxthreads": "n_thread_fam",
     "segfile": "seg_file",
 }
 
@@ -78,130 +74,33 @@ def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
     """
     # Initial MAF estimates depend only on penetrance, so they can be prepared once.
     prepare_alternative_allele_probabilities(pedigree, peeling_info, args)
-    if (
-        args.locus_parallel_mode == "block"
-        and args.numba_threads > 1
-        and not single_locus_mode
-    ):
-        run_locus_block_peeling_cycles(pedigree, peeling_info, args)
-        return
+
+    locus_thread_blocks = None
+    if args.n_thread_loci > 1:
+        locus_thread_blocks = create_locus_block_peeling_infos(
+            peeling_info, args.n_thread_loci
+        )
+        if len(locus_thread_blocks) <= 1:
+            locus_thread_blocks = None
 
     jit_generations = None
     if args.n_cycle > 0:
         jit_generations = get_jit_families_by_generation(pedigree)
 
-    for i in range(args.n_cycle):
-        print("Cycle ", i)
-        peeling_cycle(
-            pedigree,
-            peeling_info,
-            args=args,
-            single_locus_mode=single_locus_mode,
-            jit_generations=jit_generations,
-        )
-        peeling_info.iteration += 1
-        update_estimated_parameters(pedigree, peeling_info, args)
-
-
-def run_locus_block_peeling_cycles(pedigree, peeling_info, args):
-    """Run peeling cycles with independent locus-block peeling states."""
-
-    n_blocks = args.numba_threads
-    set_locus_thread_count(1)
-    blocks = create_locus_block_peeling_infos(peeling_info, n_blocks)
-    jit_generations = None
-    if args.n_cycle > 0:
-        jit_generations = get_jit_families_by_generation(pedigree)
+    cycle_context = PeelingCycleContext(
+        pedigree=pedigree,
+        peeling_info=peeling_info,
+        n_fam_threads=args.maxthreads,
+        single_locus_mode=single_locus_mode,
+        jit_generations=jit_generations,
+        locus_thread_blocks=locus_thread_blocks,
+    )
 
     for i in range(args.n_cycle):
         print("Cycle ", i)
-        locus_block_peeling_cycle(pedigree, peeling_info, blocks, jit_generations)
-        merge_locus_block_peeling_infos(peeling_info, blocks)
+        peeling_cycle(cycle_context)
         peeling_info.iteration += 1
         update_estimated_parameters(pedigree, peeling_info, args)
-        scatter_full_peeling_info_to_locus_blocks(peeling_info, blocks)
-
-    merge_locus_block_peeling_infos(peeling_info, blocks)
-
-
-def locus_block_peeling_cycle(pedigree, peeling_info, blocks, jit_generations):
-    """Run one block-local peel-down/up cycle with serial segregation collapse."""
-
-    set_defer_segregation_collapse(True)
-    try:
-        for index, jit_families in enumerate(jit_generations):
-            print("Peeling Down, Generation", index)
-            run_locus_blocks_in_parallel(
-                blocks, peel_down_generation_block, jit_families
-            )
-            merge_locus_block_peeling_infos(peeling_info, blocks)
-            collapse_generation_child_segregation(
-                peeling_info, jit_families, scale=0.999999, floor=0.000001 / 4
-            )
-            scatter_full_peeling_info_to_locus_blocks(peeling_info, blocks)
-    finally:
-        set_defer_segregation_collapse(False)
-
-    for index, generation in enumerate(reversed(pedigree.generations)):
-        print("Peeling Up, Generation", pedigree.nGenerations - index - 1)
-        jit_families = jit_generations[pedigree.nGenerations - index - 1]
-        run_locus_blocks_in_parallel(blocks, peel_up_generation_block, jit_families)
-
-        sires = set()
-        dams = set()
-        for family in generation.families:
-            sires.add(family.sire)
-            dams.add(family.dam)
-        for _, _, block_info in blocks:
-            update_posterior(block_info, sires, dams)
-
-
-def run_locus_blocks_in_parallel(blocks, worker, jit_families):
-    """Run one generation operation for all locus blocks."""
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(blocks)) as executor:
-        futures = [
-            executor.submit(worker, block_info, jit_families)
-            for _, _, block_info in blocks
-        ]
-        for future in futures:
-            future.result()
-
-
-def peel_down_generation_block(block_info, jit_families):
-    """Peel down one generation for one locus block."""
-
-    for family in jit_families:
-        peel_down(family, block_info, False)
-
-
-def peel_up_generation_block(block_info, jit_families):
-    """Peel up one generation for one locus block."""
-
-    for family in jit_families:
-        peel_up(family, block_info)
-
-
-def collapse_generation_child_segregation(peeling_info, jit_families, scale, floor):
-    """Collapse full-chromosome segregation for children touched by a generation."""
-
-    child_ids = []
-    seen = set()
-    for family in jit_families:
-        for child in family.offspring:
-            if child not in seen:
-                seen.add(child)
-                child_ids.append(child)
-
-    if child_ids:
-        collapse_child_segregations_in_place(
-            peeling_info.segregation,
-            peeling_info.transmission_rate,
-            np.array(child_ids, dtype=np.uint32),
-            scale,
-            floor,
-            peeling_info.n_loci,
-        )
 
 
 def update_estimated_parameters(pedigree, peeling_info, args):
@@ -240,129 +139,79 @@ def get_jit_families_by_generation(pedigree):
     ]
 
 
-def peeling_cycle(
-    pedigree, peeling_info, args, single_locus_mode=False, jit_generations=None
-):
+def peeling_cycle(context):
     """Run one peeling cycle, first down the pedigree and then back up.
 
-    :param pedigree: pedigree information container
-    :type pedigree: class:`tinyhouse.Pedigree.Pedigree()`
-    :param peeling_info: Peeling information container
-    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
-    :param args: argument container with configuration options for peeling
-    :type args: argparse.Namespace or similar object with attributes
-    :param single_locus_mode: whether method is single locus or not, defaults to False
-    :type single_locus_mode: bool, optional
-    :param jit_generations: prebuilt jit family containers for each generation, defaults to None
-    :type jit_generations: list, optional
+    :param context: prepared state for this peeling cycle
+    :type context: PeelingCycleContext
     :return: None. The function modifies the peeling_info and pedigree object in place
     """
-    n_workers = args.maxthreads
-    if jit_generations is None:
-        jit_generations = get_jit_families_by_generation(pedigree)
+    pedigree = context.pedigree
 
-    for index, jit_families in enumerate(jit_generations):
-        print("Peeling Down, Generation", index)
+    if context.jit_generations is None:
+        context.jit_generations = get_jit_families_by_generation(pedigree)
 
-        if args.maxthreads > 1:
-            with concurrent.futures.ThreadPoolExecutor(
-                max_workers=n_workers
-            ) as executor:
-                executor.map(
-                    peel_down,
-                    jit_families,
-                    repeat(peeling_info),
-                    repeat(single_locus_mode),
-                )
-        else:
-            for family in jit_families:
-                peel_down(family, peeling_info, single_locus_mode)
+    for index, jit_families in enumerate(context.jit_generations):
+        peel_down_generation(context, index, jit_families)
 
     for index, generation in enumerate(reversed(pedigree.generations)):
-        print("Peeling Up, Generation", pedigree.nGenerations - index - 1)
-        jit_families = jit_generations[pedigree.nGenerations - index - 1]
-
-        if args.maxthreads > 1:
-            with concurrent.futures.ThreadPoolExecutor(
-                max_workers=n_workers
-            ) as executor:
-                executor.map(
-                    peel_up,
-                    jit_families,
-                    repeat(peeling_info),
-                )
-        else:
-            for family in jit_families:
-                peel_up(family, peeling_info)
-
-        sires = set()
-        dams = set()
-        for family in generation.families:
-            sires.add(family.sire)
-            dams.add(family.dam)
-        update_posterior(peeling_info, sires, dams)
+        generation_index = pedigree.nGenerations - index - 1
+        peel_up_generation(context, generation_index, generation)
 
 
-def update_posterior(peeling_info, sires, dams):
-    """Updates the posterior term for a specific set of sires and dams.
+def peel_down_generation(context, generation_index, jit_families):
+    """Run peel-down for one generation."""
 
-    :param peeling_info: Peeling information container
-    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
-    :param sires: collection of sires to update
-    :type sires: set of class:`tinyhouse.Pedigree.Individual`
-    :param dams: collection of dams to update
-    :type dams: set of class:`tinyhouse.Pedigree.Individual`
-    :return: None. The function modifies the peeling_info object in place
-    """
+    print("Peeling Down, Generation", generation_index)
 
-    for sire in sires:
-        update_sire(sire, peeling_info)
+    if context.n_fam_threads > 1:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=context.n_fam_threads
+        ) as executor:
+            executor.map(
+                peel_down,
+                jit_families,
+                repeat(context.peeling_info),
+                repeat(context.single_locus_mode),
+                repeat(context.locus_thread_blocks),
+            )
+        return
 
-    for dam in dams:
-        update_dam(dam, peeling_info)
-
-
-def update_sire(sire, peeling_info):
-    """Updates the posterior term for a specific sire.
-
-    :param sire: the sire to update
-    :type sire: class: `tinyhouse.Pedigree.Individual`
-    :param peeling_info: Peeling information container
-    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
-    :return: None. The function modifies the peeling_info object in place
-    """
-    fam_list = [fam.idn for fam in sire.families]
-    sire = sire.idn
-    sire_posterior = peeling_info.posterior[sire, :, :]
-    sire_posterior[:, :] = 0
-    for fam_id in fam_list:
-        log_update = np.log(peeling_info.posterior_sire_contribution[fam_id, :, :])
-        sire_posterior += log_update
-
-    # Convert accumulated log terms back to normalized probabilities.
-    sire_posterior[:, :] = exp_norm_1d(sire_posterior, peeling_info.n_loci)
-    sire_posterior /= np.sum(sire_posterior, 0)
+    for family in jit_families:
+        peel_down(
+            family,
+            context.peeling_info,
+            context.single_locus_mode,
+            context.locus_thread_blocks,
+        )
 
 
-def update_dam(dam, peeling_info):
-    """Updates the posterior term for a specific dam.
+def peel_up_generation(context, generation_index, generation):
+    """Run peel-up for one generation and update affected parent posteriors."""
 
-    :param dam: the dam to update
-    :type dam: class: `tinyhouse.Pedigree.Individual`
-    :param peeling_info: Peeling information container
-    :type peeling_info: class:`peeling_info_module.JitPeelingInformation`
-    :return: None. The function modifies the peeling_info object in place
-    """
-    fam_list = [fam.idn for fam in dam.families]
-    dam = dam.idn
-    dam_posterior = peeling_info.posterior[dam, :, :]
-    dam_posterior[:, :] = 0
-    for fam_id in fam_list:
-        log_update = np.log(peeling_info.posterior_dam_contribution[fam_id, :, :])
-        dam_posterior += log_update
+    print("Peeling Up, Generation", generation_index)
+    jit_families = context.jit_generations[generation_index]
 
-    dam_posterior[:, :] = exp_norm_1d(dam_posterior, peeling_info.n_loci)
-    dam_posterior /= np.sum(dam_posterior, 0)
+    if context.n_fam_threads > 1:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=context.n_fam_threads
+        ) as executor:
+            executor.map(
+                peel_up,
+                jit_families,
+                repeat(context.peeling_info),
+                repeat(context.locus_thread_blocks),
+            )
+    else:
+        for family in jit_families:
+            peel_up(family, context.peeling_info, context.locus_thread_blocks)
+
+    sires = set()
+    dams = set()
+    for family in generation.families:
+        sires.add(family.sire)
+        dams.add(family.dam)
+    update_posterior(context.peeling_info, sires, dams)
 
 
 def get_loci_and_distance(snp_map, seg_map):
@@ -648,40 +497,25 @@ def get_output_options():
 
 def get_multithread_options():
     """Collects the optional multithread options of the program as a dictionary. The option is:
-    -n_thread: maxthreads
+    -n_thread_fam: maxthreads
 
     :return: the option for the multithreading parameters.
     :rtype: dict
     """
     parse_dictionary = {}
     parse_dictionary["maxthreads"] = lambda parser: parser.add_argument(
-        "-n_thread",
+        "-n_thread_fam",
         default=1,
         required=False,
         type=int,
-        help="Maximum number of threads to use. Default: 1.",
+        help="Maximum number of family threads to use. Default: 1.",
     )
-    parse_dictionary["numba_threads"] = lambda parser: parser.add_argument(
-        "-numba_threads",
+    parse_dictionary["n_thread_loci"] = lambda parser: parser.add_argument(
+        "-n_thread_loci",
         default=1,
         required=False,
         type=_positive_int,
-        help=(
-            "Number of Numba threads and locus blocks to use for locus-wise "
-            "peeling parallelism. Default: 1."
-        ),
-    )
-    parse_dictionary["locus_parallel_mode"] = lambda parser: parser.add_argument(
-        "-locus_parallel_mode",
-        default="block",
-        required=False,
-        choices=("block", "inner"),
-        help=(
-            "How to use -numba_threads for locus-wise peeling parallelism. "
-            "'block' splits the full chromosome into independent locus blocks; "
-            "'inner' keeps the normal family-level -n_thread parallelism and "
-            "uses -numba_threads inside each family peel. Default: block."
-        ),
+        help=("Number of locus threads to use inside each family peel. Default: 1."),
     )
     return parse_dictionary
 
@@ -940,7 +774,7 @@ def _add_peeling_parameter_arguments(parser):
     add_arguments_from_dictionary(
         computational_parser,
         get_multithread_options(),
-        options=["maxthreads", "numba_threads", "locus_parallel_mode"],
+        options=["maxthreads", "n_thread_loci"],
     )
 
     estimation_parser = parser.add_argument_group(
@@ -1077,7 +911,6 @@ def main(argv=None):
     docs_link = f"https://alphapeel.readthedocs.io/en/v{version_version}/usage.html"
     print_boilerplate("AlphaPeel", version=version_version, docs=docs_link)
     args = get_args(argv=argv)
-    set_locus_thread_count(args.numba_threads)
 
     pedigree = Pedigree()
     readInPedigreeFromInputs(pedigree, args)
