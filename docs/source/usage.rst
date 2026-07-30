@@ -294,8 +294,11 @@ Peeling parameters
     Computational parameters:
       -n_cycle N_CYCLE      Number of peeling cycles.
                             Default: 5.
-      -n_thread N_THREAD
-                            Maximum number of threads to use.
+      -n_thread_fam N_THREAD_FAM
+                            Maximum number of family threads to use.
+                            Default: 1.
+      -n_thread_loci N_THREAD_LOCI
+                            Number of locus threads to use inside each family peel.
                             Default: 1.
 
     Estimation of model parameters:
@@ -325,7 +328,8 @@ of the alternative allele as paternally or maternally inherited.
 Computational effort and speed of |Software| can be controlled with
 the number of peeling cycles (``-n_cycle``,
 increasing the number will marginally increase accuracy, but also runtime) and
-the number of threads (``-n_thread``, to reduce runtime on large datasets).
+the number of family and locus threads (``-n_thread_fam`` and
+``-n_thread_loci``, to reduce runtime on large datasets).
 
 |Software| can estimate the model parameters from the input data.
 The :ref:`default or user provided input values<input_options>`

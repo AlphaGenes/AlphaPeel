@@ -14,7 +14,8 @@ SIMULATION_FIXTURE_DIR = os.path.join(ACCURACY_TEST_ROOT, "sim_for_alphapeel_acc
 
 DEFAULT_ALPHA_PEEL_ARGS = {
     "n_cycle": "5",
-    "n_thread": "6",
+    "n_thread_fam": "2",
+    "n_thread_loci": "3",
     "geno_threshold": ".1",
     "hap_threshold": ".1",
     "geno": None,
