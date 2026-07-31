@@ -306,7 +306,7 @@ In the meeting:
 
 * Each person shares:
 
-    * What issue they’re working on
+    * What issue they're working on
 
     * Any blockers
 

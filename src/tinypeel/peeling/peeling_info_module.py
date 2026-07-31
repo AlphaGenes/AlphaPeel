@@ -26,7 +26,7 @@ class PeelingCycleContext:
 
     pedigree: object
     peeling_info: object
-    n_fam_threads: int
+    n_thread_fam: int
     single_locus_mode: bool
     jit_generations: list
     locus_thread_blocks: list
