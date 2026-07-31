@@ -90,7 +90,7 @@ def run_peeling_cycles(pedigree, peeling_info, args, single_locus_mode=False):
     cycle_context = PeelingCycleContext(
         pedigree=pedigree,
         peeling_info=peeling_info,
-        n_fam_threads=args.maxthreads,
+        n_thread_fam=args.maxthreads,
         single_locus_mode=single_locus_mode,
         jit_generations=jit_generations,
         locus_thread_blocks=locus_thread_blocks,
@@ -164,9 +164,9 @@ def peel_down_generation(context, generation_index, jit_families):
 
     print("Peeling Down, Generation", generation_index)
 
-    if context.n_fam_threads > 1:
+    if context.n_thread_fam > 1:
         with concurrent.futures.ThreadPoolExecutor(
-            max_workers=context.n_fam_threads
+            max_workers=context.n_thread_fam
         ) as executor:
             executor.map(
                 peel_down,
@@ -192,9 +192,9 @@ def peel_up_generation(context, generation_index, generation):
     print("Peeling Up, Generation", generation_index)
     jit_families = context.jit_generations[generation_index]
 
-    if context.n_fam_threads > 1:
+    if context.n_thread_fam > 1:
         with concurrent.futures.ThreadPoolExecutor(
-            max_workers=context.n_fam_threads
+            max_workers=context.n_thread_fam
         ) as executor:
             executor.map(
                 peel_up,
@@ -498,6 +498,7 @@ def get_output_options():
 def get_multithread_options():
     """Collects the optional multithread options of the program as a dictionary. The option is:
     -n_thread_fam: maxthreads
+    -n_thread_loci: n_thread_loci
 
     :return: the option for the multithreading parameters.
     :rtype: dict
@@ -508,14 +509,14 @@ def get_multithread_options():
         default=1,
         required=False,
         type=int,
-        help="Maximum number of family threads to use. Default: 1.",
+        help="Number of family threads to use for parallelisation. Default: 1.",
     )
     parse_dictionary["n_thread_loci"] = lambda parser: parser.add_argument(
         "-n_thread_loci",
         default=1,
         required=False,
         type=_positive_int,
-        help=("Number of locus threads to use inside each family peel. Default: 1."),
+        help="Number of locus threads to use for parallelisation. Default: 1.",
     )
     return parse_dictionary
 
