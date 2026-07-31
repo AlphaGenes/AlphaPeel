@@ -509,14 +509,14 @@ def get_multithread_options():
         default=1,
         required=False,
         type=int,
-        help="Number of family threads to use for parallelisation. Default: 1.",
+        help="Number of threads to parallelise computation across families. Default: 1.",
     )
     parse_dictionary["n_thread_loci"] = lambda parser: parser.add_argument(
         "-n_thread_loci",
         default=1,
         required=False,
         type=_positive_int,
-        help="Number of locus threads to use for parallelisation. Default: 1.",
+        help="Number of threads to parallelise computation across loci. Default: 1.",
     )
     return parse_dictionary
 

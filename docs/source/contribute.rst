@@ -561,7 +561,7 @@ generations more than others before you open a pull request.
 
     * For coverage test, you can install ``coverage`` and run ``coverage run -m pytest tests/functional_tests``,
       and check the coverage report by running ``coverage report`` or ``coverage html`` to generate an HTML report.
-      Remember that coverage report cannot identify the calls to JIT-compiled functions.
+      Note that coverage report cannot identify the calls to JIT-compiled functions.
 
 The instructions of building your own distribution is available at :ref:`dist-install`.
 
