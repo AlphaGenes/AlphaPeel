@@ -295,10 +295,10 @@ Peeling parameters
       -n_cycle N_CYCLE      Number of peeling cycles.
                             Default: 5.
       -n_thread_fam N_THREAD_FAM
-                            Number of family threads to use for parallelisation.
+                            Number of threads to parallelise computation across families.
                             Default: 1.
       -n_thread_loci N_THREAD_LOCI
-                            Number of locus threads to use for parallelisation.
+                            Number of threads to parallelise computation across loci.
                             Default: 1.
 
     Estimation of model parameters:
@@ -328,17 +328,21 @@ of the alternative allele as paternally or maternally inherited.
 Computational effort and speed of |Software| can be controlled with
 the number of peeling cycles (``-n_cycle``,
 increasing the number will marginally increase accuracy, but also runtime) and
-the number of family and locus threads (``-n_thread_fam`` and
-``-n_thread_loci``, to reduce runtime on large datasets).
+the number of threads to parallelise computations across families and loci 
+(``-n_thread_fam`` and ``-n_thread_loci``, to reduce runtime on large datasets).
 
 Both multithreading options, ``-n_thread_fam`` and
 ``-n_thread_loci``, are used for parallelisation of the peeling process.
-``-n_thread_fam`` controls the number of threads to parallelise 
-families per generation, while ``-n_thread_loci`` controls the number of threads 
-to parallelise loci for each individual. Both options can be used together 
+``-n_thread_fam`` controls the number of threads to parallelise accross
+families in a generation, while ``-n_thread_loci`` controls the number of threads 
+to parallelise across loci for each individual. Both options can be used together 
 to speed up the analysis, but ``-n_thread_fam`` is more efficient than 
-``-n_thread_loci`` when the number of loci is small (i.e. less than 3000) 
-and computing resources are limited.
+``-n_thread_loci`` when the number of loci is small (i.e., less than 3000
+per chromosome) and computing resources are limited.
+While the ``-n_thread_loci`` option might be more useful if number of CPU cores 
+is abundant and the number of loci is large 
+(e.g., more than 5 cores and 4000 loci).
+You are encouraged to find a combination that works best for your use case.
 
 |Software| can estimate the model parameters from the input data.
 The :ref:`default or user provided input values<input_options>`

@@ -18,7 +18,7 @@ AlphaPeel -geno_file data/genotypes.txt \
           -out_file outputs/multilocus \
           -n_cycle 5 \
           -method multi \
-          -n_fam_thread 6 \
+          -n_thread_fam 6 \
           -seg_prob
 
 # Example 1b: Performing multi-locus peeling with genotype data and calling the values with a threshold of 0.98
@@ -27,7 +27,7 @@ AlphaPeel -geno_file data/genotypes.txt \
           -out_file outputs/multilocus_with_phase \
           -n_cycle 5 \
           -method multi \
-          -n_fam_thread 6 \
+          -n_thread_fam 6 \
           -geno_threshold 0.98 \
           -hap_threshold 0.98 \
           -geno \
@@ -42,4 +42,4 @@ AlphaPeel -seq_file data/sequence.txt \
          -seg_map_file data/segregation-map.txt \
          -seg_file outputs/multilocus.seg_prob.txt \
          -n_cycle 5 \
-         -n_fam_thread 6
+         -n_thread_fam 6
