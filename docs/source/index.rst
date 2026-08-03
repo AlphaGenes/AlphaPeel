@@ -25,6 +25,7 @@
   :maxdepth: 2
 
   algorithm
+  testing_and_profiling
   contribute
 
 .. toctree::

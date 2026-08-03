@@ -335,11 +335,11 @@ Both multithreading options, ``-n_thread_fam`` and
 ``-n_thread_loci``, are used for parallelisation of the peeling process.
 ``-n_thread_fam`` controls the number of threads to parallelise accross
 families in a generation, while ``-n_thread_loci`` controls the number of threads 
-to parallelise across loci for each individual. Both options can be used together 
-to speed up the analysis, but ``-n_thread_fam`` is more efficient than 
+to parallelise across loci. Both options can be used together 
+to speed up the analysis, but ``-n_thread_fam`` is more impactful than 
 ``-n_thread_loci`` when the number of loci is small (i.e., less than 3000
 per chromosome) and computing resources are limited.
-While the ``-n_thread_loci`` option might be more useful if number of CPU cores 
+The ``-n_thread_loci`` option might be more useful if number of CPU cores 
 is abundant and the number of loci is large 
 (e.g., more than 5 cores and 4000 loci).
 You are encouraged to find a combination that works best for your use case.
