@@ -438,136 +438,12 @@ Then, you can rebase your branch to the latest ``devel`` branch of the AlphaGene
 Make changes in your clone
 --------------------------
 
-Make changes to the code and commit them to your local clone repository.
-Adding ``AlphaGenes/AlphaPeel#GitHubIssueNumber`` in the message will link the commit with the issue page.
+Make changes to the code, then test them before committing. The recommended
+test, benchmark workflow is described in
+:ref:`testing-and-profiling`.
 
-Before you commit the changes,
-make sure you test your changes by running the tests and examples.
-To this end, you should install ``pytest`` and ``pytest-benchmark``
-(see `pytest Documentation <https://docs.pytest.org/en/stable/getting-started.html>`_ and
-`pytest-benchmark Documentation <https://pytest-benchmark.readthedocs.io/en/latest/installation.html>`_) and
-run ``pytest`` on the distribution built on your modified code to see if the code passes all the tests.
-
-To install ``pytest`` and ``pytest-benchmark``:
-
-.. code-block:: bash
-
-    pip install pytest
-    pip install pytest-benchmark
-
-To build and reinstall the package on your modified code:
-
-.. code-block:: bash
-
-    python -m build
-    python -m pip uninstall AlphaPeel -y
-    python -m pip install dist/*.whl
-
-To run ``pytest``:
-
-.. code-block:: bash
-
-    pytest
-
-If you want to run a specific functional test, such as the ``test_files``, you can run like the following:
-
-.. code-block:: bash
-
-    pytest tests/functional_tests/run_func_test.py::TestClass::test_files
-
-If some functioanl tests fail and you want to see the output of the tests, you can add the ``-s`` flag, note that the accuracy test report cannot be generated with the ``-s`` flag:
-
-.. code-block:: bash
-
-    pytest -s tests/functional_tests/run_func_test.py
-
-If the tests run successfully, you are expected to see the head of the output similar to the following:
-
-.. code-block::
-
-    ============================================================================================ test session starts =============================================================================================
-    platform darwin -- Python 3.11.11, pytest-9.0.1, pluggy-1.6.0
-    benchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
-    rootdir: /Users/xtang3/AlphaPeel
-    configfile: pyproject.toml
-    plugins: benchmark-5.2.3, memray-1.9.0
-    collected 16 items                                                                                                                                                                                           
-
-    tests/accuracy_tests/run_accu_test.py ...                                                                                                                                                              [ 18%]
-    tests/functional_tests/run_func_test.py .............                                                                                                                                                  [100%]
-    ...
-
-Run accuracy benchmarks and visualise the report
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-In addition to running ``pytest``, you can run the full accuracy benchmark suite
-directly from Python. This is useful when you want to compare the impact of a
-new change on accuracy and runtime across the configured benchmark cases.
-
-From the root of the repository, run:
-
-.. code-block:: python
-
-    from src.accuracy_runner import run_full_accuracy_suite
-
-    run_full_accuracy_suite(run_name="benchmark")
-
-This writes outputs under ``tests/accuracy_tests/outputs_benchmark`` and writes
-the accuracy report to ``tests/accuracy_tests/reports_benchmark/accu_report.txt``.
-The report is a comma-separated text file with records in the form
-``file_name,label,metric_name,value``. For most accuracy metrics, ``value``
-contains the population metric followed by the metrics for generations 1 to 5.
-Runtime is written separately as ``runtime,<label>,elapsed_seconds,<seconds>``.
-
-To assess the impact of a new change, you can run the benchmark suite on the
-version of the code before the change, copy the report to a different name, 
-and then run the benchmark suite on the modified code to generate a new report. 
-You can then compare the two reports to see if the new change improves runtime, 
-changes accuracy, or affects some generations more than others.
-
-It's possible to visualise the benchmark report:
-
-.. code-block:: python
-
-    from src.accuracy_visualization import create_accuracy_report_visualizations
-
-    create_accuracy_report_visualizations(
-        "tests/accuracy_tests/reports_benchmark/accu_report.txt",
-        "tests/accuracy_tests/reports_benchmark/plots",
-    )
-
-By default, this creates plots for ``marker_corr``, ``abs_diff``, and
-``correct_rate``, together with a separate runtime plot. To focus on a different
-set of metrics or methods, pass explicit selections:
-
-.. code-block:: python
-
-    create_accuracy_report_visualizations(
-        "tests/accuracy_tests/reports_benchmark/accu_report.txt",
-        "tests/accuracy_tests/reports_benchmark/plots",
-        metric_names=("marker_corr", "switch_error_rate", "phase_error_rate"),
-        labels=("single", "multi", "hybrid"),
-    )
-
-These plots are intended as a development aid. They can help you spot whether a
-new implementation improves runtime, changes accuracy, or affects some
-generations more than others before you open a pull request.
-
-.. note::
-
-    It is possible to run memory profiling and coverage test with ``pytest`` on the functional tests.
-
-    * For memory profiling, you can install ``memray`` and run ``pytest --memray tests/functional_tests``.
-
-    * For coverage test, you can install ``coverage`` and run ``coverage run -m pytest tests/functional_tests``,
-      and check the coverage report by running ``coverage report`` or ``coverage html`` to generate an HTML report.
-      Note that coverage report cannot identify the calls to JIT-compiled functions.
-
-The instructions of building your own distribution is available at :ref:`dist-install`.
-
-Instructions on running the examples are at :ref:`run-examples`.
-
-If tests and examples pass, finally install ``pre-commit`` and the ``pre-commit`` hooks for code formatting.
+After tests and examples pass, install ``pre-commit`` and the ``pre-commit``
+hooks for code formatting.
 
 .. code-block:: bash
 
@@ -585,7 +461,11 @@ An example output of the ``pre-commit`` hooks is as follows:
 
 For more information, see `pre-commit Documentation <https://pre-commit.com/#quick-start>`_.
 
-To commit your changes, run the following commands in your terminal:
+Then commit your changes to your local clone repository. Adding
+``AlphaGenes/AlphaPeel#GitHubIssueNumber`` in the commit message will link the
+commit with the issue page.
+
+Run the following commands in your terminal:
 
 .. code-block:: bash
 
@@ -599,9 +479,6 @@ In the ``git add`` line above, don't use ``git add .``
 because this last command will add all changes files to your commit,
 including temporary files that might not belong in the repository.
 Are you aware of `.gitignore file <https://git-scm.com/docs/gitignore>`_?
-
-In the ``git add`` line above, don't use ``git add .`` because this last command will add all changes files to your commit, 
-including temporary files that might not belong in the repository. Are you aware of `<https://git-scm.com/docs/gitignore>`_?
 
 .. _documentation-changes:
 
@@ -640,7 +517,7 @@ Before you open a pull request, make sure you have:
 
     * Tested your code changes by running the tests on the distribution built on your modified code
 
-        * Instructions: :ref:`changes_instructions`
+        * Instructions: :ref:`testing-and-profiling`
 
     * Committed your changes with informative commit messages
 
