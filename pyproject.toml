@@ -37,3 +37,7 @@ AlphaPeel = "tinypeel.tinypeel:main"
 [tool.setuptools]
 package-dir = {"" = "src"}
 packages = ["tinypeel", "tinypeel.tinyhouse", "tinypeel.peeling"]
+
+[tool.pylint.main]
+init-hook = "import sys; sys.path.insert(0, '.')"
+ignore-paths = ["^src/tinypeel/tinyhouse/.*$"]

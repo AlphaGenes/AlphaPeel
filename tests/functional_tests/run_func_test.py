@@ -1,8 +1,12 @@
+# pylint: disable=too-many-lines
+"""Functional tests for the tinypeel module."""
+
+import contextlib
 import concurrent.futures
 import os
 import shutil
-import src.tinypeel.tinypeel as tinypeel
 import pytest
+from src.tinypeel import tinypeel
 
 
 def read_file(file_path, test_alt_allele_prob=False, **kwargs):
@@ -22,10 +26,10 @@ def read_file(file_path, test_alt_allele_prob=False, **kwargs):
         returns a tuple ``(values, metafounder_header)``.
     :rtype: list or tuple
     """
-    with open(file_path, "r") as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         values = [line.strip().split() for line in file]
     if test_alt_allele_prob:
-        MF = values[0]
+        meta_founder = values[0]
         values.pop(0)
 
     decimal_place = kwargs.get("decimal_place")
@@ -55,9 +59,9 @@ def read_file(file_path, test_alt_allele_prob=False, **kwargs):
             for line in values
         ]
     if test_alt_allele_prob:
-        return values, MF
-    else:
-        return values
+        return values, meta_founder
+
+    return values
 
 
 def read_and_sort_file(file_path, test_alt_allele_prob=False, id_list=None, **kwargs):
@@ -82,7 +86,7 @@ def read_and_sort_file(file_path, test_alt_allele_prob=False, id_list=None, **kw
     """
 
     if test_alt_allele_prob:
-        values, MF = read_file(file_path, test_alt_allele_prob, **kwargs)
+        values, meta_founder = read_file(file_path, test_alt_allele_prob, **kwargs)
     else:
         values = read_file(file_path, test_alt_allele_prob, **kwargs)
 
@@ -97,9 +101,9 @@ def read_and_sort_file(file_path, test_alt_allele_prob=False, id_list=None, **kw
     values.sort(key=lambda row: row[0])
 
     if test_alt_allele_prob:
-        return values, MF
-    else:
-        return values
+        return values, meta_founder
+
+    return values
 
 
 def delete_columns(two_d_list, col_del):
@@ -116,9 +120,9 @@ def delete_columns(two_d_list, col_del):
     :return: None. The operation modifies ``two_d_list`` in-place.
     :rtype: None
     """
-    for n in range(len(col_del)):
+    for n, col in enumerate(col_del):
         for row in two_d_list:
-            del row[col_del[n] - n - 1]
+            del row[col - n - 1]
 
 
 def read_geno_hap(file_path):
@@ -135,7 +139,7 @@ def read_geno_hap(file_path):
     :rtype: dict[str, list[list[str]]]
     """
     dic_file = {}
-    with open(file_path, "r") as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         for line in file:
             line = line.strip().split()
             if line == []:
@@ -168,28 +172,28 @@ def compare_geno_hap(output, true, total_error=2):
     trues = read_geno_hap(true)
 
     trues_id = sorted(trues.keys())
-    outputs_id = sorted(outputs.keys())
     # check the ids are the same
-    assert trues_id == outputs_id
+    assert trues_id == sorted(outputs.keys())
     number_error = 0
     # check the content
-    for i in trues_id:
-        value_output = outputs[i]
-        value_true = trues[i]
-        for k in range(len(value_output)):
-            rows_value_output = value_output[k]
-            rows_value_true = value_true[k]
-            number = len(rows_value_output)
-            for j in range(number):
+    for ind_id in trues_id:
+        for row_index, output_row in enumerate(outputs[ind_id]):
+            true_row = trues[ind_id][row_index]
+            for value_index, (output_value, true_value) in enumerate(
+                zip(output_row, true_row)
+            ):
                 # check the number of mismatches
-                if rows_value_output[j] != rows_value_true[j]:
+                if output_value != true_value:
                     number_error += 1
-                    print(f"the {i} {j}th genotype/haplotype{k} is different")
+                    print(
+                        f"the {ind_id} {value_index}th "
+                        f"genotype/haplotype{row_index} is different"
+                    )
                 if number_error > total_error:
                     raise ValueError("the number of error is larger than 2")
 
 
-class TestClass:
+class TestClass:  # pylint: disable=too-many-instance-attributes
     """Functional test runner helpers for AlphaPeel unit tests.
 
     This class provides helper methods and test cases that invoke the
@@ -201,6 +205,19 @@ class TestClass:
     path = os.path.join("tests", "functional_tests")
     test_cases = None
     input_file_depend_on_test_cases = None
+    argv = None
+    output_path = None
+    output_file_path = None
+    expected_file_path = None
+    output = None
+    expected = None
+    test_name = None
+    input_files = None
+    arguments = None
+    output_file_prefix = None
+    output_file_to_check = None
+    first_output = None
+    second_output = None
 
     # all the input file options for non-hybrid peeling except the binary file
     files_to_input = [
@@ -219,7 +236,7 @@ class TestClass:
         "seg_prob",
     ]
 
-    def mk_output_dir(self):
+    def _mk_output_dir(self):
         """Create an empty output directory for the current test.
 
         If the directory already exists it is removed first.
@@ -232,7 +249,7 @@ class TestClass:
 
         os.mkdir(self.output_path)
 
-    def generate_arguments(self):
+    def _generate_arguments(self):
         """Build the ``argv`` list to pass to :mod:`tinypeel` for the test.
 
         The method inspects ``self.input_files`` and ``self.arguments`` and
@@ -266,7 +283,7 @@ class TestClass:
         self.argv.append("-out_file")
         self.argv.append(os.path.join(self.output_path, self.output_file_prefix))
 
-    def prepare_path(self):
+    def _prepare_path(self):
         """Prepare test file paths and create the output directory.
 
         Sets ``self.path`` to the directory for the current test case and
@@ -278,9 +295,9 @@ class TestClass:
         """
         self.path = os.path.join(self.path, self.test_name)
         self.output_path = os.path.join(self.path, "outputs")
-        self.mk_output_dir()
+        self._mk_output_dir()
 
-    def check_files(self):
+    def _check_files(self):
         """Check whether the expected output files were created.
 
         :return: List of booleans indicating presence for each of the files in
@@ -306,6 +323,71 @@ class TestClass:
         ]
         return [check(file) for file in files]
 
+    def _run_tinypeel(self):
+        """Generate argv for the current case and run AlphaPeel."""
+
+        self._generate_arguments()
+        tinypeel.main(argv=self.argv)
+
+    def _run_tinypeel_with_raise(self, expected, match=None):
+        """Run AlphaPeel while checking for expected warnings or errors."""
+
+        expected_messages = (
+            expected if isinstance(expected, list) else [(expected, match)]
+        )
+        self._generate_arguments()
+        with contextlib.ExitStack() as stack:
+            for expected_type, expected_message in expected_messages:
+                if issubclass(expected_type, Warning):
+                    context = pytest.warns(expected_type, match=expected_message)
+                else:
+                    context = pytest.raises(expected_type, match=expected_message)
+                stack.enter_context(context)
+            tinypeel.main(argv=self.argv)
+
+    def _output_path_for(self, file_type):
+        """Return the output path for one output file type."""
+
+        return os.path.join(
+            self.output_path,
+            f"{self.output_file_prefix}.{file_type}.txt",
+        )
+
+    def _expected_path_for(self, file_type, test_case=None):
+        """Return the expected-output path for one output file type."""
+
+        if test_case is None:
+            file_name = f"true-{file_type}.txt"
+        else:
+            file_name = f"true-{file_type}-{test_case}.txt"
+        return os.path.join(self.path, file_name)
+
+    def _assert_output_matches_expected(
+        self,
+        file_type,
+        test_case=None,
+        output_kwargs=None,
+        expected_kwargs=None,
+    ):
+        """Assert that one generated output file matches its expected file."""
+
+        output_kwargs = {} if output_kwargs is None else output_kwargs
+        expected_kwargs = {} if expected_kwargs is None else expected_kwargs
+        self.output_file_path = self._output_path_for(file_type)
+        self.expected_file_path = self._expected_path_for(file_type, test_case)
+        self.output = read_and_sort_file(self.output_file_path, **output_kwargs)
+        self.expected = read_and_sort_file(
+            self.expected_file_path,
+            **expected_kwargs,
+        )
+        assert self.output == self.expected
+        return self.output, self.expected
+
+    def _assert_output_missing(self, file_type):
+        """Assert that one output file type was not written."""
+
+        assert not os.path.exists(self._output_path_for(file_type))
+
     def test_files(self):
         """Functional test: various input formats produce the expected genotype.
 
@@ -316,7 +398,7 @@ class TestClass:
         :return: None. Uses :mod:`pytest` assertions.
         """
         self.test_name = "test_files"
-        self.prepare_path()
+        self._prepare_path()
 
         self.input_files = self.files_to_input
         self.arguments = {
@@ -330,31 +412,29 @@ class TestClass:
         self.output_file_prefix = "files"
         self.output_file_to_check = "geno_0.333"
 
-        self.generate_arguments()
-        with pytest.warns(
-            UserWarning,
-            match="External phased genotype probability file included, but est_geno_error_prob flag used. The two options are incompatible. est_geno_error_prob set to false.",
-        ):
-            with pytest.warns(
-                UserWarning,
-                match="External phased genotype probability file included, but est_seq_error_prob flag used. The two options are incompatible. est_seq_error_prob set to false.",
-            ):
-                tinypeel.main(argv=self.argv)
-
-        self.output_file_path = os.path.join(
-            self.output_path,
-            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
+        self._run_tinypeel_with_raise(
+            [
+                (
+                    UserWarning,
+                    "External phased genotype probability file included, "
+                    "but est_geno_error_prob flag used. "
+                    "The two options are incompatible. "
+                    "est_geno_error_prob set to false.",
+                ),
+                (
+                    UserWarning,
+                    "External phased genotype probability file included, "
+                    "but est_seq_error_prob flag used. "
+                    "The two options are incompatible. "
+                    "est_seq_error_prob set to false.",
+                ),
+            ]
         )
-        self.expected_file_path = os.path.join(
-            self.path, f"true-{self.output_file_to_check}.txt"
-        )
 
-        self.output = read_and_sort_file(self.output_file_path)
-        self.expected = read_and_sort_file(self.expected_file_path)
-
-        # Produced genotype file correctly where multiple different files are inputted of unrelated individuals:
-        # Geno_file, hap_file, ped_file, phased_geno_prob_file, and seq_file
-        assert self.output == self.expected
+        # Produced genotype file correctly where multiple different files
+        # are inputted of unrelated individuals:
+        # geno_file, hap_file, ped_file, phased_geno_prob_file, and seq_file
+        self._assert_output_matches_expected(self.output_file_to_check)
 
     def test_subset(self):
         """Functional test: check if subsetting of SNPs using ``start_snp``/``stop_snp``
@@ -364,7 +444,7 @@ class TestClass:
         corresponding chunk of the full expected output.
         """
         self.test_name = "test_subset"
-        self.prepare_path()
+        self._prepare_path()
 
         self.input_files = self.files_to_input
         self.arguments = {
@@ -378,20 +458,13 @@ class TestClass:
         self.output_file_prefix = "subset"
         self.output_file_to_check = "geno_0.333"
 
-        self.generate_arguments()
-        tinypeel.main(argv=self.argv)
-
-        self.output_file_path = os.path.join(
-            self.output_path,
-            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-        )
-        self.expected_file_path = os.path.join(
-            self.path, f"true-{self.output_file_to_check}.txt"
-        )
-
+        self._run_tinypeel()
+        self.output_file_path = self._output_path_for(self.output_file_to_check)
+        self.expected_file_path = self._expected_path_for(self.output_file_to_check)
         self.output = read_and_sort_file(self.output_file_path)
         self.expected = read_and_sort_file(self.expected_file_path)
-        # Remove the first and last column inline with start_snp (2) and stop_snp (4) command
+        # Remove the first and last column inline with start_snp (2) and stop_snp
+        # (4) command.
         delete_columns(self.expected, [2, 6])
         # Test start_snp and stop_snp commands across different input files
         # Compares the outputted genotype dosage file with the expected genotype dosage.
@@ -404,7 +477,7 @@ class TestClass:
         that the output ordering matches the expected order for several modes.
         """
         self.test_name = "test_out_id_order"
-        self.prepare_path()
+        self._prepare_path()
 
         self.input_files = self.files_to_input
         self.arguments = {
@@ -429,14 +502,8 @@ class TestClass:
             self.arguments["out_id_order"] = self.test_cases
             self.output_file_prefix = f"out_id_order.{self.test_cases}"
 
-            self.generate_arguments()
-            tinypeel.main(argv=self.argv)
-
-            self.output_file_path = os.path.join(
-                self.output_path,
-                f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-            )
-
+            self._run_tinypeel()
+            self.output_file_path = self._output_path_for(self.output_file_to_check)
             self.output = read_file(self.output_file_path)
             # Total four individuals across the five inputted files
             assert len(self.output) == 4
@@ -447,14 +514,8 @@ class TestClass:
         self.arguments["out_id_only"] = None
         self.output_file_prefix = f"out_id_order.{self.test_cases}"
 
-        self.generate_arguments()
-        tinypeel.main(argv=self.argv)
-
-        self.output_file_path = os.path.join(
-            self.output_path,
-            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-        )
-
+        self._run_tinypeel()
+        self.output_file_path = self._output_path_for(self.output_file_to_check)
         self.output = read_file(self.output_file_path)
         # one observation as one individual in seq file
         assert len(self.output) == 1
@@ -468,21 +529,15 @@ class TestClass:
         that identifiers for parents (``MotherOf``/``FatherOf``) are excluded.
         """
         self.test_name = "test_out_id_only"
-        self.prepare_path()
+        self._prepare_path()
 
         self.input_files = ["geno_file", "ped_file"]
         self.arguments = {"method": "multi", "out_id_only": None, "seg_prob": None}
         self.output_file_prefix = "out_id_only"
         self.output_file_to_check = "dosage"
 
-        self.generate_arguments()
-        tinypeel.main(argv=self.argv)
-
-        self.output_file_path = os.path.join(
-            self.output_path,
-            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-        )
-
+        self._run_tinypeel()
+        self.output_file_path = self._output_path_for(self.output_file_to_check)
         self.output = read_file(self.output_file_path)
 
         # Number of observations in dosage file is 6 as no dummy individuals in output.
@@ -499,7 +554,7 @@ class TestClass:
         expected outputs where applicable.
         """
         self.test_name = "test_est"
-        self.prepare_path()
+        self._prepare_path()
 
         self.input_files = self.files_to_input.copy()
         self.input_files.remove("phased_geno_prob_file")
@@ -512,7 +567,6 @@ class TestClass:
             "est_seq_error_prob",
             "rec_length",
         ]:
-            # TODO estrecombrate instead of just adding length
             if self.test_cases != "rec_length":
                 self.arguments[self.test_cases] = None
             else:
@@ -522,21 +576,12 @@ class TestClass:
                 self.input_files.append("phased_geno_prob_file")
             self.output_file_prefix = f"est.{self.test_cases}"
 
-            self.generate_arguments()
-            tinypeel.main(argv=self.argv)
-
-            self.output_file_path = os.path.join(
-                self.output_path,
-                f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-            )
-            self.expected_file_path = os.path.join(
-                self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-            )
-
-            self.output = read_and_sort_file(self.output_file_path)
-            self.expected = read_and_sort_file(self.expected_file_path)
+            self._run_tinypeel()
             # Checking AlphaPeel runs so compares outputted genotypes with expected.
-            assert self.output == self.expected
+            self._assert_output_matches_expected(
+                self.output_file_to_check,
+                self.test_cases,
+            )
 
             self.arguments.pop(self.test_cases)
 
@@ -547,41 +592,16 @@ class TestClass:
         self.arguments["est_start_alt_allele_prob"] = None
         self.output_file_prefix = f"est.{self.test_cases}"
 
-        self.generate_arguments()
-        tinypeel.main(argv=self.argv)
+        self._run_tinypeel()
 
         self.output_file_to_check = "alt_allele_prob"
-        self.output_file_path = os.path.join(
-            self.output_path,
-            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-        )
-        self.expected_file_path = os.path.join(
-            self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-        )
-
-        self.output, MF = read_and_sort_file(
-            self.output_file_path, test_alt_allele_prob=True, decimal_place=1
-        )
-        self.expected, MF = read_and_sort_file(
-            self.expected_file_path, test_alt_allele_prob=True, decimal_place=1
-        )
-        assert self.output == self.expected
+        self._assert_alt_allele_prob_matches_expected(decimal_place=1)
 
         self.output_file_to_check = "dosage"
 
-        self.output_file_path = os.path.join(
-            self.output_path,
-            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-        )
-        self.expected_file_path = os.path.join(
-            self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-        )
-
-        self.output = read_and_sort_file(self.output_file_path, decimal_place=1)
-        self.expected = read_and_sort_file(self.expected_file_path, decimal_place=1)
-
-        # Check the outputted dosage file with expected when est_start_alt_allele_prob is used as starting point for estimation.
-        assert self.output == self.expected
+        # Check the outputted dosage file with expected when est_start_alt_allele_prob
+        # is used as starting point for estimation.
+        self._assert_dosage_matches_expected(expected_decimal_place=1)
 
         self.arguments.pop(self.test_cases)
 
@@ -603,7 +623,7 @@ class TestClass:
         - ``rec_prob``
         """
         self.test_name = "test_no"
-        self.prepare_path()
+        self._prepare_path()
 
         self.input_files = self.files_to_input.copy()
         self.input_files.remove("phased_geno_prob_file")
@@ -637,8 +657,7 @@ class TestClass:
             self.arguments[self.test_cases] = None
             self.output_file_prefix = f"no.{self.test_cases}"
 
-            self.generate_arguments()
-            tinypeel.main(argv=self.argv)
+            self._run_tinypeel()
             # When requested through commands, test the presents of file outputs:
             # no_dosage, output files: no output
             # seg_prob, output files: dosage, seg_prob
@@ -649,7 +668,7 @@ class TestClass:
             # alt_allele_prob, output files: dosage, alt_allele_prob
             # phased_geno_prob, output files: dosage, phased_geno_prob
             # rec_prob, output files: dosage, rec_prob
-            assert self.check_files() == expect[self.test_cases]
+            assert self._check_files() == expect[self.test_cases]
 
             self.arguments.pop(self.test_cases)
 
@@ -660,7 +679,7 @@ class TestClass:
         currently is not implemented correctly.
         """
         self.test_name = "test_rec"
-        self.prepare_path()
+        self._prepare_path()
 
         self.input_files = ["ped_file"]
         self.arguments = {
@@ -684,32 +703,22 @@ class TestClass:
                 # as sequence error cannot be 0
                 self.arguments["seq_error_prob"] = "0.00000001"
 
-            self.generate_arguments()
-            tinypeel.main(argv=self.argv)
+            self._run_tinypeel()
 
             # bug in writeCalledPhase()
             # skip called phase file for now
             self.files_to_check.pop(0)
 
             for self.output_file_to_check in self.files_to_check:
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}.txt"
-                )
-
                 if self.test_cases == "seq_file":
                     # since sequence error is not 0, we need to round the output up
-                    self.output = read_and_sort_file(
-                        self.output_file_path, decimal_place=2
+                    self._assert_output_matches_expected(
+                        self.output_file_to_check,
+                        output_kwargs={"decimal_place": 2},
                     )
                 else:
-                    self.output = read_and_sort_file(self.output_file_path)
-                self.expected = read_and_sort_file(self.expected_file_path)
+                    self._assert_output_matches_expected(self.output_file_to_check)
                 # Check outputted genotype, dosage, phased, and seg to expected files
-                assert self.output == self.expected
 
             self.input_files.pop(-1)
             if self.test_cases == "geno_file":
@@ -722,9 +731,15 @@ class TestClass:
         created_worker_counts = []
 
         class RecordingThreadPoolExecutor(original_executor):
-            def __init__(self, max_workers=None, *args, **kwargs):
+            """ThreadPoolExecutor subclass that records the number of workers requested."""
+
+            def __init__(self, *args, **kwargs):
+                max_workers = kwargs.get(
+                    "max_workers",
+                    args[0] if args else None,
+                )
                 created_worker_counts.append(max_workers)
-                super().__init__(max_workers=max_workers, *args, **kwargs)
+                super().__init__(*args, **kwargs)
 
         monkeypatch.setattr(
             concurrent.futures,
@@ -733,7 +748,7 @@ class TestClass:
         )
 
         self.test_name = "test_thread"
-        self.prepare_path()
+        self._prepare_path()
         self.input_files = ["geno_file", "ped_file"]
         self.input_file_depend_on_test_cases = None
 
@@ -754,8 +769,7 @@ class TestClass:
                 "geno": None,
             }
             self.output_file_prefix = f"thread.{label}"
-            self.generate_arguments()
-            tinypeel.main(argv=self.argv)
+            self._run_tinypeel()
 
             assert set(created_worker_counts) == expected_worker_counts
 
@@ -770,7 +784,7 @@ class TestClass:
         needs to rewrite.
         """
         self.test_name = "test_sex"
-        self.prepare_path()
+        self._prepare_path()
 
         self.arguments = {
             "method": "multi",
@@ -790,16 +804,13 @@ class TestClass:
             self.output_file_prefix = f"sex.{self.test_cases}"
             self.output_file_to_check = ["geno_0.333", "hap_0.5"]
 
-            self.generate_arguments()
-            tinypeel.main(argv=self.argv)
+            self._run_tinypeel()
 
             for check in self.output_file_to_check:
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{check}.txt",
-                )
+                self.output_file_path = self._output_path_for(check)
                 self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_prefix}.{check}.txt"
+                    self.path,
+                    f"true-{self.output_file_prefix}.{check}.txt",
                 )
                 # Compares outputted genotype files to expected.
                 if check == "geno_0.333":
@@ -817,7 +828,7 @@ class TestClass:
         The true values to check against for test_error is not written yet.
         """
         self.test_name = "test_error"
-        self.prepare_path()
+        self._prepare_path()
 
         # using default error rates: genotype error rate: 0.001
         #                            sequence error rate: 0.0001
@@ -835,18 +846,249 @@ class TestClass:
 
             self.output_file_prefix = f"error.{self.test_cases}"
 
-            self.generate_arguments()
-            tinypeel.main(argv=self.argv)
+            self._run_tinypeel()
+
+    def _assert_alt_allele_prob_matches_expected(self, decimal_place=None):
+        """Assert an alt-allele probability output against its expected file."""
+
+        file_kwargs = {"test_alt_allele_prob": True}
+        if decimal_place is not None:
+            file_kwargs["decimal_place"] = decimal_place
+        self._assert_output_matches_expected(
+            self.output_file_to_check,
+            self.test_cases,
+            output_kwargs=file_kwargs,
+            expected_kwargs=file_kwargs,
+        )
+
+    def _assert_dosage_matches_expected(self, expected_decimal_place=None):
+        """Assert a rounded dosage output against its expected file."""
+
+        expected_kwargs = {}
+        if expected_decimal_place is not None:
+            expected_kwargs["decimal_place"] = expected_decimal_place
+        self._assert_output_matches_expected(
+            self.output_file_to_check,
+            self.test_cases,
+            output_kwargs={"decimal_place": 1},
+            expected_kwargs=expected_kwargs,
+        )
+
+    def _read_alt_allele_prob_output(self):
+        """Read the current alt-allele probability output file."""
+
+        self.output_file_to_check = "alt_allele_prob"
+        self.output_file_path = self._output_path_for(self.output_file_to_check)
+        self.output, meta_founder = read_and_sort_file(
+            self.output_file_path,
+            test_alt_allele_prob=True,
+        )
+        return meta_founder
+
+    def _assert_single_metafounder_output(self, expected_metafounder):
+        """Assert that the alt-allele probability output has one metafounder."""
+
+        meta_founder = self._read_alt_allele_prob_output()
+        assert len(meta_founder) == 1
+        assert meta_founder[0] == expected_metafounder
+
+    def _run_alt_allele_prob_default(self):
+        """Check default alternative allele probabilities."""
+
+        self.output_file_to_check = "alt_allele_prob"
+        self.arguments["alt_allele_prob"] = None
+        self._run_tinypeel()
+        self._assert_alt_allele_prob_matches_expected(decimal_place=1)
+
+    def _run_alt_allele_prob_alt_allele_prob_file_single(self):
+        """Check a single-metafounder alt allele probability file."""
+
+        self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
+        self.output_file_to_check = "dosage"
+        self._run_tinypeel()
+        self._assert_dosage_matches_expected()
+
+    def _run_alt_allele_prob_alt_allele_prob_file_multiple(self):
+        """Check a multi-metafounder alt allele probability file."""
+
+        self._run_tinypeel()
+        self._assert_dosage_matches_expected()
+
+    def _run_alt_allele_prob_multiple_metafounder_individual(self):
+        """Check averaging for individuals with multiple metafounders."""
+
+        self._run_tinypeel()
+        self._assert_dosage_matches_expected()
+        self.input_file_depend_on_test_cases.pop(-1)
+
+    def _run_alt_allele_prob_est_alt_allele_prob_single(self):
+        """Check estimated alt allele probabilities for one metafounder."""
+
+        self.arguments["est_alt_allele_prob"] = None
+        self.output_file_to_check = "alt_allele_prob"
+        self._run_tinypeel()
+        self._assert_alt_allele_prob_matches_expected()
+
+    def _run_alt_allele_prob_est_alt_allele_prob_multiple(self):
+        """Check estimated alt allele probabilities for multiple metafounders."""
+
+        self._run_tinypeel()
+        self._assert_alt_allele_prob_matches_expected()
+
+    def _run_alt_allele_prob_est_alt_allele_prob_multiple_individual(self):
+        """Check estimated probabilities for a multi-metafounder individual."""
+
+        self._run_tinypeel()
+        self._assert_alt_allele_prob_matches_expected()
+
+    def _run_alt_allele_prob_one_metafounder_individual(self):
+        """Check error for an individual with only one metafounder parent."""
+
+        self._run_tinypeel_with_raise(
+            ValueError,
+            match=(
+                "Both parents must be metafounders if one is a "
+                "metafounder. For individual D0 the parents were F0 "
+                "and MF_2.\nConsider using a dummy individual for the "
+                "metafounder."
+            ),
+        )
+
+    def _run_alt_allele_prob_both(self):
+        """Check file-provided probabilities as an estimation starting point."""
+
+        self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
+        self._run_tinypeel()
+        self._assert_alt_allele_prob_matches_expected()
+        self.arguments.pop("est_alt_allele_prob")
+
+    def _run_alt_allele_prob_incorrect_pedigree(self):
+        """Check error when a regular individual uses the metafounder prefix."""
+
+        self._run_tinypeel_with_raise(
+            ValueError,
+            match=(
+                "Individual MF_1 uses the prefix 'MF_' which is reserved "
+                "for metafounders and cannot be used for an individual's id."
+            ),
+        )
+        self.input_file_depend_on_test_cases.pop(-1)
+
+    def _run_alt_allele_prob_default_metafounder(self):
+        """Check replacement of missing parents with the default metafounder."""
+
+        self._run_tinypeel()
+        self._assert_single_metafounder_output("MF_1")
+
+    def _run_alt_allele_prob_main_metafounder(self):
+        """Check user-specified main metafounder handling."""
+
+        self.arguments["main_metafounder"] = "MF_test"
+        self._run_tinypeel()
+        self._assert_single_metafounder_output("MF_test")
+
+    def _run_alt_allele_prob_incorrect_main_metafounder(self):
+        """Check error when main_metafounder does not start with MF_."""
+
+        self.arguments["main_metafounder"] = "test"
+        self._run_tinypeel_with_raise(
+            ValueError,
+            match="The main_metafounder must start with MF_.",
+        )
+        self.arguments.pop("main_metafounder")
+
+    def _run_alt_allele_prob_incorrect_metafounder_in_file(self):
+        """Check malformed metafounder file input."""
+
+        self.input_files.append("alt_allele_prob_file")
+        self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
+        self._run_tinypeel_with_raise(
+            ValueError,
+            match=(
+                "Incorrect number of locus rows in the "
+                "`alt_allele_prob_file`. Expected 5 rows but found 6."
+            ),
+        )
+
+    def _run_alt_allele_prob_missing_metafounder_in_file(self):
+        """Check defaults for metafounders missing from the input file."""
+
+        self._run_tinypeel()
+        self._assert_alt_allele_prob_matches_expected()
+
+    def _run_alt_allele_prob_extra_metafounder_in_file(self):
+        """Check warning and output cleanup for extra metafounders."""
+
+        self._run_tinypeel_with_raise(
+            UserWarning,
+            match=(
+                "MF_3 is not in the pedigree. The alternative allele "
+                "probability for MF_3 has been ignored."
+            ),
+        )
+        self._assert_alt_allele_prob_matches_expected()
+
+    def _run_alt_allele_prob_alt_allele_prob_missing(self):
+        """Check error when one probability value is missing."""
+
+        self._run_tinypeel_with_raise(
+            ValueError,
+            match=(
+                "In the `alt_allele_prob_file`, locus row 3 has 1 values "
+                "but header has 2 metafounders. If the alternative allele "
+                "probability is unknown, please use default of 0.5."
+            ),
+        )
+
+    def _run_alt_allele_prob_alt_allele_prob_missing_9(self):
+        """Check error for a probability value outside [0, 1]."""
+
+        self._run_tinypeel_with_raise(
+            ValueError,
+            match=(
+                r"Invalid value 9.0 for alternative allele probability "
+                r"for metafounder MF_2 at locus 2. \nValues must be "
+                r"between 0 and 1. Set to 0.5 \(default\) if unknown."
+            ),
+        )
+
+    def _run_alt_allele_prob_alt_allele_prob_missing_metafounder(self):
+        """Check error when a metafounder column is empty."""
+
+        self._run_tinypeel_with_raise(
+            ValueError,
+            match=(
+                "In the `alt_allele_prob_file`, locus row 1 has 1 values "
+                "but header has 2 metafounders. If the alternative allele "
+                "probability is unknown, please use default of 0.5."
+            ),
+        )
+
+    def _run_alt_allele_prob_metafounder_order_in_output(self):
+        """Check numeric ordering for many metafounder columns."""
+
+        self._run_tinypeel()
+        meta_founder = self._read_alt_allele_prob_output()
+        assert meta_founder == [
+            "MF_1",
+            "MF_2",
+            "MF_3",
+            "MF_4",
+            "MF_5",
+            "MF_6",
+            "MF_7",
+            "MF_8",
+            "MF_9",
+            "MF_10",
+            "MF_11",
+            "MF_12",
+        ]
 
     def test_alt_allele_prob(self):
-        """Functional test: alternative allele probability handling and metafounders.
+        """Functional test: alternative allele probability handling."""
 
-        Tests many sub-cases related to input files, estimation, multiple
-        metafounders, and error conditions. Each sub-case compares outputs to
-        expected files or asserts that the correct exception is raised.
-        """
         self.test_name = "test_alt_allele_prob"
-        self.prepare_path()
+        self._prepare_path()
 
         self.input_files = ["geno_file", "ped_file"]
         self.input_file_depend_on_test_cases = self.input_files
@@ -874,406 +1116,12 @@ class TestClass:
             "alt_allele_prob_missing_metafounder",
             "metafounder_order_in_output",
         ]:
-            # test case default: Test the default values of the alternative allele frequency
-            #                    without any input or estimation with multiple metafounders
-            #           alt_allele_prob_file_single: Test the input option alt_allele_prob_file
-            #                                   for a single metafounder
-            #           alt_allele_prob_file_multiple: Test the input option alt_allele_prob_file
-            #                                     for multiple metafounders
-            #           multiple_metafounder_individual: Test case when an individual has multiple metafounders
-            #                                       assigned and whether the average alternative allele
-            #                                       probabilities are being used correctly
-            #           est_alt_allele_prob_single: Test the option est_alt_allele_prob
-            #                                       for a single metafounder
-            #           est_alt_allele_prob_multiple: Test the option est_alt_allele_prob
-            #                                         for multiple metafounders
-            #           est_alt_allele_prob_multiple_individual: Test case when an individual has multiple metafounders
-            #                                       assigned and whether the average alternative allele
-            #                                       probabilities are being updated correctly with est_alt_allele_prob
-            #           one_metafounder_individual: Test case when an individual has one metafounder. This will trigger an error
-            #           both: Test the case when both alt_allele_prob_file and est_alt_allele_prob options are used,
-            #                 whether the inputted alternative allele probabilities are used as
-            #                 a starting point for alternative allele probabilities estimation
-            #           incorrect_pedigree: Test case when a metafounder is written incorrectly as
-            #                               not a founder in the pedigree file
-            #           default_metafounder: Test case when 0 is being used as parents and
-            #                                no main metafounder is being provided as input,
-            #                                test whether 0 would be replaced by the default MF_1
-            #           main_metafounder: Test if the input option main_metafounder is working
-            #                             i.e the user defines the default metafounder where 0 is used.
-            #           incorrect_main_metafounder: Test case when the input main_metafounder does not start with MF_,
-            #                                       whether an error would be raised
-            #           incorrect_metafounder_in_file: Test case when the names of input metafounders
-            #                                          in the input alternative allele probability file do not start with MF_,
-            #                                          whether an error would be raised
-            #           missing_metafounder_in_file: Test case when a metafounder is present in the pedigree but missing in the
-            #                                       input alternative allele probability file.
-            #           extra_metafounder_in_file: Test case when an additional metafounder is present in the input alternative
-            #                                       allele probability file.
-            #           alt_allele_prob_missing: Test case when a value is missing in
-            #                                     the inputted alternative allele probability file.
-            #           alt_allele_prob_missing_9: Test case when a value is missing (with a missing value of 9) in the inputted alternative allele probability file.
-            #           alt_allele_prob_missing_metafounder: Test case when a metafounder is listed but empty in the
-            #                                       inputted alternative allele probability file.
-            #           metafounder_order_in_output: Check the order of metafounders in the output is numerical when over 10 metafounders.
-
             self.output_file_prefix = f"alt_allele_prob.{self.test_cases}"
-
-            if self.test_cases == "default":
-                self.output_file_to_check = "alt_allele_prob"
-                self.arguments[
-                    "alt_allele_prob"
-                ] = None  # To output the alt_allele_prob
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-
-                self.output, MF = read_and_sort_file(
-                    self.output_file_path, test_alt_allele_prob=True, decimal_place=1
-                )
-                self.expected, MF = read_and_sort_file(
-                    self.expected_file_path, test_alt_allele_prob=True, decimal_place=1
-                )
-                # Each metafounder has alt_allele_prob of 0.5 per marker
-                assert self.output == self.expected
-
-            elif self.test_cases == "alt_allele_prob_file_single":
-                self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
-
-                self.output_file_to_check = "dosage"
-
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-
-                self.output = read_and_sort_file(self.output_file_path, decimal_place=1)
-                self.expected = read_and_sort_file(self.expected_file_path)
-
-                # Compares the outputted dosage file to the expected based on inputted alt_allele_prob file.
-                assert self.output == self.expected
-
-            elif self.test_cases == "alt_allele_prob_file_multiple":
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-
-                self.output = read_and_sort_file(self.output_file_path, decimal_place=1)
-                self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted dosage file to the expected based on inputted alt_allele_prob file.
-                assert self.output == self.expected
-            elif self.test_cases == "multiple_metafounder_individual":
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-
-                self.output = read_and_sort_file(self.output_file_path, decimal_place=1)
-                self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted dosage file to the expected based on inputted alt_allele_prob file
-                assert self.output == self.expected
-                # self.input_files.pop(-1)
-                self.input_file_depend_on_test_cases.pop(-1)
-
-            elif self.test_cases == "est_alt_allele_prob_single":
-                self.arguments["est_alt_allele_prob"] = None
-                self.output_file_to_check = "alt_allele_prob"
-
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-
-                self.output, MF = read_and_sort_file(
-                    self.output_file_path, test_alt_allele_prob=True
-                )
-                self.expected, MF = read_and_sort_file(
-                    self.expected_file_path, test_alt_allele_prob=True
-                )
-                # Compares alt_allele_prob output with expected when estimated by AlphaPeel for one metafounder
-                assert self.output == self.expected
-
-            elif self.test_cases == "est_alt_allele_prob_multiple":
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-
-                self.output, MF = read_and_sort_file(
-                    self.output_file_path, test_alt_allele_prob=True
-                )
-                self.expected, MF = read_and_sort_file(
-                    self.expected_file_path, test_alt_allele_prob=True
-                )
-                # Compares alt_allele_prob output with expected when estimated by AlphaPeel for multiple metafounders
-                assert self.output == self.expected
-            elif self.test_cases == "est_alt_allele_prob_multiple_individual":
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-
-                self.output, MF = read_and_sort_file(
-                    self.output_file_path, test_alt_allele_prob=True
-                )
-                self.expected, MF = read_and_sort_file(
-                    self.expected_file_path, test_alt_allele_prob=True
-                )
-                # Compares alt_allele_prob output with expected when estimated by AlphaPeel for multiple metafounders per individual
-                assert self.output == self.expected
-            elif self.test_cases == "one_metafounder_individual":
-                self.generate_arguments()
-
-                with pytest.raises(
-                    ValueError,
-                    match="Both parents must be metafounders if one is a metafounder. For individual D0 the parents were F0 and MF_2.\nConsider using a dummy individual for the metafounder.",
-                ):
-                    tinypeel.main(argv=self.argv)
-
-            elif self.test_cases == "both":
-                self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-
-                self.output, MF = read_and_sort_file(
-                    self.output_file_path, test_alt_allele_prob=True
-                )
-                self.expected, MF = read_and_sort_file(
-                    self.expected_file_path, test_alt_allele_prob=True
-                )
-
-                # check if the estimated alt_allele_prob is 0.5
-                assert self.output == self.expected
-
-                self.arguments.pop("est_alt_allele_prob")
-
-            elif self.test_cases == "incorrect_pedigree":
-                self.generate_arguments()
-
-                with pytest.raises(
-                    ValueError,
-                    match="Individual MF_1 uses the prefix 'MF_' which is reserved for metafounders and cannot be used for an individual's id.",
-                ):
-                    tinypeel.main(argv=self.argv)
-
-                self.input_file_depend_on_test_cases.pop(-1)
-
-            elif self.test_cases == "default_metafounder":
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_to_check = "alt_allele_prob"
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-
-                self.output, MF = read_and_sort_file(
-                    self.output_file_path, test_alt_allele_prob=True
-                )
-
-                # check if there is only one metafounder
-                assert len(MF) == 1
-                # check if the name of the metafounder is MF_1
-                assert MF[0] == "MF_1"
-
-            elif self.test_cases == "main_metafounder":
-                self.arguments["main_metafounder"] = "MF_test"
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-
-                self.output, MF = read_and_sort_file(
-                    self.output_file_path, test_alt_allele_prob=True
-                )
-
-                # check if there is only one metafounder
-                assert len(MF) == 1
-                # check if the name of the metafounder is MF_test
-                assert MF[0] == "MF_test"
-
-            elif self.test_cases == "incorrect_main_metafounder":
-                self.arguments["main_metafounder"] = "test"
-                self.generate_arguments()
-
-                with pytest.raises(
-                    ValueError, match="The main_metafounder must start with MF_."
-                ):
-                    tinypeel.main(argv=self.argv)
-
-                self.arguments.pop("main_metafounder")
-
-            elif self.test_cases == "incorrect_metafounder_in_file":
-                self.input_files.append("alt_allele_prob_file")
-                self.input_file_depend_on_test_cases.append("alt_allele_prob_file")
-                self.generate_arguments()
-
-                with pytest.raises(
-                    ValueError,
-                    match="Incorrect number of locus rows in the `alt_allele_prob_file`. Expected 5 rows but found 6.",
-                ):
-                    tinypeel.main(argv=self.argv)
-
-            elif self.test_cases == "missing_metafounder_in_file":
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path,
-                    f"true-{self.output_file_to_check}-{self.test_cases}.txt",
-                )
-
-                self.output, MF = read_and_sort_file(
-                    self.output_file_path, test_alt_allele_prob=True
-                )
-
-                self.expected, MF = read_and_sort_file(
-                    self.expected_file_path, test_alt_allele_prob=True
-                )
-
-                # Check that the default is assigned to any metafounders present in the pedigree but not the alt_allele_prob_file
-                assert self.output == self.expected
-
-            elif self.test_cases == "extra_metafounder_in_file":
-                self.generate_arguments()
-                with pytest.warns(
-                    UserWarning,
-                    match="MF_3 is not in the pedigree. The alternative allele probability for MF_3 has been ignored.",
-                ):
-                    tinypeel.main(argv=self.argv)
-
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path,
-                    f"true-{self.output_file_to_check}-{self.test_cases}.txt",
-                )
-
-                self.output, MF = read_and_sort_file(
-                    self.output_file_path, test_alt_allele_prob=True
-                )
-
-                self.expected, MF = read_and_sort_file(
-                    self.expected_file_path, test_alt_allele_prob=True
-                )
-                # Check that the extra is removed from the alt_allele_prob output
-                assert self.output == self.expected
-
-            elif self.test_cases == "alt_allele_prob_missing":
-                self.generate_arguments()
-                with pytest.raises(
-                    ValueError,
-                    match="In the `alt_allele_prob_file`, locus row 3 has 1 values but header has 2 metafounders. If the alternative allele probability is unknown, please use default of 0.5.",
-                ):
-                    tinypeel.main(argv=self.argv)
-
-            elif self.test_cases == "alt_allele_prob_missing_9":
-                self.generate_arguments()
-                with pytest.raises(
-                    ValueError,
-                    match=r"Invalid value 9.0 for alternative allele probability for metafounder MF_2 at locus 2. \nValues must be between 0 and 1. Set to 0.5 \(default\) if unknown.",
-                ):
-                    tinypeel.main(argv=self.argv)
-
-            elif self.test_cases == "alt_allele_prob_missing_metafounder":
-                self.generate_arguments()
-                with pytest.raises(
-                    ValueError,
-                    match="In the `alt_allele_prob_file`, locus row 1 has 1 values but header has 2 metafounders. If the alternative allele probability is unknown, please use default of 0.5.",
-                ):
-                    tinypeel.main(argv=self.argv)
-
-            elif self.test_cases == "metafounder_order_in_output":
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-
-                self.output, MF = read_and_sort_file(
-                    self.output_file_path, test_alt_allele_prob=True
-                )
-
-                # Check that the metafounders are in the correct order in the output
-                assert MF == [
-                    "MF_1",
-                    "MF_2",
-                    "MF_3",
-                    "MF_4",
-                    "MF_5",
-                    "MF_6",
-                    "MF_7",
-                    "MF_8",
-                    "MF_9",
-                    "MF_10",
-                    "MF_11",
-                    "MF_12",
-                ]
+            case_runner = getattr(
+                self,
+                f"_run_alt_allele_prob_{self.test_cases}",
+            )
+            case_runner()
 
     def test_pheno(self):
         """Functional test: phenotype and penetrance handling.
@@ -1283,7 +1131,7 @@ class TestClass:
         phenotype information behave as expected.
         """
         self.test_name = "test_pheno"
-        self.prepare_path()
+        self._prepare_path()
 
         self.input_files = ["geno_file", "ped_file"]
         self.input_file_depend_on_test_cases = self.input_files
@@ -1306,26 +1154,16 @@ class TestClass:
             if self.test_cases == "pheno_probs_no_penetrance":
                 # This will give a warning and not print phenotype probabilities
                 self.arguments["pheno_prob"] = None
-                self.generate_arguments()
-
-                with pytest.warns(
+                self._run_tinypeel_with_raise(
                     UserWarning,
-                    match="Phenotype probabilities are not available. Please provide a penetrance file with -pheno_penetrance_prob_file. -pheno_prob will be ignored.",
-                ):
-                    tinypeel.main(argv=self.argv)
-
-                self.output_file_to_check = "pheno_prob"
-                # Check the pheno_prob file does not exist
-
-                test = os.path.exists(
-                    os.path.join(
-                        self.output_path,
-                        f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                    )
+                    match=(
+                        "Phenotype probabilities are not available. Please provide "
+                        "a penetrance file with -pheno_penetrance_prob_file. "
+                        "-pheno_prob will be ignored."
+                    ),
                 )
 
-                expect = False
-                assert test == expect
+                self._assert_output_missing("pheno_prob")
 
             elif self.test_cases == "pheno_probs_with_penetrance":
                 # This will print phenotype probabilities
@@ -1333,123 +1171,65 @@ class TestClass:
                     "pheno_penetrance_prob_file"
                 )
 
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_to_check = "pheno_prob"
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-                self.output = read_and_sort_file(self.output_file_path)
-                self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_prob_file.
-                assert self.output == self.expected
+                self._run_tinypeel()
+                # Compares the outputted pheno_probs file to the expected based
+                # on inputted pheno_penetrance_prob_file.
+                self._assert_output_matches_expected("pheno_prob", self.test_cases)
 
             elif self.test_cases == "pheno_file_with_penetrance":
-                # This will update the dosage file from pheno data and print phenotype probabilities
+                # This will update the dosage file from pheno data and print
+                # phenotype probabilities.
                 self.input_file_depend_on_test_cases.append("pheno_file")
 
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
+                self._run_tinypeel()
+                # Compares the outputted pheno_probs file to the expected based
+                # on inputted pheno_penetrance_prob_file.
+                self._assert_output_matches_expected("pheno_prob", self.test_cases)
 
-                self.output_file_to_check = "pheno_prob"
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-                self.output = read_and_sort_file(self.output_file_path)
-                self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_prob_file.
-                assert self.output == self.expected
-
-                self.output_file_to_check = "dosage"
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-                self.output = read_and_sort_file(self.output_file_path)
-                self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted dosage file to the expected based on inputted pheno_penetrance_prob_file.
-                assert self.output == self.expected
+                # Compares the outputted dosage file to the expected based on
+                # inputted pheno_penetrance_prob_file.
+                self._assert_output_matches_expected("dosage", self.test_cases)
 
             elif self.test_cases == "repeat_pheno_record":
                 # This will update the dosage and pheno_prob file
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
+                self._run_tinypeel()
+                # Compares the outputted pheno_probs file to the expected based
+                # on inputted pheno_penetrance_prob_file.
+                self._assert_output_matches_expected("pheno_prob", self.test_cases)
 
-                self.output_file_to_check = "pheno_prob"
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-                self.output = read_and_sort_file(self.output_file_path)
-                self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_prob_file.
-                assert self.output == self.expected
-
-                self.output_file_to_check = "dosage"
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-                self.output = read_and_sort_file(self.output_file_path)
-                self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted dosage file to the expected based on inputted pheno_penetrance_prob_file.
-                assert self.output == self.expected
+                # Compares the outputted dosage file to the expected based on
+                # inputted pheno_penetrance_prob_file.
+                self._assert_output_matches_expected("dosage", self.test_cases)
 
             elif self.test_cases == "multi_pheno_state":
                 # This will update the dosage and pheno_prob file
-                self.generate_arguments()
-                tinypeel.main(argv=self.argv)
-
-                self.output_file_to_check = "pheno_prob"
-                self.output_file_path = os.path.join(
-                    self.output_path,
-                    f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-                )
-                self.expected_file_path = os.path.join(
-                    self.path, f"true-{self.output_file_to_check}-{self.test_cases}.txt"
-                )
-                self.output = read_and_sort_file(self.output_file_path)
-                self.expected = read_and_sort_file(self.expected_file_path)
-                # Compares the outputted pheno_probs file to the expected based on inputted pheno_penetrance_prob_file.
-                assert self.output == self.expected
+                self._run_tinypeel()
+                # Compares the outputted pheno_probs file to the expected based
+                # on inputted pheno_penetrance_prob_file.
+                self._assert_output_matches_expected("pheno_prob", self.test_cases)
 
             elif self.test_cases == "pheno_file_with_multi_loci_geno_file":
                 # This will flag an error and exit the program (at the moment)
-                self.generate_arguments()
-                with pytest.raises(
+                self._run_tinypeel_with_raise(
                     ValueError,
-                    match="Currently phenotype information can only be used with a single locus genotype input. Please either remove the pheno_file or use a single locus genotype input.",
-                ):
-                    tinypeel.main(argv=self.argv)
+                    match=(
+                        "Currently phenotype information can only be used with a "
+                        "single locus genotype input. Please either remove the "
+                        "pheno_file or use a single locus genotype input."
+                    ),
+                )
 
                 self.input_file_depend_on_test_cases.pop(-2)
 
             elif self.test_cases == "pheno_file_only":
                 # This will flag an error and exit the program
-                self.generate_arguments()
-                with pytest.raises(
+                self._run_tinypeel_with_raise(
                     ValueError,
-                    match="To use phenotype information, please provide a phenotype penetrance via '-pheno_penetrance_file'.",
-                ):
-                    tinypeel.main(argv=self.argv)
+                    match=(
+                        "To use phenotype information, please provide a phenotype "
+                        "penetrance via '-pheno_penetrance_file'."
+                    ),
+                )
 
     def test_map_input(self):
         """Functional test: behaviour when providing a genetic map file.
@@ -1459,7 +1239,7 @@ class TestClass:
         start/stop SNP range.
         """
         self.test_name = "test_map_input"
-        self.prepare_path()
+        self._prepare_path()
 
         self.arguments = {"method": "multi", "start_snp": "2", "stop_snp": "5"}
         self.output_file_to_check = "dosage"
@@ -1468,28 +1248,16 @@ class TestClass:
         self.input_files = ["geno_file", "ped_file"]
         self.output_file_prefix = "map_input.no_map_file"
 
-        self.generate_arguments()
-        tinypeel.main(argv=self.argv)
-
-        self.output_file_path = os.path.join(
-            self.output_path,
-            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-        )
-
+        self._run_tinypeel()
+        self.output_file_path = self._output_path_for(self.output_file_to_check)
         self.first_output = read_and_sort_file(self.output_file_path)
 
         # with map file input
         self.input_files.append("map_file")
         self.output_file_prefix = "map_input.with_map_file"
 
-        self.generate_arguments()
-        tinypeel.main(argv=self.argv)
-
-        self.output_file_path = os.path.join(
-            self.output_path,
-            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-        )
-
+        self._run_tinypeel()
+        self.output_file_path = self._output_path_for(self.output_file_to_check)
         self.second_output = read_and_sort_file(self.output_file_path)
 
         # the two outputs should match
@@ -1502,7 +1270,7 @@ class TestClass:
         in the produced dosage output.
         """
         self.test_name = "test_founder_status"
-        self.prepare_path()
+        self._prepare_path()
 
         self.input_files = ["ped_file", "geno_file"]
         self.arguments = {"method": "multi"}
@@ -1510,14 +1278,8 @@ class TestClass:
         self.output_file_prefix = "founder_status"
         self.output_file_to_check = "dosage"
 
-        self.generate_arguments()
-        tinypeel.main(argv=self.argv)
-
-        self.output_file_path = os.path.join(
-            self.output_path,
-            f"{self.output_file_prefix}.{self.output_file_to_check}.txt",
-        )
-
+        self._run_tinypeel()
+        self.output_file_path = self._output_path_for(self.output_file_to_check)
         self.output = read_and_sort_file(self.output_file_path)
 
         assert round(float(self.output[1][1])) == 2
