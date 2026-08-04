@@ -342,6 +342,10 @@ per chromosome) and computing resources are limited.
 The ``-n_thread_loci`` option might be more useful if number of CPU cores 
 is abundant and the number of loci is large 
 (e.g., more than 5 cores and 4000 loci).
+
+You can try the script described in :ref:`multi-threading benchmarking <multi-threading-benchmarking>`
+to see how the number of threads affects the runtime of the 2000 loci simulation data on your device.
+
 You are encouraged to find a combination that works best for your use case.
 
 |Software| can estimate the model parameters from the input data.
