@@ -461,6 +461,16 @@ An example output of the ``pre-commit`` hooks is as follows:
 
 For more information, see `pre-commit Documentation <https://pre-commit.com/#quick-start>`_.
 
+You can also use ``pylint`` as an additional code quality check during
+development. It is not part of the default pre-commit hooks, but it can help
+identify unclear control flow, unused code, and maintainability issues before
+you open a pull request.
+
+.. code-block:: bash
+
+    pip install pylint
+    pylint src/tinypeel/peeling # or other modules you have changed
+
 Then commit your changes to your local clone repository. Adding
 ``AlphaGenes/AlphaPeel#GitHubIssueNumber`` in the commit message will link the
 commit with the issue page.
@@ -520,6 +530,10 @@ Before you open a pull request, make sure you have:
         * Instructions: :ref:`testing-and-profiling`
 
     * Committed your changes with informative commit messages
+
+        * Instructions: :ref:`changes_instructions`
+
+    * Considered running ``pylint`` as an additional code quality check
 
         * Instructions: :ref:`changes_instructions`
 

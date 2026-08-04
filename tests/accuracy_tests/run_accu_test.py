@@ -1,3 +1,5 @@
+"""Accuracy tests for the AlphaPeel module."""
+
 import pytest
 from src.accuracy_core import sim_path
 from src.accuracy_runner import run_accuracy_case

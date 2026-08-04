@@ -7,7 +7,7 @@ Before committing code changes, run the tests/checks from a package built
 from your modified source. 
 
 This page collects the common checks used during
-AlphaPeel development: the regular ``pytest`` suite,
+|Software| development: the regular ``pytest`` suite,
 accuracy benchmark, and profiling and coverage checks.
 
 ``pytest`` suite
@@ -129,7 +129,7 @@ and compare them with the ``compare_reports`` function described below.
 Visualise accuracy reports
 --------------------------
 
-You can create plots from an accuracy report:
+You can create plots from an accuracy report (``matplotlib.pyplot`` is required):
 
 .. code-block:: python
 
@@ -173,7 +173,7 @@ code from the repository root:
     from src.accuracy_report_comparison import compare_reports
     compare_reports()
 
-It by default compares the two reports ``accu_report.txt``
+It by default compares the two reports ``accu_report.txt`` (at root of the repository)
 and ``tests/accuracy_tests/reports_benchmark/accu_report.txt``, but you 
 can pass explicit paths to the two reports to compare with the arguments
 ``baseline_report_path`` and ``current_report_path``.
@@ -216,7 +216,7 @@ that runs the workflow you want to inspect. For example:
     run_full_accuracy_suite(run_name="benchmark")
 
 Save the driver outside version control, or remove it after profiling. Then run
-it with ``memray``:
+it with `memray <https://github.com/bloomberg/memray>`_:
 
 .. code-block:: bash
 
@@ -236,7 +236,7 @@ Runtime profiling
 -----------------
 
 For line-wise runtime profiling, create a small temporary Python driver with
-``line_profiler``. Add the functions you want to inspect, then run the accuracy
+`line_profiler <https://kernprof.readthedocs.io/en/latest/>`_. Add the functions you want to inspect, then run the accuracy
 case inside the profiler:
 
 .. code-block:: python
@@ -347,7 +347,7 @@ comparing results across code changes.
 Test coverage
 -------------
 
-Coverage can be collected with ``coverage``:
+Coverage can be collected with `coverage <https://coverage.readthedocs.io/en/latest/>`_:
 
 .. code-block:: bash
 
