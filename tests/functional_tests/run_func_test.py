@@ -1,3 +1,4 @@
+import concurrent.futures
 import os
 import shutil
 import src.tinypeel.tinypeel as tinypeel
@@ -713,6 +714,50 @@ class TestClass:
             self.input_files.pop(-1)
             if self.test_cases == "geno_file":
                 self.arguments.pop("geno_error_prob")
+
+    def test_thread(self, monkeypatch):
+        """Functional test: multithreading options request the expected workers."""
+
+        original_executor = concurrent.futures.ThreadPoolExecutor
+        created_worker_counts = []
+
+        class RecordingThreadPoolExecutor(original_executor):
+            def __init__(self, max_workers=None, *args, **kwargs):
+                created_worker_counts.append(max_workers)
+                super().__init__(max_workers=max_workers, *args, **kwargs)
+
+        monkeypatch.setattr(
+            concurrent.futures,
+            "ThreadPoolExecutor",
+            RecordingThreadPoolExecutor,
+        )
+
+        self.test_name = "test_thread"
+        self.prepare_path()
+        self.input_files = ["geno_file", "ped_file"]
+        self.input_file_depend_on_test_cases = None
+
+        cases = [
+            ("serial", "1", "1", set()),
+            ("family", "2", "1", {2}),
+            ("loci", "1", "3", {3}),
+            ("family_loci", "2", "3", {2, 3}),
+        ]
+
+        for label, n_thread_fam, n_thread_loci, expected_worker_counts in cases:
+            created_worker_counts.clear()
+            self.arguments = {
+                "method": "multi",
+                "n_cycle": "1",
+                "n_thread_fam": n_thread_fam,
+                "n_thread_loci": n_thread_loci,
+                "geno": None,
+            }
+            self.output_file_prefix = f"thread.{label}"
+            self.generate_arguments()
+            tinypeel.main(argv=self.argv)
+
+            assert set(created_worker_counts) == expected_worker_counts
 
     def test_sex(self):
         """Functional test: sex chromosome handling.

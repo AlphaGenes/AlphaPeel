@@ -201,12 +201,151 @@ You can pass the ``output_path`` argument to save the comparison results to a CS
 Profiling and coverage
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Memory profiling can be run on the functional tests with ``memray``:
+Profiling is useful when you need to identify performance bottlenecks.
+
+Memory profiling
+----------------
+
+For memory profiling, create a small temporary Python driver ``benchmark_memray.py``
+that runs the workflow you want to inspect. For example:
+
+.. code-block:: python
+
+    from src.accuracy_runner import run_full_accuracy_suite
+
+    run_full_accuracy_suite(run_name="benchmark")
+
+Save the driver outside version control, or remove it after profiling. Then run
+it with ``memray``:
 
 .. code-block:: bash
 
     pip install memray
-    pytest --memray tests/functional_tests
+    memray run benchmark_memray.py
+
+This creates a ``.bin`` memory profile file. Inspect it by generating a
+flamegraph:
+
+.. code-block:: bash
+
+    memray flamegraph memray-*.bin
+
+This generates an HTML file that you can open in a browser to inspect memory usage.
+
+Runtime profiling
+-----------------
+
+For line-wise runtime profiling, create a small temporary Python driver with
+``line_profiler``. Add the functions you want to inspect, then run the accuracy
+case inside the profiler:
+
+.. code-block:: python
+
+    from line_profiler import LineProfiler
+
+    from src.accuracy_core import get_params, sim_path
+    from src.accuracy_runner import run_accuracy_case
+    from src.tinypeel.tinypeel import main, peeling_cycle, run_peeling_cycles
+
+    lp = LineProfiler()
+
+    for fn in [
+        run_peeling_cycles,
+        peeling_cycle,
+        main,
+    ]:
+        lp.add_function(fn)
+
+    # This is a single accuracy case from the benchmark suite. You can change it to
+    # any other case you want to profile.
+    case = (
+        "multi",  # method
+        False,    # est_start_alt_allele_prob
+        True,     # est_geno_error_prob
+        True,     # est_seq_error_prob
+        True,     # seq_file
+        False,    # alt_allele_prob_file
+        False,    # est_alt_allele_prob
+        False,    # metafounder
+        False,    # x_chr
+    )
+
+    with lp:
+        run_accuracy_case(
+            get_params(),
+            sim_path(),
+            *case,
+            benchmark=None,
+            run_name="profile_line",
+            TINYPEEL_DIRECT_IS_WARMED_UP=True,
+        )
+
+    lp.print_stats()
+
+Save this driver outside version control, or remove it after profiling. If the
+temporary file is named ``line_profile.py``, run:
+
+.. code-block:: bash
+
+    pip install line_profiler
+    python line_profile.py
+
+The example above skips a warmup run by setting
+``TINYPEEL_DIRECT_IS_WARMED_UP=True``. In a fresh Python process, this means the
+reported line timings include JIT compilation time. If you have
+``TINYPEEL_DIRECT_IS_WARMED_UP=False``, then the reported line timings include one warmup run, 
+and the actual runtime of the function, which is equivalent to the compilation time 
+plus two times the runtime.
+
+To keep a reference profile for later comparison, redirect the output to a text
+file with a descriptive name:
+
+.. code-block:: bash
+
+    python line_profile.py > before_change_line_profile.txt
+
+.. _multi-threading-benchmarking:
+
+Multi-threading benchmarking
+----------------------------
+
+Use ``src.thread_profiler`` to benchmark the ``multi`` method across
+``n_thread_fam`` and ``n_thread_loci`` combinations. The profiler runs each
+grid cell in a fresh Python subprocess, records raw timings, writes a summary
+CSV, and creates 3D runtime surface plots.
+
+From the repository root, run:
+
+.. code-block:: python
+
+    from src.thread_profiler import run_thread_profiler
+
+    run_thread_profiler()
+
+By default, this benchmarks thread counts ``1, 2, 4, 8`` with one replicate per
+grid cell and writes artifacts under
+``tests/accuracy_tests/outputs_thread_grid``. To use a smaller or larger grid,
+pass explicit arguments:
+
+.. code-block:: python
+
+    run_thread_profiler(
+        thread_counts=(1, 2, 4, 8, 16),
+        replicates=3,
+        n_cycle=5,
+        skip_existing=True,
+    )
+
+The raw timings are written to ``thread_grid_raw.csv``, the aggregated timings
+to ``thread_grid_summary.csv``, and the runtime surface plot to
+``thread_grid_runtime_surface_inner.png`` in the output directory. Keep the CSV
+files from a previous run if you want a reference for later comparisons.
+Because each grid cell is run in a fresh Python subprocess, timings include
+process startup and first-run JIT compilation time. Use the same settings when
+comparing results across code changes.
+
+Test coverage
+-------------
 
 Coverage can be collected with ``coverage``:
 
