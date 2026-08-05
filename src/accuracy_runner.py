@@ -1,13 +1,20 @@
+"""Module for running accuracy benchmarks and assessments of AlphaPeel."""
+
+from dataclasses import dataclass
 import os
 
 import numpy as np
 
 from src.accuracy_assessment import (
+    AssessmentContext,
     _write_accuracy_metric,
     assess_accuracy,
     assess_test_accuracy,
 )
 from src.accuracy_core import (
+    AccuracyCase,
+    AccuracyInputOptions,
+    AccuracyRunPaths,
     benchmark_tinypeel_direct,
     build_accuracy_case_name,
     build_accuracy_output_path,
@@ -22,16 +29,25 @@ from src.accuracy_core import (
     prepare_directory,
     run_command,
     run_tinypeel_direct,
-    sim_path,
+    sim_path as default_sim_path,
     ensure_directory,
     warmup_tinypeel_direct,
 )
 
 
+@dataclass(frozen=True)
+class AccuracyRunnerOptions:
+    """Execution options for one accuracy case run."""
+
+    benchmark: object = None
+    run_name: str = "test_accu"
+    tinypeel_direct_is_warmed_up: bool = False
+
+
 def _read_map_marker_names(path):
     """Return marker names from an AlphaPeel map file."""
 
-    with open(path, "r") as file:
+    with open(path, "r", encoding="utf-8") as file:
         return [line.split()[1] for line in file if line.strip()]
 
 
@@ -55,7 +71,7 @@ def _hybrid_subset_input_dir(output_path):
 
 
 def _prepare_hybrid_multi_inputs(
-    sim_path,
+    simulation_path,
     seq_file,
     metafounder,
     x_chr,
@@ -63,17 +79,16 @@ def _prepare_hybrid_multi_inputs(
 ):
     """Create subset inputs for the first stage of a hybrid benchmark."""
 
-    subset_input_dir = _hybrid_subset_input_dir(output_path)
-    ensure_directory(subset_input_dir)
+    ensure_directory(_hybrid_subset_input_dir(output_path))
 
     map_path = _fixture_file_path(
-        sim_path,
+        simulation_path,
         "map_file",
         metafounder=metafounder,
         x_chr=x_chr,
     )
     seg_map_path = _fixture_file_path(
-        sim_path,
+        simulation_path,
         "seg_map_file",
         metafounder=metafounder,
         x_chr=x_chr,
@@ -94,12 +109,15 @@ def _prepare_hybrid_multi_inputs(
 
     locus_file_name = "seq_file" if seq_file else "geno_file"
     source_path = _fixture_file_path(
-        sim_path,
+        simulation_path,
         locus_file_name,
         metafounder=metafounder,
         x_chr=x_chr,
     )
-    subset_path = os.path.join(subset_input_dir, f"{locus_file_name}.txt")
+    subset_path = os.path.join(
+        _hybrid_subset_input_dir(output_path),
+        f"{locus_file_name}.txt",
+    )
     _subset_locus_file(source_path, subset_path, columns)
 
     return {
@@ -122,170 +140,124 @@ def _run_tinypeel_direct_sequence(argvs):
         run_tinypeel_direct(argv)
 
 
-def run_accuracy_case(
-    get_params,
-    sim_path,
-    method,
-    est_start_alt_allele_prob=False,
-    est_geno_error_prob=False,
-    est_seq_error_prob=False,
-    seq_file=False,
-    alt_allele_prob_file=False,
-    est_alt_allele_prob=False,
-    metafounder=False,
-    x_chr=False,
-    benchmark=None,
-    run_name="test_accu",
-    TINYPEEL_DIRECT_IS_WARMED_UP=False,
+def _case_for_method(case, method):
+    """Return ``case`` options with a different AlphaPeel method."""
+
+    return AccuracyCase(
+        method,
+        est_start_alt_allele_prob=case.est_start_alt_allele_prob,
+        est_geno_error_prob=case.est_geno_error_prob,
+        est_seq_error_prob=case.est_seq_error_prob,
+        seq_file=case.seq_file,
+        alt_allele_prob_file=case.alt_allele_prob_file,
+        est_alt_allele_prob=case.est_alt_allele_prob,
+        metafounder=case.metafounder,
+        x_chr=case.x_chr,
+    )
+
+
+def run_accuracy_case(  # pylint: disable=too-many-locals
+    parameters,
+    simulation_path,
+    case,
+    options=None,
 ):
     """Run AlphaPeel and evaluate outputs based on the specified parameters."""
 
-    name = build_accuracy_case_name(
-        method,
-        est_start_alt_allele_prob,
-        est_geno_error_prob,
-        est_seq_error_prob,
-        seq_file,
-        alt_allele_prob_file,
-        est_alt_allele_prob,
-        metafounder,
-        x_chr,
-    )
-    output_path = build_accuracy_output_path(name, run_name)
+    if options is None:
+        options = AccuracyRunnerOptions()
+
+    name = build_accuracy_case_name(case)
+    output_path = build_accuracy_output_path(name, options.run_name)
+    paths = AccuracyRunPaths(simulation_path=simulation_path, output_path=output_path)
     prepare_directory(output_path)
     runtime_seconds = None
 
-    if method == "hybrid":
+    if case.method == "hybrid":
         multi_output_path = _hybrid_multi_output_path(output_path)
+        multi_paths = AccuracyRunPaths(
+            simulation_path=simulation_path,
+            output_path=multi_output_path,
+        )
         prepare_directory(multi_output_path)
         multi_file_overrides = _prepare_hybrid_multi_inputs(
-            sim_path,
-            seq_file,
-            metafounder,
-            x_chr,
+            simulation_path,
+            case.seq_file,
+            case.metafounder,
+            case.x_chr,
             output_path,
         )
         hybrid_file_overrides = {
             "seg_file": os.path.join(multi_output_path, ".seg_prob.txt")
         }
+        multi_options = AccuracyInputOptions(
+            file_overrides=multi_file_overrides,
+            extra_input_files=["map_file"],
+        )
+        hybrid_options = AccuracyInputOptions(
+            file_overrides=hybrid_file_overrides,
+            input_files_method="hybrid",
+        )
 
-        if run_name == "test_accu":
+        if options.run_name == "test_accu":
             commands = [
                 generate_command(
-                    sim_path,
-                    "multi",
-                    multi_output_path,
-                    est_start_alt_allele_prob,
-                    est_geno_error_prob,
-                    est_seq_error_prob,
-                    seq_file,
-                    alt_allele_prob_file,
-                    est_alt_allele_prob,
-                    metafounder,
-                    x_chr,
-                    file_overrides=multi_file_overrides,
-                    extra_input_files=["map_file"],
+                    multi_paths,
+                    _case_for_method(case, "multi"),
+                    input_options=multi_options,
                 ),
                 generate_command(
-                    sim_path,
-                    "single",
-                    output_path,
-                    est_start_alt_allele_prob,
-                    est_geno_error_prob,
-                    est_seq_error_prob,
-                    seq_file,
-                    alt_allele_prob_file,
-                    est_alt_allele_prob,
-                    metafounder,
-                    x_chr,
-                    file_overrides=hybrid_file_overrides,
-                    input_files_method="hybrid",
+                    paths,
+                    _case_for_method(case, "single"),
+                    input_options=hybrid_options,
                 ),
             ]
-            benchmark(_run_commands, commands)
+            options.benchmark(_run_commands, commands)
         else:
             argvs = [
                 generate_accuracy_argv(
-                    sim_path,
-                    "multi",
-                    est_start_alt_allele_prob,
-                    est_geno_error_prob,
-                    est_seq_error_prob,
-                    seq_file,
-                    alt_allele_prob_file,
-                    est_alt_allele_prob,
-                    metafounder,
-                    x_chr,
-                    multi_output_path,
-                    file_overrides=multi_file_overrides,
-                    extra_input_files=["map_file"],
+                    multi_paths,
+                    _case_for_method(case, "multi"),
+                    input_options=multi_options,
                 ),
                 generate_accuracy_argv(
-                    sim_path,
-                    "single",
-                    est_start_alt_allele_prob,
-                    est_geno_error_prob,
-                    est_seq_error_prob,
-                    seq_file,
-                    alt_allele_prob_file,
-                    est_alt_allele_prob,
-                    metafounder,
-                    x_chr,
-                    output_path,
-                    file_overrides=hybrid_file_overrides,
-                    input_files_method="hybrid",
+                    paths,
+                    _case_for_method(case, "single"),
+                    input_options=hybrid_options,
                 ),
             ]
             _run_tinypeel_direct_sequence(argvs)
 
-    elif run_name == "test_accu":
+    elif options.run_name == "test_accu":
         command = generate_command(
-            sim_path,
-            method,
-            output_path,
-            est_start_alt_allele_prob,
-            est_geno_error_prob,
-            est_seq_error_prob,
-            seq_file,
-            alt_allele_prob_file,
-            est_alt_allele_prob,
-            metafounder,
-            x_chr,
+            paths,
+            case,
         )
-        benchmark(run_command, command)
+        options.benchmark(run_command, command)
 
     else:
         argv = generate_accuracy_argv(
-            sim_path,
-            method,
-            est_start_alt_allele_prob,
-            est_geno_error_prob,
-            est_seq_error_prob,
-            seq_file,
-            alt_allele_prob_file,
-            est_alt_allele_prob,
-            metafounder,
-            x_chr,
-            output_path,
+            paths,
+            case,
         )
 
-        if not TINYPEEL_DIRECT_IS_WARMED_UP:
+        if not options.tinypeel_direct_is_warmed_up:
             warmup_tinypeel_direct(argv, output_path=output_path)
 
         runtime_seconds = benchmark_tinypeel_direct(argv)
 
-    report_path = build_accuracy_report_path(run_name)
+    report_path = build_accuracy_report_path(options.run_name)
     ensure_directory(os.path.dirname(report_path))
-    with open(report_path, "a") as file_out:
-        if run_name == "test_accu":
+    with open(report_path, "a", encoding="utf-8") as file_out:
+        if options.run_name == "test_accu":
             assess_test_accuracy(
-                sim_path,
-                get_params,
+                simulation_path,
+                parameters,
                 output_path,
-                method,
+                case.method,
                 file_out,
             )
-        elif run_name == "benchmark":
+        elif options.run_name == "benchmark":
             if runtime_seconds is not None:
                 _write_accuracy_metric(
                     file_out,
@@ -296,21 +268,23 @@ def run_accuracy_case(
                 )
 
             assess_accuracy(
-                sim_path,
-                get_params,
-                output_path,
-                name,
-                method,
-                file_out,
-                metafounder,
-                x_chr,
+                AssessmentContext(
+                    simulation_path=simulation_path,
+                    parameters=parameters,
+                    output_path=output_path,
+                    name=name,
+                    method=case.method,
+                    file_out=file_out,
+                    metafounder=case.metafounder,
+                    x_chr=case.x_chr,
+                )
             )
 
 
 def run_full_accuracy_suite(run_name="benchmark"):
     """Run the full direct-call accuracy benchmark suite."""
 
-    TINYPEEL_DIRECT_IS_WARMED_UP = False
+    tinypeel_direct_is_warmed_up = False
 
     prepare_directory(get_accuracy_benchmark_output_root(run_name))
     prepare_directory(get_accuracy_benchmark_report_root(run_name))
@@ -318,11 +292,13 @@ def run_full_accuracy_suite(run_name="benchmark"):
     for case in get_accuracy_benchmark_cases():
         run_accuracy_case(
             get_params(),
-            sim_path(),
-            *case,
-            benchmark=None,
-            run_name=run_name,
-            TINYPEEL_DIRECT_IS_WARMED_UP=TINYPEEL_DIRECT_IS_WARMED_UP,
+            default_sim_path(),
+            case,
+            options=AccuracyRunnerOptions(
+                benchmark=None,
+                run_name=run_name,
+                tinypeel_direct_is_warmed_up=tinypeel_direct_is_warmed_up,
+            ),
         )
-        if not TINYPEEL_DIRECT_IS_WARMED_UP:
-            TINYPEEL_DIRECT_IS_WARMED_UP = True
+        if not tinypeel_direct_is_warmed_up:
+            tinypeel_direct_is_warmed_up = True

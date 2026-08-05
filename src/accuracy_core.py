@@ -1,9 +1,13 @@
+"""Module for core accuracy assessment functionality."""
+
+from dataclasses import dataclass
 import os
 import shutil
 import subprocess
 import time
+from typing import Dict, List, Optional
 
-import src.tinypeel.tinypeel as tinypeel
+from src.tinypeel import tinypeel
 
 
 ACCURACY_TEST_ROOT = os.path.join("tests", "accuracy_tests")
@@ -58,8 +62,41 @@ ACCURACY_REPORT_VALUE_NAMES = (
 )
 
 
+@dataclass(frozen=True)
+class AccuracyCase:  # pylint: disable=too-many-instance-attributes
+    """Configuration for one accuracy benchmark case."""
+
+    method: str
+    est_start_alt_allele_prob: bool = False
+    est_geno_error_prob: bool = False
+    est_seq_error_prob: bool = False
+    seq_file: bool = False
+    alt_allele_prob_file: bool = False
+    est_alt_allele_prob: bool = False
+    metafounder: bool = False
+    x_chr: bool = False
+
+
+@dataclass(frozen=True)
+class AccuracyRunPaths:
+    """Input and output paths for one accuracy run."""
+
+    simulation_path: str
+    output_path: str
+
+
+@dataclass(frozen=True)
+class AccuracyInputOptions:
+    """Input-file overrides used when building AlphaPeel argv."""
+
+    file_overrides: Optional[Dict[str, str]] = None
+    extra_input_files: Optional[List[str]] = None
+    input_files_method: Optional[str] = None
+
+
 def get_params():
-    with open(SIMULATION_PARAMETERS_FILE, "r") as file:
+    """Get the simulation parameters from the simulation_parameters.txt file."""
+    with open(SIMULATION_PARAMETERS_FILE, "r", encoding="utf-8") as file:
         sim_params = [line.strip().split() for line in file]
 
     params = {}
@@ -119,12 +156,14 @@ def build_accuracy_report_path(run_name="test_accu"):
 
 
 def run_command(command):
+    """Run a command using subprocess.run and raise an error if it fails."""
     use_shell = isinstance(command, str)
     result = subprocess.run(
         command,
         shell=use_shell,
         text=True,
         capture_output=True,
+        check=False,
     )
 
     if result.returncode != 0:
@@ -143,154 +182,65 @@ def get_accuracy_benchmark_cases():
     """Return the full accuracy benchmark case matrix."""
 
     return [
-        ("single", None, None, None, None, None, None, None, None),
-        (
-            "single",
-            "est_start_alt_allele_prob",
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-        ),
-        ("single", None, None, None, None, None, "est_alt_allele_prob", None, None),
-        ("multi", None, None, None, None, None, None, None, None),
-        (
+        AccuracyCase("single"),
+        AccuracyCase("single", est_start_alt_allele_prob=True),
+        AccuracyCase("single", est_alt_allele_prob=True),
+        AccuracyCase("multi"),
+        AccuracyCase("multi", est_start_alt_allele_prob=True),
+        AccuracyCase("multi", est_alt_allele_prob=True),
+        AccuracyCase(
             "multi",
-            "est_start_alt_allele_prob",
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
+            est_start_alt_allele_prob=True,
+            est_geno_error_prob=True,
+            est_seq_error_prob=True,
         ),
-        ("multi", None, None, None, None, None, "est_alt_allele_prob", None, None),
-        (
+        AccuracyCase("multi", seq_file=True),
+        AccuracyCase("multi", est_start_alt_allele_prob=True, seq_file=True),
+        AccuracyCase(
             "multi",
-            "est_start_alt_allele_prob",
-            "est_geno_error_prob",
-            "est_seq_error_prob",
-            None,
-            None,
-            None,
-            None,
-            None,
+            est_start_alt_allele_prob=True,
+            est_geno_error_prob=True,
+            est_seq_error_prob=True,
+            seq_file=True,
         ),
-        ("multi", None, None, None, "seq_file", None, None, None, None),
-        (
-            "multi",
-            "est_start_alt_allele_prob",
-            None,
-            None,
-            "seq_file",
-            None,
-            None,
-            None,
-            None,
-        ),
-        (
-            "multi",
-            "est_start_alt_allele_prob",
-            "est_geno_error_prob",
-            "est_seq_error_prob",
-            "seq_file",
-            None,
-            None,
-            None,
-            None,
-        ),
-        ("hybrid", None, None, None, None, None, None, None, None),
-        ("hybrid", None, None, None, "seq_file", None, None, None, None),
-        (
+        AccuracyCase("hybrid"),
+        AccuracyCase("hybrid", seq_file=True),
+        AccuracyCase("single", alt_allele_prob_file=True, metafounder=True),
+        AccuracyCase("single", est_start_alt_allele_prob=True, metafounder=True),
+        AccuracyCase("single", est_alt_allele_prob=True, metafounder=True),
+        AccuracyCase(
             "single",
-            None,
-            None,
-            None,
-            None,
-            "alt_allele_prob_file",
-            None,
-            "metafounder",
-            None,
+            est_start_alt_allele_prob=True,
+            est_alt_allele_prob=True,
+            metafounder=True,
         ),
-        (
+        AccuracyCase(
             "single",
-            "est_start_alt_allele_prob",
-            None,
-            None,
-            None,
-            None,
-            None,
-            "metafounder",
-            None,
+            alt_allele_prob_file=True,
+            est_alt_allele_prob=True,
+            metafounder=True,
         ),
-        (
-            "single",
-            None,
-            None,
-            None,
-            None,
-            None,
-            "est_alt_allele_prob",
-            "metafounder",
-            None,
-        ),
-        (
-            "single",
-            "est_start_alt_allele_prob",
-            None,
-            None,
-            None,
-            None,
-            "est_alt_allele_prob",
-            "metafounder",
-            None,
-        ),
-        (
-            "single",
-            None,
-            None,
-            None,
-            None,
-            "alt_allele_prob_file",
-            "est_alt_allele_prob",
-            "metafounder",
-            None,
-        ),
-        ("single", None, None, None, None, None, None, None, "x_chr"),
-        ("multi", None, None, None, None, None, None, None, "x_chr"),
-        ("hybrid", None, None, None, None, None, None, None, "x_chr"),
+        AccuracyCase("single", x_chr=True),
+        AccuracyCase("multi", x_chr=True),
+        AccuracyCase("hybrid", x_chr=True),
     ]
 
 
-def build_accuracy_case_name(
-    method,
-    est_start_alt_allele_prob,
-    est_geno_error_prob,
-    est_seq_error_prob,
-    seq_file,
-    alt_allele_prob_file,
-    est_alt_allele_prob,
-    metafounder,
-    x_chr,
-):
+def build_accuracy_case_name(case):
     """Build the benchmark case name from the accuracy case parameters."""
 
     return "_".join(
         str(param)
         for param in [
-            method,
-            est_start_alt_allele_prob,
-            est_geno_error_prob,
-            est_seq_error_prob,
-            seq_file,
-            alt_allele_prob_file,
-            est_alt_allele_prob,
-            metafounder,
-            x_chr,
+            case.method,
+            "est_start_alt_allele_prob" if case.est_start_alt_allele_prob else None,
+            "est_geno_error_prob" if case.est_geno_error_prob else None,
+            "est_seq_error_prob" if case.est_seq_error_prob else None,
+            "seq_file" if case.seq_file else None,
+            "alt_allele_prob_file" if case.alt_allele_prob_file else None,
+            "est_alt_allele_prob" if case.est_alt_allele_prob else None,
+            "metafounder" if case.metafounder else None,
+            "x_chr" if case.x_chr else None,
         ]
         if param
     )
@@ -328,15 +278,15 @@ def _fixture_file_prefix(metafounder=False, x_chr=False):
     return ""
 
 
-def _fixture_file_path(sim_path, file_name, metafounder=False, x_chr=False):
+def _fixture_file_path(simulation_path, file_name, metafounder=False, x_chr=False):
     """Build the path to one benchmark fixture file."""
 
     prefix = _fixture_file_prefix(metafounder=metafounder, x_chr=x_chr)
-    return os.path.join(sim_path, f"{prefix}{file_name}.txt")
+    return os.path.join(simulation_path, f"{prefix}{file_name}.txt")
 
 
 def _input_file_path(
-    sim_path,
+    simulation_path,
     file_name,
     metafounder=False,
     x_chr=False,
@@ -348,7 +298,7 @@ def _input_file_path(
         return file_overrides[file_name]
 
     return _fixture_file_path(
-        sim_path,
+        simulation_path,
         file_name,
         metafounder=metafounder,
         x_chr=x_chr,
@@ -363,112 +313,69 @@ def _add_argument(argv, key, value):
         argv.append(value)
 
 
-def generate_accuracy_argv(
-    sim_path,
-    method,
-    est_start_alt_allele_prob,
-    est_geno_error_prob,
-    est_seq_error_prob,
-    seq_file,
-    alt_allele_prob_file,
-    est_alt_allele_prob,
-    metafounder,
-    x_chr,
-    output_path,
-    file_overrides=None,
-    extra_input_files=None,
-    input_files_method=None,
-):
+def generate_accuracy_argv(paths, case, input_options=None):
     """Generate an ``argv`` list for a direct ``tinypeel.main`` accuracy run."""
+
+    if input_options is None:
+        input_options = AccuracyInputOptions()
 
     argv = []
     input_files = _input_files_for_case(
-        input_files_method or method,
-        seq_file,
-        alt_allele_prob_file,
+        input_options.input_files_method or case.method,
+        case.seq_file,
+        case.alt_allele_prob_file,
     )
-    if extra_input_files:
-        input_files.extend(extra_input_files)
+    if input_options.extra_input_files:
+        input_files.extend(input_options.extra_input_files)
 
-    arguments = _alpha_peel_arguments(method)
+    arguments = _alpha_peel_arguments(case.method)
 
-    if est_start_alt_allele_prob:
+    if case.est_start_alt_allele_prob:
         arguments["est_start_alt_allele_prob"] = None
-    if est_geno_error_prob and est_seq_error_prob:
+    if case.est_geno_error_prob and case.est_seq_error_prob:
         arguments["est_geno_error_prob"] = None
         arguments["est_seq_error_prob"] = None
-    if est_alt_allele_prob:
+    if case.est_alt_allele_prob:
         arguments["est_alt_allele_prob"] = None
     for file_name in input_files:
         argv.extend(
             [
                 f"-{file_name}",
                 _input_file_path(
-                    sim_path,
+                    paths.simulation_path,
                     file_name,
-                    metafounder=metafounder,
-                    x_chr=x_chr,
-                    file_overrides=file_overrides,
+                    metafounder=case.metafounder,
+                    x_chr=case.x_chr,
+                    file_overrides=input_options.file_overrides,
                 ),
             ]
         )
 
-    if x_chr:
+    if case.x_chr:
         argv.append("-x_chr")
 
     for key, value in arguments.items():
         _add_argument(argv, key, value)
 
-    argv.extend(["-out_file", f"{output_path}{os.sep}"])
+    argv.extend(["-out_file", f"{paths.output_path}{os.sep}"])
 
     return argv
 
 
-def generate_command(
-    sim_path,
-    method,
-    output_path,
-    est_start_alt_allele_prob=False,
-    est_geno_error_prob=False,
-    est_seq_error_prob=False,
-    seq_file=False,
-    alt_allele_prob_file=False,
-    est_alt_allele_prob=False,
-    metafounder=False,
-    x_chr=False,
-    file_overrides=None,
-    extra_input_files=None,
-    input_files_method=None,
-):
+def generate_command(paths, case, input_options=None):
     """Generate the command used to run AlphaPeel for a test case.
 
-    :param sim_path: Directory containing simulation input files.
-    :type sim_path: str
-    :param method: AlphaPeel method to run, such as ``single``, ``multi`` or
-        ``hybrid``.
-    :type method: str
-    :param output_path: Output directory for AlphaPeel results.
-    :type output_path: str
+    :param paths: Simulation input and output paths for the run.
+    :type paths: AccuracyRunPaths
+    :param case: AlphaPeel method and accuracy-case options.
+    :type case: AccuracyCase
+    :param input_options: Optional input-file overrides for special cases.
+    :type input_options: AccuracyInputOptions or None
     :return: The command argv to pass to ``subprocess.run``.
     :rtype: list[str]
     """
 
-    argv = generate_accuracy_argv(
-        sim_path,
-        method,
-        est_start_alt_allele_prob,
-        est_geno_error_prob,
-        est_seq_error_prob,
-        seq_file,
-        alt_allele_prob_file,
-        est_alt_allele_prob,
-        metafounder,
-        x_chr,
-        output_path,
-        file_overrides=file_overrides,
-        extra_input_files=extra_input_files,
-        input_files_method=input_files_method,
-    )
+    argv = generate_accuracy_argv(paths, case, input_options=input_options)
 
     return ["AlphaPeel", *argv]
 

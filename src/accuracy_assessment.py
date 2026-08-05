@@ -1,3 +1,5 @@
+"""Module for assessing the accuracy of AlphaPeel output against truth files."""
+from dataclasses import dataclass
 import os
 import warnings
 
@@ -10,6 +12,39 @@ from src.accuracy_core import (
     ROWS_PER_INDIVIDUAL,
     SEG_PROB_START_GEN,
 )
+
+
+@dataclass(frozen=True)
+class AccuracyDimensions:
+    """Simulation dimensions used by accuracy reports."""
+
+    n_gen: int
+    n_ind_per_gen: int
+    n_loci_all: int
+
+
+@dataclass(frozen=True)
+class FileMetricContext:
+    """Per-file dimensions used to calculate accuracy metrics."""
+
+    file_name: str
+    n_gen: int
+    n_ind_per_gen: int
+    n_row_per_ind: int
+
+
+@dataclass(frozen=True)
+class AssessmentContext:  # pylint: disable=too-many-instance-attributes
+    """Inputs shared by one benchmark accuracy assessment."""
+
+    simulation_path: str
+    parameters: dict
+    output_path: str
+    name: str
+    method: str
+    file_out: object
+    metafounder: bool
+    x_chr: bool
 
 
 def _accuracy_files(method, metafounder=False):
@@ -28,10 +63,11 @@ def _accuracy_dimensions(get_params):
     """Return generation, individual, and locus dimensions from parameters."""
 
     n_gen = int(get_params["nGen"])
-    n_ind_per_gen = int(get_params["nInd"] / n_gen)
-    n_loci_all = int(get_params["nLociAll"])
-
-    return n_gen, n_ind_per_gen, n_loci_all
+    return AccuracyDimensions(
+        n_gen=n_gen,
+        n_ind_per_gen=int(get_params["nInd"] / n_gen),
+        n_loci_all=int(get_params["nLociAll"]),
+    )
 
 
 def _load_accuracy_matrix(path, n_loci_all):
@@ -171,25 +207,32 @@ def _per_generation_metric(
     metric_func,
     output,
     truth,
-    file_name,
-    n_gen,
-    n_ind_per_gen,
-    n_row_per_ind,
+    context,
     *metric_args,
 ):
     """Return a list of per-generation metric values as strings."""
 
     values = []
-    for gen in range(n_gen):
-        if _seg_prob_generation_is_skipped(file_name, gen):
+    for gen in range(context.n_gen):
+        if _seg_prob_generation_is_skipped(context.file_name, gen):
             values.append("nan")
             continue
 
         values.append(
             str(
                 metric_func(
-                    _generation_slice(output, gen, n_ind_per_gen, n_row_per_ind),
-                    _generation_slice(truth, gen, n_ind_per_gen, n_row_per_ind),
+                    _generation_slice(
+                        output,
+                        gen,
+                        context.n_ind_per_gen,
+                        context.n_row_per_ind,
+                    ),
+                    _generation_slice(
+                        truth,
+                        gen,
+                        context.n_ind_per_gen,
+                        context.n_row_per_ind,
+                    ),
                     *metric_args,
                 )
             )
@@ -202,16 +245,17 @@ def _benchmark_metric_values(
     metric_func,
     output,
     truth,
-    file_name,
-    n_gen,
-    n_ind_per_gen,
-    n_row_per_ind,
+    context,
     *metric_args,
 ):
     """Return whole-file and per-generation benchmark metric values."""
 
     overall_output, overall_truth = _overall_comparison(
-        output, truth, file_name, n_ind_per_gen, n_row_per_ind
+        output,
+        truth,
+        context.file_name,
+        context.n_ind_per_gen,
+        context.n_row_per_ind,
     )
     overall_value = metric_func(overall_output, overall_truth, *metric_args)
 
@@ -219,26 +263,16 @@ def _benchmark_metric_values(
         metric_func,
         output,
         truth,
-        file_name,
-        n_gen,
-        n_ind_per_gen,
-        n_row_per_ind,
+        context,
         *metric_args,
     )
 
 
-def _benchmark_ind_corr_values(
-    output,
-    truth,
-    file_name,
-    n_gen,
-    n_ind_per_gen,
-    n_row_per_ind,
-):
+def _benchmark_ind_corr_values(output, truth, context):
     """Return whole-file and per-generation individual-correlation values."""
 
     overall_start_gen = None
-    if file_name == "seg_prob":
+    if context.file_name == "seg_prob":
         overall_start_gen = SEG_PROB_START_GEN
 
     values = [
@@ -246,8 +280,8 @@ def _benchmark_ind_corr_values(
             get_ind_corr(
                 output,
                 truth,
-                n_ind_per_gen,
-                n_row_per_ind,
+                context.n_ind_per_gen,
+                context.n_row_per_ind,
                 start_gen=overall_start_gen,
             )
         )
@@ -257,12 +291,9 @@ def _benchmark_ind_corr_values(
         get_ind_corr,
         output,
         truth,
-        file_name,
-        n_gen,
-        n_ind_per_gen,
-        n_row_per_ind,
-        n_ind_per_gen,
-        n_row_per_ind,
+        context,
+        context.n_ind_per_gen,
+        context.n_row_per_ind,
     )
 
 
@@ -278,13 +309,15 @@ def _safe_rate(numerator, denominator):
 def get_hap_switch_error_metrics(called_file, true_file, n_ind, n_loci_all):
     """Calculate switch, phase, and related haplotype call metrics."""
 
-    switch_error_count = 0
-    phase_error_count = 0
-    uncalled_count = 0
-    wrong_homo_count = 0
-    true_hetero_count = 0
-    homo_count = 0
-    hetero_count = 0
+    counts = {
+        "switch_error": 0,
+        "phase_error": 0,
+        "uncalled": 0,
+        "wrong_homo": 0,
+        "true_hetero": 0,
+        "homo": 0,
+        "hetero": 0,
+    }
 
     for ind in range(n_ind):
         hap_p_new = called_file[ind * 2]
@@ -295,32 +328,32 @@ def get_hap_switch_error_metrics(called_file, true_file, n_ind, n_loci_all):
         switched = False
         for loci in range(n_loci_all):
             if hap_p_true[loci] == hap_m_true[loci]:
-                homo_count += 1
+                counts["homo"] += 1
             else:
-                hetero_count += 1
+                counts["hetero"] += 1
 
             if np.isnan(hap_p_new[loci]) or np.isnan(hap_m_new[loci]):
-                uncalled_count += 1
+                counts["uncalled"] += 1
                 continue
 
             if hap_p_new[loci] == 9 or hap_m_new[loci] == 9:
-                uncalled_count += 1
+                counts["uncalled"] += 1
                 continue
 
             if hap_p_true[loci] + hap_m_true[loci] == 1:
                 if hap_p_new[loci] == hap_m_new[loci]:
-                    wrong_homo_count += 1
+                    counts["wrong_homo"] += 1
                     continue
 
-                true_hetero_count += 1
+                counts["true_hetero"] += 1
                 if hap_p_new[loci] != hap_p_true[loci]:
-                    phase_error_count += 1
+                    counts["phase_error"] += 1
 
                 if (hap_p_new[loci] != hap_p_true[loci] and switched is False) or (
                     hap_p_new[loci] == hap_p_true[loci] and switched is True
                 ):
                     switched = not switched
-                    switch_error_count += 1
+                    counts["switch_error"] += 1
 
     genotype_count = n_ind * n_loci_all
     switch_opportunity_count = n_ind * (n_loci_all - 1)
@@ -328,18 +361,18 @@ def get_hap_switch_error_metrics(called_file, true_file, n_ind, n_loci_all):
     return [
         (
             "switch_error_rate",
-            _safe_rate(switch_error_count, switch_opportunity_count),
+            _safe_rate(counts["switch_error"], switch_opportunity_count),
         ),
-        ("phase_error_rate", _safe_rate(phase_error_count, genotype_count)),
-        ("uncalled_rate", _safe_rate(uncalled_count, genotype_count)),
-        ("wrong_homozygote_rate", _safe_rate(wrong_homo_count, genotype_count)),
+        ("phase_error_rate", _safe_rate(counts["phase_error"], genotype_count)),
+        ("uncalled_rate", _safe_rate(counts["uncalled"], genotype_count)),
+        ("wrong_homozygote_rate", _safe_rate(counts["wrong_homo"], genotype_count)),
         (
             "correct_heterozygote_rate",
-            _safe_rate(true_hetero_count, genotype_count),
+            _safe_rate(counts["true_hetero"], genotype_count),
         ),
-        ("homozygote_count", homo_count),
-        ("heterozygote_count", hetero_count),
-        ("homo_to_hetero_ratio", _safe_rate(homo_count, hetero_count)),
+        ("homozygote_count", counts["homo"]),
+        ("heterozygote_count", counts["hetero"]),
+        ("homo_to_hetero_ratio", _safe_rate(counts["homo"], counts["hetero"])),
     ]
 
 
@@ -385,21 +418,14 @@ def _benchmark_hap_switch_error_metrics(output, truth, n_gen, n_ind_per_gen):
     ]
 
 
-def _write_test_hap_switch_error_metrics(
-    file_out,
-    file_name,
-    method,
-    output,
-    truth,
-    n_gen,
-    n_ind_per_gen,
-):
+def _write_test_hap_switch_error_metrics(target, output, truth, dimensions):
     """Write test accuracy switch-error metrics for haplotype output."""
 
+    file_out, file_name, method = target
     for metric_name, value in get_hap_switch_error_metrics(
         output,
         truth,
-        n_gen * n_ind_per_gen,
+        dimensions.n_gen * dimensions.n_ind_per_gen,
         output.shape[1],
     ):
         if metric_name in [
@@ -411,24 +437,73 @@ def _write_test_hap_switch_error_metrics(
         _write_accuracy_metric(file_out, file_name, method, metric_name, value)
 
 
-def _write_benchmark_hap_switch_error_metrics(
-    file_out,
-    file_name,
-    name,
-    output,
-    truth,
-    n_gen,
-    n_ind_per_gen,
-):
+def _write_benchmark_hap_switch_error_metrics(target, output, truth, dimensions):
     """Write benchmark switch-error metrics for haplotype output."""
 
+    file_out, file_name, name = target
     for metric_name, values in _benchmark_hap_switch_error_metrics(
         output,
         truth,
-        n_gen,
-        n_ind_per_gen,
+        dimensions.n_gen,
+        dimensions.n_ind_per_gen,
     ):
         _write_accuracy_metric(file_out, file_name, name, metric_name, values)
+
+
+def _write_test_file_accuracy(target, dimensions, accuracy_pair):
+    """Write test accuracy metrics for one output file."""
+
+    file_out, file_name, method = target
+    new_file, true_file = accuracy_pair
+    n_row_per_ind = ROWS_PER_INDIVIDUAL[file_name]
+    metric_new_file = _normal_metric_output(new_file, file_name)
+    comparison_output, comparison_truth = _overall_comparison(
+        metric_new_file,
+        true_file,
+        file_name,
+        dimensions.n_ind_per_gen,
+        n_row_per_ind,
+    )
+    _write_accuracy_metric(
+        file_out,
+        file_name,
+        method,
+        "marker_corr",
+        get_marker_corr(comparison_output, comparison_truth),
+    )
+    _write_accuracy_metric(
+        file_out,
+        file_name,
+        method,
+        "ind_corr",
+        _ind_corr_for_file(
+            metric_new_file,
+            true_file,
+            file_name,
+            dimensions.n_ind_per_gen,
+            n_row_per_ind,
+        ),
+    )
+    _write_accuracy_metric(
+        file_out,
+        file_name,
+        method,
+        "abs_diff",
+        get_abs_diff(comparison_output, comparison_truth, n_row_per_ind),
+    )
+
+    if file_name == HAP_FILE:
+        _write_test_hap_switch_error_metrics(
+            target,
+            new_file,
+            true_file,
+            dimensions,
+        )
+    if file_name == "seg_prob":
+        correct_rate = get_correct_rate(comparison_output, comparison_truth)
+        _write_accuracy_metric(
+            file_out, file_name, method, "correct_rate", correct_rate
+        )
 
 
 def assess_test_accuracy(
@@ -438,64 +513,118 @@ def assess_test_accuracy(
     method,
     file_out,
 ):
-    file_to_check = _accuracy_files(method)
-    n_gen, n_ind_per_gen, n_loci_all = _accuracy_dimensions(get_params)
+    """Assess pytest accuracy output against truth files."""
 
-    for file_name in file_to_check:
-        n_row_per_ind = ROWS_PER_INDIVIDUAL[file_name]
+    dimensions = _accuracy_dimensions(get_params)
+    for file_name in _accuracy_files(method):
         accuracy_pair = _load_test_accuracy_pair(
-            output_path, sim_path, file_name, n_loci_all
+            output_path, sim_path, file_name, dimensions.n_loci_all
         )
         if accuracy_pair is None:
             continue
-
-        new_file, true_file = accuracy_pair
-        # replace uncalled haplotype values with nan for accuracy metrics
-        metric_new_file = _normal_metric_output(new_file, file_name)
-        comparison_output, comparison_truth = _overall_comparison(
-            metric_new_file, true_file, file_name, n_ind_per_gen, n_row_per_ind
+        _write_test_file_accuracy(
+            (file_out, file_name, method),
+            dimensions,
+            accuracy_pair,
         )
-        marker_corr = get_marker_corr(
-            comparison_output,
-            comparison_truth,
-        )
-        _write_accuracy_metric(file_out, file_name, method, "marker_corr", marker_corr)
 
-        ind_corr = _ind_corr_for_file(
+
+def _benchmark_file_context(file_name, dimensions):
+    """Build a file metric context from simulation dimensions."""
+
+    return FileMetricContext(
+        file_name=file_name,
+        n_gen=dimensions.n_gen,
+        n_ind_per_gen=dimensions.n_ind_per_gen,
+        n_row_per_ind=ROWS_PER_INDIVIDUAL[file_name],
+    )
+
+
+def _write_benchmark_file_accuracy(context, dimensions, file_name):
+    """Write benchmark accuracy metrics for one output file."""
+
+    new_file, true_file = _load_accuracy_pair(
+        context.output_path,
+        context.simulation_path,
+        file_name,
+        dimensions.n_loci_all,
+        metafounder=context.metafounder,
+        x_chr=context.x_chr,
+    )
+    _mask_x_chr_hap_missing(new_file, true_file, file_name, context.x_chr)
+    metric_new_file = _normal_metric_output(new_file, file_name)
+    file_context = _benchmark_file_context(file_name, dimensions)
+
+    _write_accuracy_metric(
+        context.file_out,
+        file_name,
+        context.name,
+        "marker_corr",
+        _benchmark_metric_values(
+            get_marker_corr,
             metric_new_file,
             true_file,
+            file_context,
+        ),
+    )
+    _write_accuracy_metric(
+        context.file_out,
+        file_name,
+        context.name,
+        "ind_corr",
+        _benchmark_ind_corr_values(metric_new_file, true_file, file_context),
+    )
+    _write_accuracy_metric(
+        context.file_out,
+        file_name,
+        context.name,
+        "abs_diff",
+        _benchmark_metric_values(
+            get_abs_diff,
+            metric_new_file,
+            true_file,
+            file_context,
+            file_context.n_row_per_ind,
+        ),
+    )
+
+    if file_name == HAP_FILE:
+        _write_benchmark_hap_switch_error_metrics(
+            (context.file_out, file_name, context.name),
+            new_file,
+            true_file,
+            dimensions,
+        )
+    if file_name == "seg_prob":
+        correct_rate = _benchmark_metric_values(
+            get_correct_rate,
+            new_file,
+            true_file,
+            file_context,
+        )
+        _write_accuracy_metric(
+            context.file_out,
             file_name,
-            n_ind_per_gen,
-            n_row_per_ind,
+            context.name,
+            "correct_rate",
+            correct_rate,
         )
-        _write_accuracy_metric(file_out, file_name, method, "ind_corr", ind_corr)
-
-        abs_diff = get_abs_diff(
-            comparison_output,
-            comparison_truth,
-            n_row_per_ind,
-        )
-        _write_accuracy_metric(file_out, file_name, method, "abs_diff", abs_diff)
-
-        if file_name == HAP_FILE:
-            _write_test_hap_switch_error_metrics(
-                file_out,
-                file_name,
-                method,
-                new_file,
-                true_file,
-                n_gen,
-                n_ind_per_gen,
-            )
-
-        if file_name == "seg_prob":
-            correct_rate = get_correct_rate(comparison_output, comparison_truth)
-            _write_accuracy_metric(
-                file_out, file_name, method, "correct_rate", correct_rate
-            )
 
 
-def assess_accuracy(
+def assess_accuracy(context):
+    """Assess benchmark output accuracy against truth files."""
+
+    dimensions = _accuracy_dimensions(context.parameters)
+
+    print(" ")
+    print(f"Test: {context.name}")
+
+    for file_name in _accuracy_files(context.method, context.metafounder):
+        _write_benchmark_file_accuracy(context, dimensions, file_name)
+
+
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+def assess_accuracy_from_parts(
     sim_path,
     get_params,
     output_path,
@@ -505,84 +634,20 @@ def assess_accuracy(
     metafounder,
     x_chr,
 ):
-    """Assess output accuracy against truth files."""
+    """Backward-compatible wrapper around :func:`assess_accuracy`."""
 
-    file_to_check = _accuracy_files(method, metafounder)
-    n_gen, n_ind_per_gen, n_loci_all = _accuracy_dimensions(get_params)
-
-    print(" ")
-    print(f"Test: {name}")
-
-    for file_name in file_to_check:
-        n_row_per_ind = ROWS_PER_INDIVIDUAL[file_name]
-        new_file, true_file = _load_accuracy_pair(
-            output_path,
-            sim_path,
-            file_name,
-            n_loci_all,
+    assess_accuracy(
+        AssessmentContext(
+            simulation_path=sim_path,
+            parameters=get_params,
+            output_path=output_path,
+            name=name,
+            method=method,
+            file_out=file_out,
             metafounder=metafounder,
             x_chr=x_chr,
         )
-        _mask_x_chr_hap_missing(new_file, true_file, file_name, x_chr)
-        metric_new_file = _normal_metric_output(new_file, file_name)
-
-        marker_corr = _benchmark_metric_values(
-            get_marker_corr,
-            metric_new_file,
-            true_file,
-            file_name,
-            n_gen,
-            n_ind_per_gen,
-            n_row_per_ind,
-        )
-        _write_accuracy_metric(file_out, file_name, name, "marker_corr", marker_corr)
-
-        ind_corr = _benchmark_ind_corr_values(
-            metric_new_file,
-            true_file,
-            file_name,
-            n_gen,
-            n_ind_per_gen,
-            n_row_per_ind,
-        )
-        _write_accuracy_metric(file_out, file_name, name, "ind_corr", ind_corr)
-
-        abs_diff = _benchmark_metric_values(
-            get_abs_diff,
-            metric_new_file,
-            true_file,
-            file_name,
-            n_gen,
-            n_ind_per_gen,
-            n_row_per_ind,
-            n_row_per_ind,
-        )
-        _write_accuracy_metric(file_out, file_name, name, "abs_diff", abs_diff)
-
-        if file_name == HAP_FILE:
-            _write_benchmark_hap_switch_error_metrics(
-                file_out,
-                file_name,
-                name,
-                new_file,
-                true_file,
-                n_gen,
-                n_ind_per_gen,
-            )
-
-        if file_name == "seg_prob":
-            correct_rate = _benchmark_metric_values(
-                get_correct_rate,
-                new_file,
-                true_file,
-                file_name,
-                n_gen,
-                n_ind_per_gen,
-                n_row_per_ind,
-            )
-            _write_accuracy_metric(
-                file_out, file_name, name, "correct_rate", correct_rate
-            )
+    )
 
 
 def get_marker_corr(output, real):
@@ -611,6 +676,7 @@ def get_marker_corr(output, real):
         return round(np.nanmean(accus), 4)
 
 
+# pylint: disable=invalid-name
 def get_ind_corr(output, real, nIndPerGen, n_row_per_ind, start_gen=None, end_gen=None):
     """Compute the average individual-wise Pearson correlation coefficient between two arrays.
 

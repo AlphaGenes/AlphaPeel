@@ -1,3 +1,5 @@
+"""Module for visualizing accuracy report data."""
+
 import ast
 import os
 
@@ -38,7 +40,7 @@ def load_accuracy_report(report_path):
     """
 
     records = []
-    with open(report_path, "r") as file:
+    with open(report_path, "r", encoding="utf-8") as file:
         for line_number, line in enumerate(file, start=1):
             line = line.strip()
             if not line:
@@ -123,7 +125,7 @@ def _get_pyplot():
     """Import matplotlib lazily for report visualization helpers."""
 
     try:
-        import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt  # pylint: disable=import-outside-toplevel
     except ImportError as error:
         raise ImportError(
             "matplotlib is required for accuracy report visualizations."
@@ -150,7 +152,7 @@ def _plot_colors(plt, count):
     return [color_map(index) for index in range(count)]
 
 
-def plot_accuracy_population_heatmaps(
+def plot_accuracy_population_heatmaps(  # pylint: disable=too-many-locals
     report_path,
     output_dir,
     metric_names=DEFAULT_VISUALIZATION_METRICS,
@@ -213,7 +215,7 @@ def plot_accuracy_population_heatmaps(
     return generated_paths
 
 
-def plot_accuracy_generation_profiles(
+def plot_accuracy_generation_profiles(  # pylint: disable=too-many-locals
     report_path,
     output_dir,
     metric_names=DEFAULT_VISUALIZATION_METRICS,
@@ -327,6 +329,7 @@ def plot_accuracy_runtime(report_path, output_dir, labels=None):
     return [output_path]
 
 
+# pylint: disable=too-many-arguments,too-many-positional-arguments
 def create_accuracy_report_visualizations(
     report_path,
     output_dir,

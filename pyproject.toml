@@ -40,4 +40,4 @@ packages = ["tinypeel", "tinypeel.tinyhouse", "tinypeel.peeling"]
 
 [tool.pylint.main]
 init-hook = "import sys; sys.path.insert(0, '.')"
-ignore-paths = ["^src/tinypeel/tinyhouse/.*$"]
+ignore-paths = ["^src/tinypeel/tinyhouse/.*$", "^docs/source/conf.py$"]

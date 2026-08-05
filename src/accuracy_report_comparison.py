@@ -1,3 +1,5 @@
+"""Module for comparing accuracy reports and summarizing numeric changes."""
+
 import csv
 import math
 import sys
@@ -207,7 +209,7 @@ def _write_csv(rows, output_path):
         "max_abs_delta_location",
     ]
 
-    with open(output_path, "w", newline="") as file:
+    with open(output_path, "w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)

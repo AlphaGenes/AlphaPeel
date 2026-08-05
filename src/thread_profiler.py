@@ -10,16 +10,42 @@ import shutil
 import subprocess
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
 
-from src.accuracy_core import SIMULATION_FIXTURE_DIR, generate_accuracy_argv
+from src.accuracy_core import (
+    AccuracyCase,
+    AccuracyRunPaths,
+    SIMULATION_FIXTURE_DIR,
+    generate_accuracy_argv,
+)
 
 
 DEFAULT_THREAD_COUNTS = (1, 2, 4, 8)
 DEFAULT_OUTPUT_ROOT = os.path.join("tests", "accuracy_tests", "outputs_thread_grid")
 INNER_MODE = "inner"
+
+
+@dataclass(frozen=True)
+class ThreadRunConfig:  # pylint: disable=too-many-instance-attributes
+    """Configuration shared by one profiling run."""
+
+    simulation_path: str
+    method: str
+    output_dir: Path
+    n_cycle: int = 5
+    seq_file: bool = True
+    est_geno_error_prob: bool = True
+    est_seq_error_prob: bool = True
+    est_start_alt_allele_prob: bool = False
+    est_alt_allele_prob: bool = False
+    python_executable: Optional[str] = None
+    working_dir: Optional[Path] = None
 
 
 def _normalize_thread_counts(thread_counts):
@@ -42,74 +68,39 @@ def set_arg(argv, option, value):
     return argv
 
 
-def build_tinypeel_argv(
-    sim_path,
-    method,
-    output_dir,
-    n_thread_fam,
-    n_thread_loci,
-    n_cycle=5,
-    seq_file=True,
-    est_geno_error_prob=True,
-    est_seq_error_prob=True,
-    est_start_alt_allele_prob=False,
-    est_alt_allele_prob=False,
-):
+def build_tinypeel_argv(config, n_thread_fam, n_thread_loci):
     """Build the AlphaPeel argv for one profiling run."""
 
     argv = generate_accuracy_argv(
-        sim_path,
-        method,
-        est_start_alt_allele_prob,
-        est_geno_error_prob,
-        est_seq_error_prob,
-        seq_file,
-        False,
-        est_alt_allele_prob,
-        False,
-        False,
-        str(output_dir),
+        AccuracyRunPaths(
+            simulation_path=config.simulation_path,
+            output_path=str(config.output_dir),
+        ),
+        AccuracyCase(
+            config.method,
+            est_start_alt_allele_prob=config.est_start_alt_allele_prob,
+            est_geno_error_prob=config.est_geno_error_prob,
+            est_seq_error_prob=config.est_seq_error_prob,
+            seq_file=config.seq_file,
+            est_alt_allele_prob=config.est_alt_allele_prob,
+        ),
     )
-    argv = set_arg(argv, "-n_cycle", n_cycle)
+    argv = set_arg(argv, "-n_cycle", config.n_cycle)
     argv = set_arg(argv, "-n_thread_fam", n_thread_fam)
     argv = set_arg(argv, "-n_thread_loci", n_thread_loci)
     return argv
 
 
-def run_one(
-    sim_path,
-    method,
-    output_dir,
-    n_thread_fam,
-    n_thread_loci,
-    n_cycle=5,
-    seq_file=True,
-    est_geno_error_prob=True,
-    est_seq_error_prob=True,
-    est_start_alt_allele_prob=False,
-    est_alt_allele_prob=False,
-    python_executable=None,
-    working_dir=None,
-):
+def run_one(config, n_thread_fam, n_thread_loci):
     """Run one AlphaPeel subprocess and return elapsed seconds."""
 
     argv = build_tinypeel_argv(
-        sim_path,
-        method,
-        output_dir,
+        config,
         n_thread_fam,
         n_thread_loci,
-        n_cycle=n_cycle,
-        seq_file=seq_file,
-        est_geno_error_prob=est_geno_error_prob,
-        est_seq_error_prob=est_seq_error_prob,
-        est_start_alt_allele_prob=est_start_alt_allele_prob,
-        est_alt_allele_prob=est_alt_allele_prob,
     )
-    if python_executable is None:
-        python_executable = sys.executable
-    if working_dir is None:
-        working_dir = Path.cwd()
+    python_executable = config.python_executable or sys.executable
+    working_dir = config.working_dir or Path.cwd()
 
     command = [python_executable, "-m", "src.tinypeel.tinypeel", *argv]
     start = time.perf_counter()
@@ -237,9 +228,8 @@ def summary_grid(rows, mode, thread_counts):
         key = (row["n_thread_fam"], row["n_thread_loci"])
         means.setdefault(key, []).append(row["runtime_seconds"])
 
-    x_values = np.array(thread_counts, dtype=np.float64)
-    y_values = np.array(thread_counts, dtype=np.float64)
-    x_grid, y_grid = np.meshgrid(x_values, y_values)
+    thread_values = np.array(thread_counts, dtype=np.float64)
+    x_grid, y_grid = np.meshgrid(thread_values, thread_values)
     z_grid = np.full_like(x_grid, np.nan, dtype=np.float64)
     for y_index, n_thread_loci in enumerate(thread_counts):
         for x_index, n_thread_fam in enumerate(thread_counts):
@@ -259,10 +249,7 @@ def plot_surface(output_root, rows, thread_counts, mode=INNER_MODE):
     os.environ.setdefault("MPLCONFIGDIR", str(mpl_config_dir))
     os.environ.setdefault("XDG_CACHE_HOME", str(xdg_cache_dir))
 
-    import matplotlib
-
     matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
 
     path = output_root / f"thread_grid_runtime_surface_{mode}.png"
     figure = plt.figure(figsize=(7, 6))
@@ -296,6 +283,7 @@ def draw_surface(axis, rows, mode, thread_counts):
     axis.set_yticks(thread_counts)
 
 
+# pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
 def run_thread_profiler(
     thread_counts=DEFAULT_THREAD_COUNTS,
     replicates=1,
@@ -349,12 +337,10 @@ def run_thread_profiler(
                     f"n_thread_fam={n_thread_fam} "
                     f"n_thread_loci={n_thread_loci} replicate={replicate}"
                 )
-                elapsed = run_one(
-                    sim_path,
-                    method,
-                    run_dir,
-                    n_thread_fam,
-                    n_thread_loci,
+                config = ThreadRunConfig(
+                    simulation_path=sim_path,
+                    method=method,
+                    output_dir=run_dir,
                     n_cycle=n_cycle,
                     seq_file=seq_file,
                     est_geno_error_prob=est_geno_error_prob,
@@ -364,6 +350,7 @@ def run_thread_profiler(
                     python_executable=python_executable,
                     working_dir=working_dir,
                 )
+                elapsed = run_one(config, n_thread_fam, n_thread_loci)
                 append_raw_row(
                     raw_csv,
                     {

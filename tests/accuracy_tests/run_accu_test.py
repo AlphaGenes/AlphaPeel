@@ -1,8 +1,8 @@
 """Accuracy tests for the AlphaPeel module."""
 
 import pytest
-from src.accuracy_core import sim_path
-from src.accuracy_runner import run_accuracy_case
+from src.accuracy_core import AccuracyCase, sim_path
+from src.accuracy_runner import AccuracyRunnerOptions, run_accuracy_case
 
 
 @pytest.mark.parametrize(
@@ -31,15 +31,9 @@ def test_accu(
     run_accuracy_case(
         test_get_params,
         sim_path(),
-        method,
-        False,
-        False,
-        False,
-        False,
-        False,
-        False,
-        False,
-        False,
-        benchmark=benchmark,
-        run_name="test_accu",
+        AccuracyCase(method),
+        options=AccuracyRunnerOptions(
+            benchmark=benchmark,
+            run_name="test_accu",
+        ),
     )
