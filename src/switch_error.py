@@ -1,3 +1,4 @@
+"""Module for calculating switch error rate and phase error rate of haplotype files."""
 import argparse
 import os
 
@@ -18,13 +19,14 @@ def calc_switch_error_rate():
     parser = argparse.ArgumentParser(
         prog="calc_switch_error_rate",
         description="Calculate switch error rate, phase error rate",
-        epilog="The SER and PER_intra calculation follows the definition from: https://www.cell.com/hgg-advances/fulltext/S2666-2477(25)00082-X",
+        epilog="The SER and PER_intra calculation follows the definition from: "
+        "https://www.cell.com/hgg-advances/fulltext/S2666-2477(25)00082-X",
     )
 
     params = get_params()
 
-    nLociAll = int(params["nLociAll"])
-    nInd = int(params["nInd"])
+    n_loci_all = int(params["nLociAll"])
+    n_ind = int(params["nInd"])
 
     parser.add_argument(
         "-true_path",
@@ -46,10 +48,12 @@ def calc_switch_error_rate():
     true_path = args.true_path
     called_path = args.called_path
 
-    called_file = np.loadtxt(called_path, usecols=np.arange(1, nLociAll + 1))
-    true_file = np.loadtxt(true_path, usecols=np.arange(1, nLociAll + 1))
+    called_file = np.loadtxt(called_path, usecols=np.arange(1, n_loci_all + 1))
+    true_file = np.loadtxt(true_path, usecols=np.arange(1, n_loci_all + 1))
 
-    metrics = dict(get_hap_switch_error_metrics(called_file, true_file, nInd, nLociAll))
+    metrics = dict(
+        get_hap_switch_error_metrics(called_file, true_file, n_ind, n_loci_all)
+    )
 
     print(f"Switch error rate: {metrics['switch_error_rate']}")
     print(f"Phase error (intra) rate: {metrics['phase_error_rate']}")
