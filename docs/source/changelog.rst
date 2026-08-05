@@ -7,7 +7,7 @@ Changelog
   add your changes to the top of the file under the [Unreleased] section. 
   Please also include the pull request number and the GitHub username(s) of the contributor(s) who made the change.
 
-[Unreleased] - 2026-06-??
+[Unreleased] - 2026-08-??
 =========================
 
 New features
@@ -17,6 +17,12 @@ New features
 
 * Add a version option to the command line interface
   (:pr:`237`, :user:`XingerTang`).
+
+* Add support for direct in-process AlphaPeel calls for accuracy benchmarking,
+  profiling, and development workflows (:pr:`292`, :user:`XingerTang`, :user:`gregorgorjanc`).
+
+* Add locus-based multi-threading options and benchmarking support for comparing
+  family-wise and locus-wise thread settings (:pr:`292`, :user:`XingerTang`, :user:`gregorgorjanc`).
 
 
 Bug fixes
@@ -70,6 +76,26 @@ Maintenance
 
 * Restructure the documentation to make file format documentation easier to navigate and cross-reference
   (:pr:`283`, :user:`XingerTang`, :user:`gregorgorjanc`).
+
+* Rework the accuracy test and reporting scheme to produce clearer benchmark
+  outputs, generation-wise metrics, switch-error metrics, runtime summaries,
+  and visualization-ready reports (:pr:`292`, :user:`XingerTang`, :user:`gregorgorjanc`).
+
+* Optimize memory use and runtime in the peeling implementation, including
+  lower-memory data structures, streamlined array handling, and faster
+  alternative allele probability updates (:pr:`292`, :user:`XingerTang`, 
+  :user:`gregorgorjanc`).
+
+* Refactor code and documentation for clearer module-level reuse
+  (:pr:`292`, :user:`XingerTang`, :user:`gregorgorjanc`).
+
+* Add developer documentation for testing, benchmarking, memory profiling,
+  runtime profiling, multi-thread profiling, and code-quality
+  checks (:pr:`292`, :user:`XingerTang`, :user:`gregorgorjanc`).
+
+* Update continuous-integration configuration and supported Python-version
+  testing setup for the current development workflow (:pr:`292`, :user:`XingerTang`,
+  :user:`gregorgorjanc`).
 
 [1.3.0] - 2026-02-05
 ====================
