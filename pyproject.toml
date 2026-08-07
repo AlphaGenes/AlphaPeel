@@ -6,7 +6,15 @@ build-backend = "setuptools.build_meta"
 name = "AlphaPeel"
 version = "1.4.0"
 authors = [
-  { name="Andrew Whalen", email="alphagenes.dev@gmail.com" },
+  { name="Andrew Whalen" },
+  { name="Xinger Tang", email="alphagenes.dev@gmail.com" },
+  { name="Rosalind Craddock", email="alphagenes.dev@gmail.com" },
+  { name="Yu Zhang", email="alphagenes.dev@gmail.com" },
+  { name="Gregor Gorjanc", email="alphagenes.dev@gmail.com" },
+]
+maintainers = [
+  { name="Xinger Tang", email="alphagenes.dev@gmail.com" },
+  { name="Gregor Gorjanc", email="alphagenes.dev@gmail.com" },
 ]
 description = "Multilocus and hybrid peeling"
 # readme corresponds to the long_description
