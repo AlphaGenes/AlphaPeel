@@ -6,7 +6,7 @@ Introduction
 Availability
 ------------
 
-|Software| is available as open-source from `Github <https://github.com/AlphaGenes/AlphaPeel>`_ website and can be easily installed using ``pip install AlphaPeel`` (the latest release).
+|Software| is available as open-source from `GitHub <https://github.com/AlphaGenes/AlphaPeel>`_ website and can be easily installed using ``pip install AlphaPeel`` (the latest release).
 
 Please report any issues at `<https://github.com/AlphaGenes/AlphaPeel/issues>`_.
 
@@ -23,5 +23,3 @@ Disclaimer
 ----------
 
 While every effort has been made to ensure that |Software| does what it claims to do, there is absolutely no guarantee that the results provided are correct. Use of |Software| is entirely at your own risk.
-
-.. |Software| replace:: AlphaPeel

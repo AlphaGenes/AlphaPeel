@@ -1,0 +1,7 @@
+genotypes_0 2 0 2
+genotypes_1 2 0 2
+genotypes_2 2 0 2
+penetrance_AA 2 0 2
+penetrance_Aa 2 0 2
+penetrance_aA 2 0 2
+penetrance_aa 2 0 2

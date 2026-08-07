@@ -172,17 +172,9 @@ for (ind in (1:nInd)) {
   for (locus in (1:nLociAll)) {
     currentGeno <- haplotypes[((ind - 1) * 2 + 1):(ind * 2), locus]
     if (all(currentGeno == c(0, 0)) == TRUE) {
-      if (sex[[ind]] == 0){
-        currentPhasedGeno <- c(0.5, 0, 0.5, 0)
-      }else{
-        currentPhasedGeno <- c(1, 0, 0, 0)
-      }
+      currentPhasedGeno <- c(1, 0, 0, 0)
     } else if (all(currentGeno == c(0, 1)) == TRUE) {
-      if (sex[[ind]] == 0){
-      currentPhasedGeno<- c(0, 0.5, 0, 0.5)
-      }else{
-        currentPhasedGeno <- c(0, 1, 0, 0)
-      }
+      currentPhasedGeno <- c(0, 1, 0, 0)
     } else if (all(currentGeno == c(1, 0)) == TRUE) {
       currentPhasedGeno <- c(0, 0, 1, 0)
     } else {
@@ -200,18 +192,9 @@ for (ind in (1:nInd)) {
   for (locus in (1:nLociAll)) {
     currentGeno <- haplotypes[((ind - 1) * 2 + 1):(ind * 2), locus]
     if (all(currentGeno == c(0, 0)) == TRUE) {
-      if (sex[[ind]] == 0){
-        currentUnphasedGeno <- c(0.5, 0.5, 0)
-      }else{
-        currentUnphasedGeno <- c(1, 0, 0)
-      }
-      
+      currentUnphasedGeno <- c(1, 0, 0)
     } else if (all(currentGeno == c(0, 1)) == TRUE) {
-      if (sex[[ind]] == 0){
-        currentUnphasedGeno <- c(0, 0.5, 0.5)
-      }else{
-        currentUnphasedGeno <- c(0, 1, 0)
-      }
+      currentUnphasedGeno <- c(0, 1, 0)
     } else if (all(currentGeno == c(1, 0)) == TRUE) {
       currentUnphasedGeno <- c(0, 1, 0)
     } else {
@@ -299,9 +282,21 @@ recHist <- SP$recHist
 
 segregation <- matrix(data = 0, nrow = nInd * 4, ncol = nLociAll + 1)
 segregation[1:(4 * nIndPerGen), 1] <- rep(x = 1:nIndPerGen, each = 4)
-segregation[1:(4 * nIndPerGen), 2:(nLociAll + 1)] <- 
-  matrix(data = rep(0.25, times = nLociAll * 4 * nIndPerGen), 
-         nrow = 4 * nIndPerGen, ncol = nLociAll)
+for (ind in 1:nInd) {
+  rows <- (4*ind - 3):(4*ind)
+  if (sex[ind] == 0) {
+    # Male: [0.5, 0.5, 0, 0]
+    segregation[rows, 2:(nLociAll + 1)] <-matrix(
+      rep(c(0.5, 0.5, 0, 0), times = nLociAll),
+      nrow = 4, ncol = nLociAll
+    )
+  } else {
+    # Female: [0, 0, 0.5, 0.5]
+    segregation[rows, 2:(nLociAll + 1)] <- matrix(
+      rep(c(0, 0, 0.5, 0.5), times = nLociAll),
+      nrow = 4, ncol = nLociAll
+      )
+}}
 
 for (ind in (nIndPerGen + 1):nInd) {
   indRecHist <- recHist[[ind]][[1]]
@@ -310,37 +305,39 @@ for (ind in (nIndPerGen + 1):nInd) {
   maternalPattern <- matrix(0, nrow = 4, ncol = nLociAll)
   for (comb in (1:nMaternalComb)) {
     start <- indRecHist[[1]][comb, 2]
-    if (indRecHist[[1]][comb, 1] == 1) {
-      # maternal haplotype is inherited from the individual's grandmaternal
-      pattern <- c(0, 1, 0, 1)
-    } else {
-      # maternal haplotype is inherited from the individual's grandpaternal
-      pattern <- c(1, 0, 1, 0)
-    }
-    maternalPattern[1:4, start:nLociAll] <- 
-      matrix(data = rep(pattern, times = nLociAll - start + 1), 
+      if (start < nLociAll+1){
+        if (indRecHist[[1]][comb, 1] == 1) {
+          # maternal haplotype is inherited from the individual's grandmaternal
+          pattern <- c(0, 1, 0, 1)
+        } else {
+          # maternal haplotype is inherited from the individual's grandpaternal
+          pattern <- c(1, 0, 1, 0)
+        }
+        maternalPattern[1:4, start:nLociAll] <- 
+          matrix(data = rep(pattern, times = nLociAll - start + 1), 
             nrow = 4, ncol = nLociAll - start + 1)
-  }
-  
+      }
+    }
   nPaternalComb <- nrow(indRecHist[[2]])
   paternalPattern <- matrix(0, nrow = 4, ncol = nLociAll)
   for (comb in (1:nPaternalComb)) {
     start <- indRecHist[[2]][comb, 2]
-    if (sex[ind]==0) {
-      pattern <- c(1, 1, 0, 0)
-    }
-else{
-    if (indRecHist[[2]][comb, 1] == 1) {
-      # paternal haplotype is inherited from the individual's grandmaternal
-      pattern <- c(0, 0, 1, 1)
-    } else {
-      # paternal haplotype is inherited from the individual's grandpaternal
-      pattern <- c(1, 1, 0, 0)
-    }
-    }
-    paternalPattern[1:4, start:nLociAll] <- 
-      matrix(data = rep(pattern, times = nLociAll - start + 1),
+    if (start < nLociAll+1){
+        if (sex[ind]==0) {
+          pattern <- c(1, 1, 0, 0)
+        } else {
+          if (indRecHist[[2]][comb, 1] == 1) {
+            # paternal haplotype is inherited from the individual's grandmaternal
+            pattern <- c(0, 0, 1, 1)
+          } else {
+            # paternal haplotype is inherited from the individual's grandpaternal
+            pattern <- c(1, 1, 0, 0)
+          }
+        }
+        paternalPattern[1:4, start:nLociAll] <- 
+          matrix(data = rep(pattern, times = nLociAll - start + 1),
             nrow = 4, ncol = nLociAll - start + 1)
+    }
   }
   
   startRow <- 4 * (ind - 1) + 1
@@ -389,7 +386,7 @@ write.table(x = phasedGenotypes, file = "true-X_chr_phased_geno_prob.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
 write.table(x = UnphasedGenotypes, file = "true-X_chr_geno_prob.txt",
             row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(x = genotypes, file = "true-X_chr_geno_0.3333333333333333.txt", 
+write.table(x = genotypes, file = "true-X_chr_geno_0.333.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)
 write.table(x = genotypes, file = "true-X_chr_dosage.txt", 
             row.names = TRUE, col.names = FALSE, quote = FALSE)

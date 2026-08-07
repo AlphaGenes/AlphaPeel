@@ -1,0 +1,7 @@
+genotypes_0 1.9999 0.0001 1.9999
+genotypes_1 1.9999 0.0001 1.9999
+genotypes_2 1.9999 0.0001 1.9999
+penetrance_AA 1.4285 0.5715 1.4285
+penetrance_Aa 1.4285 0.5715 1.4285
+penetrance_aA 1.4285 0.5715 1.4285
+penetrance_aa 1.4285 0.5715 1.4285

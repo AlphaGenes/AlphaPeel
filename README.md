@@ -12,6 +12,16 @@ Whalen, A, Ros-Freixedes, R, Wilson, DL, Gorjanc, G, Hickey, JM. (2018). Hybrid 
 
 See https://alphapeel.readthedocs.io/en/latest
 
+Quick links:
+
+- [Installation](https://alphapeel.readthedocs.io/en/latest/get_started.html#install-software)
+
+- [Simple example](https://alphapeel.readthedocs.io/en/latest/get_started.html#an-example)
+
+- [How to use](https://alphapeel.readthedocs.io/en/latest/usage.html)
+
+- [Algorithm](https://alphapeel.readthedocs.io/en/latest/algorithm.html)
+
 ## Conditions of use
 
 AlphaPeel is fully and freely available for all use under the MIT License.

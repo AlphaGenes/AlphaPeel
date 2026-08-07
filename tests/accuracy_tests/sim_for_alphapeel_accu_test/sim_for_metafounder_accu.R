@@ -154,19 +154,19 @@ founders_genotypes <- genotypes[c((nIndFoundersPerSubPop + 1):nIndPerGen),]
 alt_allele_prob_B <- colSums(founders_genotypes)
 alt_allele_prob_B <- alt_allele_prob_B/(2*nrow(founders_genotypes))
 
-alt_allele_prob_input_MF <- data.frame(matrix(nrow = 2, ncol = (nLociAllPerChr + 1)))
-alt_allele_prob_input_MF[1] <- c("MF_1", "MF_2")
-alt_allele_prob_input_MF[1,2:(nLociAllPerChr + 1)] <- alt_allele_prob_A
-alt_allele_prob_input_MF[2,2:(nLociAllPerChr + 1)] <- alt_allele_prob_B
+alt_allele_prob_input_MF <- data.frame(matrix(ncol = 2, nrow = (nLociAllPerChr + 1)))
+alt_allele_prob_input_MF[1,] <- c("MF_1", "MF_2")
+alt_allele_prob_input_MF[2:(nLociAllPerChr + 1), 1] <- alt_allele_prob_A
+alt_allele_prob_input_MF[2:(nLociAllPerChr + 1), 2] <- alt_allele_prob_B
 
 # Singular alternative allele frequency is not used in testing, but calculated for comparison.
 founders_genotypes <- genotypes[c(1:nIndPerGen),]
 alt_allele_prob <- colSums(founders_genotypes)
 alt_allele_prob <- alt_allele_prob/(2*nrow(founders_genotypes))
 
-alt_allele_prob_input_noMF <- data.frame(matrix(nrow = 1, ncol = (nLociAllPerChr + 1)))
-alt_allele_prob_input_noMF[1] <- "MF_1"
-alt_allele_prob_input_noMF[1,2:(nLociAllPerChr + 1)] <- alt_allele_prob
+alt_allele_prob_input_noMF <- data.frame(matrix(ncol = 1, nrow = (nLociAllPerChr + 1)))
+alt_allele_prob_input_noMF[1,] <- "MF_1"
+alt_allele_prob_input_noMF[2:(nLociAllPerChr + 1), 1] <- alt_allele_prob
 
 # Haplotypes
 # Get haplotypes for phased and unphased genotype probabilities

@@ -1,3 +1,5 @@
+"""Configuration file for the Sphinx documentation builder."""
+
 # -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
@@ -71,6 +73,11 @@ language = "python"
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
+
+# Global substitutions available to all .rst files
+rst_epilog = """
+.. |Software| replace:: ``AlphaPeel``
+"""
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None

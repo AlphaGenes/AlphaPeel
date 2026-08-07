@@ -1,3 +1,5 @@
+.. _algorithm:
+
 ==================
 Algorithm Overview
 ==================
@@ -6,6 +8,8 @@ Here are some notes about how the peeling algorithm works.
 For further details read:
 
 .. [1] Whalen, A, Ros-Freixedes, R, Wilson, DL, Gorjanc, G, Hickey, JM. (2018). *Hybrid peeling for fast and accurate calling, phasing, and imputation with sequence data of any coverage in pedigrees*. Genetics Selection Evolution; doi: https://doi.org/10.1186/s12711-018-0438-2
+
+.. _peeling_basics:
 
 Peeling basics
 ==============
@@ -90,6 +94,8 @@ Segregation probabilities are really helpful for determining which alleles an in
 from their parents and are used for both the peel down (anterior) and peel up (posterior) steps.
 The following sections outline how the penetrance, anterior, posterior, and segregation terms are calculated.
 
+.. _penetrance:
+
 Penetrance
 ----------
 
@@ -163,7 +169,7 @@ The joint genotypes are estimated by
 .. math::
     p(g_{father}, g_{mother}|children) = \prod(p(g_{father}, g_{mother}|child)).
 
-Simulation results using AlphaPeel have suggested that accuracy may be increased
+Simulation results using ``AlphaPeel`` have suggested that accuracy may be increased
 by using the called genotype probabilities.
 Because of this we call the individual's genotypes, haplotypes, and segregation values.
 This has the added benefit of allowing us to use a look-up table to
@@ -294,12 +300,16 @@ There are a lot of possible places to obtain substantial memory savings.
       We could instead store the values as a single matrix and just add each time.
       We need to be careful with the parallel updates on this term though.
 
+
+.. _function_explanation:
+
 Function explanation
 ====================
 
-The main peeling function of AlphaPeel is given by ``tinypeel.Peeling.Peeling.peel()`` function:
+The main peeling function of ``AlphaPeel`` is given by ``tinypeel.peeling.peeling.peel_up()`` and ``tinypeel.peeling.peeling.peel_down()``:
 
-.. autofunction:: tinypeel.Peeling.Peeling.peel
+.. autofunction:: tinypeel.peeling.peeling.peel_up
+.. autofunction:: tinypeel.peeling.peeling.peel_down
 
 The peeling process consists of two parts:
 
@@ -446,28 +456,23 @@ The peeling process consists of two parts:
      A pre-defined error :math:`e` is used here with ``segregationTensor = segregationTensor*(1-e) + e/4``
      (mutation error).
 
-     This matrix can be used to generate ``ChildSegs``, which is the matrix controls
+     This matrix can be used to generate ``child_segs``, which is the matrix controls
      how the information is passed across generations.
-     By ``tinypeel.Peeling.Peeling.createChildSegs()``, the probabilities of each combination of
+     By ``tinypeel.peeling.peeling.create_child_segs()``, the probabilities of each combination of
      father's genotype, mother's genotype and child's genotype can be calculated via
      summing over the child's segregation states.
 
-     .. autofunction:: tinypeel.Peeling.Peeling.createChildSegs
+     .. autofunction:: tinypeel.peeling.peeling_kernels.create_child_segs
 
-     The information are passed with functions ``tinypeel.Peeling.Peeling.projectChildGenotypes()`` and
-     ``tinypeel.Peeling.Peeling.projectParentGenotypes()``.
+     The information are passed with functions ``tinypeel.peeling.peeling_kernels.project_child_genotypes()`` and
+     ``tinypeel.peeling.peeling_kernels.project_parent_genotypes()``.
 
-     .. autofunction:: tinypeel.Peeling.Peeling.projectChildGenotypes
+     .. autofunction:: tinypeel.peeling.peeling_kernels.project_child_genotypes
 
-     .. autofunction:: tinypeel.Peeling.Peeling.projectParentGenotypes
+     .. autofunction:: tinypeel.peeling.peeling_kernels.project_parent_genotypes
 
-     The pre-defined error :math:`e` is used in a similar way as the ``segregationTensor`` on the following variables:
-
-     - ``JointParents``,
-     - ``probSire`` and ``probDam``,
-     - ``childValues``, and
-     - ``sirePosterior`` and ``damPosterior``,
-
+     The pre-defined error :math:`e` is used in a similar way as the ``segregationTensor`` on the 
+     arrays returned by ``create_peel_down_workspace`` and ``create_peel_up_workspace``,
      which are all intermediate values or the results of the transmission across generation.
 
    - Probabilities update: The phased genotype probabilities are calculatd via ``anterior * penetrance * posterior``,
@@ -484,11 +489,11 @@ The peeling process consists of two parts:
    - Hidden states: segregation states.
    - Time dimension: locus (locus_i -> locus_i+1).
    - Observed states: phased genotype probabilities from part 1.
-   - Emission function: A segregation estimate ``pointSeg`` is obtained by ``estimateSegregationWithNorm()``,
+   - Emission function: A segregation estimate ``segregation`` is obtained by ``estimate_segregation_with_norm()``,
 
-     .. autofunction:: tinypeel.Peeling.Peeling.estimateSegregationWithNorm
+     .. autofunction:: tinypeel.peeling.peeling_kernels.estimate_segregation_with_norm
 
-     then same usage of :math:`e` as the ``segregationTensor`` is applied,
+     then same usage of :math:`e` as the ``segregation_tensor`` is applied,
      but now on the resulting output of function for the Baum-Welch algorithm implementation:
 
      * matched segregation: :math:`1 - \frac{3}{4}e`,

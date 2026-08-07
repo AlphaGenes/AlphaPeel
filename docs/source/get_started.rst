@@ -2,10 +2,22 @@
 Getting Started
 ===============
 
+Quick links:
+
+* Installation: :ref:`install`
+
+* Simple example: :ref:`simple_example`
+
+* How to use: :ref:`usage`
+
+* Algorithm: :ref:`algorithm`
+
+.. _install:
+
 Install |Software|
 ------------------
 
-Here is a sample guide for installing AlphaPeel as a Python package.
+Here is a sample guide for installing ``AlphaPeel`` as a Python package.
 
 For more information on installing Python packages,
 visit `Python Packaging User Guide <https://packaging.python.org/en/latest/tutorials/installing-packages/>`_.
@@ -88,9 +100,10 @@ Install the package by using the built wheel distribution:
 
     python -m pip install dist/alphapeel*.whl
 
+.. _run-examples:
+
 Run examples
 ============
-.. _run-examples:
 
 Change the working directory to the one holding the example:
 
@@ -123,7 +136,7 @@ Install on Eddie
 
     This section is only for the users from the University of Edinburgh.
 
-To use AlphaPeel on the Eddie, the University of Edinburgh's Research Compute Cluster,
+To use ``AlphaPeel`` on the Eddie, the University of Edinburgh's Research Compute Cluster,
 you can find information to create an environment without causing the home directory to go over quota at
 `Eddie wiki page <https://www.wiki.ed.ac.uk/spaces/ResearchServices/pages/294388305/Anaconda>`_.
 
@@ -135,6 +148,8 @@ you may can try:
     git config core.fileMode false
 
 
+.. _simple_example:
+
 An example
 ----------
 
@@ -144,6 +159,8 @@ The example is deliberately simplistic for the demonstration.
 Note that |Software| can handle much more complex examples.
 The example contains two parents with known genotypes and
 one progeny with unknown genotypes.
+See the description on
+:ref:`terminology and encoding of the input data and outputs <zero_one_two_etc>`.
 
 .. image:: static/example_pedigree_with_missing.png
     :width: 20em
@@ -231,12 +248,12 @@ And following output files:
 
     simple_output.dosage.txt
     simple_output.rec_prob.txt
-    simple_output.geno_0.3333333333333333.txt
+    simple_output.geno_0.333.txt
     simple_output.seq_error_prob.txt
     simple_output.geno_error_prob.txt
     simple_output.hap_0.5.txt
 
-The ``simple_output.hap_0.5.txt`` provides the called haplotype output:
+The ``simple_output.hap_0.5.txt`` provides the called haplotypes:
 
 .. code-block:: bash
 
@@ -249,10 +266,8 @@ The ``simple_output.hap_0.5.txt`` provides the called haplotype output:
 
 As you can see, each of the parents has two identical haplotypes,
 in line with their fully homozygous genotypes.
-As such, the progeny could only inherit one kind of haplotype
+As such, the progeny could only inherit one kind of a haplotype
 from each of the parents, making this a very simple example.
-
-The ``simple_output.geno_0.3333333333333333.txt`` provides the called genotype output:
 
 .. code-block:: bash
 
@@ -263,5 +278,3 @@ The ``simple_output.geno_0.3333333333333333.txt`` provides the called genotype o
 Which are just the sum of the haplotype alleles of each individual.
 
 For more information about how to use |Software|, please see :ref:`usage`.
-
-.. |Software| replace:: AlphaPeel
